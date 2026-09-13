@@ -753,6 +753,10 @@
       </div>
     </div>
     <div id="adminPanelView" style="display:none;">
+      <p class="admin-hint">contrôle si les nouveaux membres peuvent choisir un chibi (ceux qui en ont déjà un ne sont pas affectés)</p>
+      <div class="btn-row">
+        <button class="btn btn-confirm" id="toggleSelectionBtn">✧ chargement...</button>
+      </div>
       <p class="admin-hint">ajoute un nouveau chibi (image PNG/JPG avec fond transparent de préférence)</p>
       <input id="adminFileInput" type="file" accept="image/*">
       <input id="adminLabelInput" type="text" placeholder="petit nom (optionnel, pour toi)" maxlength="30">
@@ -834,6 +838,7 @@ let discordUser = null;    // { id, username }
 let currentModalId = null;
 let pendingChibiId = null; // chibi cliqué avant la connexion Discord (survit à la redirection)
 let adminUnlocked = false;
+let selectionClosed = false;
 let chibiOrder = [];
 let reorderMode = false;
 
@@ -1108,6 +1113,16 @@ async function refreshHiddenChibis(){
   }
 }
 
+async function refreshSelectionStatus(){
+  if(!db) return;
+  try{
+    const snap = await db.ref('settings/selectionClosed').get();
+    selectionClosed = snap.exists() ? !!snap.val() : false;
+  }catch(e){
+    selectionClosed = false;
+  }
+}
+
 async function refreshCustomChibis(){
   if(!db) return;
   try{
@@ -1172,7 +1187,7 @@ async function loadDiscordUser(){
 
 /* ====================== ADMIN DASHBOARD ====================== */
 
-adminGear.addEventListener('click', () => {
+adminGear.addEventListener('click', async () => {
   adminOverlay.classList.add('open');
   document.getElementById('adminPassword').value = '';
   document.getElementById('adminMsg').textContent = '';
@@ -1180,6 +1195,8 @@ adminGear.addEventListener('click', () => {
     document.getElementById('adminLoginView').style.display = 'none';
     document.getElementById('adminPanelView').style.display = 'block';
     updateAdminCount();
+    await refreshSelectionStatus();
+    updateToggleSelectionBtn();
   } else {
     document.getElementById('adminLoginView').style.display = 'block';
     document.getElementById('adminPanelView').style.display = 'none';
@@ -1188,13 +1205,15 @@ adminGear.addEventListener('click', () => {
 document.getElementById('adminCloseBtn').addEventListener('click', ()=>adminOverlay.classList.remove('open'));
 adminOverlay.addEventListener('click', (e)=>{ if(e.target === adminOverlay) adminOverlay.classList.remove('open'); });
 
-document.getElementById('adminUnlockBtn').addEventListener('click', () => {
+document.getElementById('adminUnlockBtn').addEventListener('click', async () => {
   const pw = document.getElementById('adminPassword').value;
   if(pw === ADMIN_PASSWORD){
     adminUnlocked = true;
     document.getElementById('adminLoginView').style.display = 'none';
     document.getElementById('adminPanelView').style.display = 'block';
     updateAdminCount();
+    await refreshSelectionStatus();
+    updateToggleSelectionBtn();
   } else {
     document.getElementById('adminMsg').textContent = 'mot de passe incorrect !';
   }
@@ -1208,6 +1227,31 @@ function updateAdminCount(){
     : String(total);
   renderAdminChibiList();
 }
+
+function updateToggleSelectionBtn(){
+  const btn = document.getElementById('toggleSelectionBtn');
+  if(selectionClosed){
+    btn.textContent = '🔓 rouvrir la sélection des chibis';
+    btn.className = 'btn btn-confirm';
+  } else {
+    btn.textContent = '🔒 fermer la sélection des chibis';
+    btn.className = 'btn btn-cancel';
+  }
+}
+
+document.getElementById('toggleSelectionBtn').addEventListener('click', async () => {
+  if(!db) return;
+  const btn = document.getElementById('toggleSelectionBtn');
+  btn.disabled = true;
+  try{
+    selectionClosed = !selectionClosed;
+    await db.ref('settings/selectionClosed').set(selectionClosed);
+    updateToggleSelectionBtn();
+  }catch(e){
+    selectionClosed = !selectionClosed; // annule le changement si ça échoue
+  }
+  btn.disabled = false;
+});
 
 function renderAdminChibiList(){
   const listEl = document.getElementById('adminChibiList');
@@ -1422,10 +1466,10 @@ applyTheme(savedTheme === 'dark');
 
 async function init(){
   await handleDiscordRedirect();
-  await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshChibiOrder(), refreshHiddenChibis(), loadDiscordUser()]);
+  await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshChibiOrder(), refreshHiddenChibis(), refreshSelectionStatus(), loadDiscordUser()]);
   renderGrid();
 
-  if(discordUser && !hasAlreadyPicked()){
+  if(selectionClosed && discordUser && !hasAlreadyPicked()){
     document.getElementById('closedScreen').classList.add('open');
     return;
   }
@@ -1439,7 +1483,7 @@ async function init(){
   }
 
   setInterval(async ()=>{
-    await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshHiddenChibis()]);
+    await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshHiddenChibis(), refreshSelectionStatus()]);
     if(!reorderMode) renderGrid();
   }, 4000);
 }
