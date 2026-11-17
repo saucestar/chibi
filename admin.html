@@ -542,7 +542,7 @@
       <div class="lp-chip"><i>15</i>CLASSEMENT</div>
       <div class="lp-win"><b></b><b></b></div><div class="lp-tape"></div>
       <p class="ad-note">Supprimer un score de mission ou un profil de jeu publié (triche, test…). Le launcher du joueur republie son profil à sa prochaine connexion.</p>
-      <div class="ad-bar"><select id="adDay"></select></div>
+      <div class="ad-bar"><select id="adDay"></select><button type="button" class="lp-btn" id="adPurge">🧹 purger les scores de plus d'un an (RGPD)</button></div>
       <div class="ad-list" id="adMissions"></div>
       <h3 class="ad-h">Profils de jeu publiés</h3>
       <div class="ad-list" id="adCoop"></div>
@@ -551,7 +551,7 @@
 </main>
 
 
-<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op · <a href="confidentialite.html">confidentialité</a> · <a href="mes-donnees.html">mes données</a></footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 
@@ -827,6 +827,14 @@ function renderCoop(){
     : '<div class="lp-empty">aucun profil de jeu publié.</div>';
 }
 $('adDay').addEventListener('change', renderMissions);
+$('adPurge').addEventListener('click', async () => {
+  const all = await val('missions').catch(() => null) || {};
+  const limit = new Date(); limit.setFullYear(limit.getFullYear() - 1);
+  const old = Object.keys(all).filter(d => d < dayKey(limit));
+  if(!old.length){ say('✔ aucun score de plus d\u2019un an'); return; }
+  if(!confirm('Supprimer les scores de ' + old.length + ' jour(s) de plus d\u2019un an ?')) return;
+  await run(old.length + ' jour(s) purgé(s)', async () => { for(const d of old) for(const id of Object.keys(all[d] || {})) await db.ref('missions/' + d + '/' + id).remove(); });
+});
 $('adMissions').addEventListener('click', async e => {
   const b = e.target.closest('button[data-day]'); if(!b) return;
   if(!confirm('Supprimer ce score de mission ?')) return;

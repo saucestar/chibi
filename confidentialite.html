@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confidentialité | TWEWY Co-op</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family:'Montserrat',sans-serif;
+    background:
+      radial-gradient(circle at 20% 20%, #ecdcff 0%, transparent 45%),
+      radial-gradient(circle at 80% 10%, #ddd0ff 0%, transparent 45%),
+      radial-gradient(circle at 50% 90%, #e6d9ff 0%, transparent 50%),
+      linear-gradient(135deg, #e4d6ff 0%, #ecdcff 40%, #f2e8ff 70%, #ded0f7 100%);
+    background-attachment:fixed;
+    overflow-x:hidden;
+    position:relative;
+    padding-bottom:80px;
+  }
+
+  body::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 1s ease;
+    background:
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
+      radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
+      radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
+      linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
+  }
+  body.dark::after{ opacity:1; }
+
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><g fill='white'><path d='M20 4 L23 15 L34 15 L25 22 L28 33 L20 26 L12 33 L15 22 L6 15 L17 15 Z'/><circle cx='90' cy='30' r='2.2'/><circle cx='60' cy='70' r='1.6'/><path d='M110 90 L112 96 L118 96 L113 100 L115 106 L110 102 L105 106 L107 100 L102 96 L108 96 Z'/><circle cx='25' cy='110' r='1.8'/><circle cx='75' cy='120' r='2.4'/><circle cx='130' cy='60' r='1.5'/></g></svg>");
+    background-size:140px 140px;
+    background-repeat:repeat;
+    opacity:.55;
+    animation:drift 40s linear infinite;
+  }
+  @keyframes drift{
+    0%{background-position:0 0; opacity:.4;}
+    50%{opacity:.65;}
+    100%{background-position:-280px 280px; opacity:.4;}
+  }
+
+  .sparkle{
+    position:fixed;
+    pointer-events:none;
+    font-size:28px;
+    color:#ffffff;
+    opacity:.9;
+    animation:float 6s ease-in-out infinite;
+    z-index:0;
+    filter:drop-shadow(0 0 6px #fff) drop-shadow(0 0 10px rgba(255,255,255,.7));
+    user-select:none;
+  }
+  @keyframes float{
+    0%,100%{transform:translate(0,0) rotate(0deg);}
+    25%{transform:translate(10px,-18px) rotate(10deg);}
+    50%{transform:translate(-6px,-28px) rotate(-8deg);}
+    75%{transform:translate(-14px,-12px) rotate(6deg);}
+  }
+
+  .marquee-wrap{
+    width:100%;
+    background:linear-gradient(90deg,var(--hotpink),var(--purple),var(--pink),var(--hotpink));
+    background-size:300% 100%;
+    animation:gradientshift 6s linear infinite;
+    overflow:hidden;
+    white-space:nowrap;
+    border-bottom:4px solid #fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.15);
+    position:relative;
+    z-index:2;
+  }
+  @keyframes gradientshift{
+    0%{background-position:0% 50%;}
+    100%{background-position:300% 50%;}
+  }
+  .marquee{
+    display:inline-block;
+    padding:8px 0;
+    color:#fff;
+    font-family:'Montserrat',sans-serif;
+    font-weight:700;
+    font-size:18px;
+    letter-spacing:1px;
+    text-shadow:0 0 6px rgba(255,255,255,.8), 2px 2px 0 rgba(0,0,0,.15);
+    animation:scroll 18s linear infinite;
+  }
+  @keyframes scroll{
+    0%{transform:translateX(100vw);}
+    100%{transform:translateX(-100%);}
+  }
+
+  /* ---------- barre de navigation ---------- */
+  .site-nav{
+    width:100%;
+    background:linear-gradient(90deg,var(--hotpink),var(--purple),var(--pink),var(--hotpink));
+    background-size:300% 100%;
+    animation:gradientshift 10s linear infinite;
+    border-bottom:4px solid #fff;
+    box-shadow:0 4px 12px rgba(0,0,0,.15);
+    position:relative;
+    z-index:2;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:34px;
+    padding:10px 16px;
+    transition:background .7s ease;
+  }
+  body.dark .site-nav{
+    background:linear-gradient(90deg,#1f1d23,#2a2630,#8fa0e8,#1f1d23);
+    background-size:300% 100%;
+  }
+  .site-nav button, .site-nav a{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-family:'Montserrat',sans-serif;
+    font-weight:800;
+    font-size:14px;
+    letter-spacing:.4px;
+    color:#fff;
+    text-decoration:none;
+    text-shadow:0 0 6px rgba(255,255,255,.6), 1px 1px 0 rgba(0,0,0,.2);
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 6px;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .site-nav button:hover, .site-nav a:hover{
+    transform:translateY(-2px);
+    opacity:.85;
+  }
+
+  header{
+    text-align:center;
+    padding:26px 20px 6px;
+    position:relative;
+    z-index:2;
+  }
+  header h1{
+    font-family:'Montserrat',sans-serif;
+    font-weight:800;
+    font-size:30px;
+    color:#141217;
+    margin:0 0 6px;
+    transition:color .7s ease;
+  }
+  body.dark header h1{ color:#fff8ec; }
+  header p.subtitle{
+    font-family:'Montserrat',sans-serif;
+    font-size:13px;
+    color:#5c5866;
+    margin:0;
+    transition:color .7s ease;
+  }
+  body.dark header p.subtitle{ color:#b9b3c4; }
+
+  main{
+    max-width:640px;
+    margin:0 auto;
+    padding:24px 20px 20px;
+    position:relative;
+    z-index:2;
+  }
+
+  section.block{ margin-bottom:44px; }
+  h2.section-title{
+    font-family:'Montserrat',sans-serif;
+    font-weight:800;
+    font-size:17px;
+    color:#141217;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    transition:color .7s ease;
+  }
+  body.dark h2.section-title{ color:#fff8ec; }
+
+  /* ---------- rangée de vidéos (asymétrique, défilement horizontal) ---------- */
+  .videos-row{
+    display:flex;
+    gap:14px;
+    overflow-x:auto;
+    padding:4px 4px 14px;
+    margin:0 -20px;
+    padding-left:20px;
+    padding-right:20px;
+    scroll-snap-type:x proximity;
+  }
+  .videos-row::-webkit-scrollbar{ height:8px; }
+  .videos-row::-webkit-scrollbar-thumb{ background:var(--purple); border-radius:8px; }
+
+  .video-card{
+    flex:0 0 auto;
+    width:220px;
+    scroll-snap-align:start;
+    text-decoration:none;
+    display:block;
+    background:rgba(255,255,255,.7);
+    border:3px solid #fff;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 6px 16px rgba(140,90,200,.2);
+    transition:transform .15s ease, background .7s ease, border-color .7s ease;
+  }
+  .video-card:nth-child(3n+2){ transform:translateY(10px); }
+  .video-card:nth-child(3n){ transform:translateY(-6px); }
+  .video-card:hover{ transform:translateY(-4px) scale(1.03); }
+  body.dark .video-card{ background:rgba(30,28,36,.6); border-color:rgba(255,255,255,.15); }
+  .video-thumb{
+    width:100%;
+    aspect-ratio:16/9;
+    object-fit:cover;
+    display:block;
+    background:linear-gradient(145deg, var(--pink), var(--blue));
+  }
+  .video-title{
+    font-family:'Montserrat',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    color:#141217;
+    padding:8px 10px 10px;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    transition:color .7s ease;
+  }
+  body.dark .video-title{ color:#f3eee4; }
+
+  /* ---------- fil d'actualité, centré mais asymétrique ---------- */
+  .feed-list{
+    display:flex;
+    flex-direction:column;
+    gap:30px;
+  }
+
+  .feed-card{
+    background:rgba(255,255,255,.6);
+    border:3px solid #fff;
+    border-radius:22px;
+    padding:16px;
+    box-shadow:0 8px 20px rgba(140,90,200,.16);
+    transition:background .7s ease, border-color .7s ease;
+  }
+  body.dark .feed-card{ background:rgba(30,28,36,.5); border-color:rgba(255,255,255,.14); }
+
+  .feed-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .feed-avatar{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    padding:2px;
+    background:conic-gradient(from 210deg, #ffd76b, var(--hotpink), var(--purple), var(--pink), #ffd76b);
+    flex-shrink:0;
+  }
+  .feed-avatar-inner{
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  body.dark .feed-avatar-inner{ background:#1e1c24; }
+  .feed-avatar-inner img{ width:80%; height:80%; object-fit:contain; }
+  .feed-meta{ display:flex; flex-direction:column; }
+  .feed-uname{
+    font-family:'Montserrat',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    color:#141217;
+    text-decoration:none;
+    transition:color .7s ease;
+  }
+  body.dark .feed-uname{ color:#fff8ec; }
+  .feed-time{
+    font-family:'Montserrat',sans-serif;
+    font-size:11px;
+    color:#9a95a2;
+  }
+  body.dark .feed-time{ color:#9a95a2; }
+
+  .feed-photo-wrap{
+    display:flex;
+    margin-bottom:10px;
+  }
+  .feed-card.align-l .feed-photo-wrap{ justify-content:flex-start; }
+  .feed-card.align-r .feed-photo-wrap{ justify-content:flex-end; }
+
+  .feed-photo{
+    width:78%;
+    max-width:340px;
+    aspect-ratio:1/1;
+    object-fit:cover;
+    border-radius:16px;
+    box-shadow:0 6px 16px rgba(140,90,200,.25);
+    border:3px solid #fff;
+  }
+  .feed-card.align-l .feed-photo{ transform:rotate(-1.4deg); }
+  .feed-card.align-r .feed-photo{ transform:rotate(1.4deg); }
+
+  .feed-caption{
+    font-family:'Montserrat',sans-serif;
+    font-size:13.5px;
+    color:#141217;
+    margin:0 0 10px;
+    white-space:pre-wrap;
+    word-break:break-word;
+    transition:color .7s ease;
+  }
+  body.dark .feed-caption{ color:#f3eee4; }
+
+  .feed-actions{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .like-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:18px;
+    padding:2px 4px;
+    line-height:1;
+    transition:transform .12s ease;
+  }
+  .like-btn:active{ transform:scale(1.3); }
+  .like-count{
+    font-family:'Montserrat',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    color:#ff208c;
+    transition:color .7s ease;
+  }
+  body.dark .like-count{ color:#d8d2e0; }
+
+  .empty-note, .loading-msg{
+    text-align:center;
+    padding:30px 20px;
+    font-family:'Montserrat',sans-serif;
+    color:#9a95a2;
+    transition:color .7s ease;
+  }
+  body.dark .empty-note, body.dark .loading-msg{ color:#9a95a2; }
+
+  footer{
+    text-align:center;
+    font-family:'Montserrat',sans-serif;
+    color:#c80064;
+    font-size:13px;
+    padding:20px;
+    position:relative;
+    z-index:2;
+    transition:color .7s ease;
+  }
+  body.dark footer{ color:#b9b3c4; }
+
+  #themeToggle{
+    position:fixed;
+    top:16px;
+    right:16px;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.8);
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
+    font-size:17px;
+    cursor:pointer;
+    z-index:40;
+    opacity:.75;
+    transition:opacity .2s, transform .3s, background .3s, color .3s;
+  }
+  #themeToggle:hover{opacity:1; transform:rotate(15deg);}
+  body.dark #themeToggle{
+    background:rgba(107,127,215,.35);
+    color:#f3eee4;
+    border-color:rgba(255,255,255,.4);
+  }
+
+  /* ---------- page Télécharger ---------- */
+  main.dl{ max-width:820px; }
+  .dl-card{
+    background:rgba(255,255,255,.72);
+    border:3px solid #fff;
+    border-radius:20px;
+    box-shadow:0 8px 24px rgba(20,18,23,.15);
+    padding:22px 24px;
+    margin-bottom:22px;
+    transition:background .7s ease, border-color .7s ease;
+  }
+  body.dark .dl-card{ background:rgba(30,28,36,.55); border-color:rgba(255,255,255,.15); }
+  .hero{ text-align:center; padding:28px 24px 24px; }
+  .hero .logo{
+    font-family:'Montserrat',sans-serif; font-weight:800; font-size:44px; letter-spacing:1px;
+    color:#fff; margin:0;
+    -webkit-text-stroke:2px #141217;
+    text-shadow:4px 4px 0 var(--hotpink), 0 0 18px rgba(255,255,255,.7);
+  }
+  .hero .logo span{ color:var(--hotpink); -webkit-text-stroke:2px #141217; text-shadow:4px 4px 0 #141217; }
+  .hero .tag{ margin:10px 0 18px; color:#5c5866; font-size:14px; font-weight:600; }
+  body.dark .hero .tag{ color:#b9b3c4; }
+  .dl-btn{
+    display:inline-flex; align-items:center; gap:12px;
+    font-family:'Montserrat',sans-serif; font-weight:800; font-size:19px; letter-spacing:.5px;
+    color:#fff; text-decoration:none;
+    background:linear-gradient(90deg,var(--hotpink),var(--purple));
+    border:3px solid #fff; border-radius:16px;
+    padding:16px 30px;
+    box-shadow:0 6px 0 #141217, 0 10px 24px rgba(20,18,23,.35);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .dl-btn:hover{ transform:translateY(-3px); box-shadow:0 9px 0 #141217, 0 14px 28px rgba(20,18,23,.4); }
+  .dl-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #141217, 0 4px 12px rgba(20,18,23,.3); }
+  .dl-meta{ margin-top:14px; font-size:13px; color:#5c5866; }
+  body.dark .dl-meta{ color:#b9b3c4; }
+  .badge{
+    display:inline-block; font-weight:800; font-size:12px; color:#fff;
+    background:var(--hotpink); border-radius:999px; padding:3px 10px; margin:0 4px;
+  }
+  .need{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:14px; }
+  .need span{
+    font-size:12px; font-weight:700; color:#141217; background:rgba(255,255,255,.8);
+    border:2px solid var(--pink); border-radius:999px; padding:5px 12px;
+  }
+  body.dark .need span{ color:#fff8ec; background:rgba(30,28,36,.6); border-color:rgba(255,255,255,.2); }
+
+  ol.steps{ list-style:none; counter-reset:s; margin:0; padding:0; }
+  ol.steps li{
+    counter-increment:s; position:relative; padding:4px 0 14px 50px;
+    color:#2a2630; font-size:14px; line-height:1.55;
+  }
+  body.dark ol.steps li{ color:#f3eee4; }
+  ol.steps li::before{
+    content:counter(s); position:absolute; left:0; top:0;
+    width:34px; height:34px; border-radius:50%;
+    background:linear-gradient(135deg,var(--hotpink),var(--purple)); color:#fff;
+    font-weight:800; display:flex; align-items:center; justify-content:center;
+    border:2px solid #fff; box-shadow:0 3px 8px rgba(20,18,23,.25);
+  }
+  ol.steps b{ color:#141217; }
+  body.dark ol.steps b{ color:#fff8ec; }
+  code{ background:rgba(255,32,140,.15); border-radius:6px; padding:1px 6px; font-size:13px; }
+
+  .feat-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; }
+  .feat{
+    background:rgba(255,255,255,.75); border:2px solid #fff; border-radius:16px;
+    padding:14px 16px; box-shadow:0 4px 12px rgba(20,18,23,.10);
+    transition:transform .2s ease, box-shadow .2s ease, background .7s ease;
+  }
+  .feat:hover{ transform:translateY(-4px) rotate(-.4deg); box-shadow:0 10px 22px rgba(20,18,23,.2); }
+  body.dark .feat{ background:rgba(30,28,36,.55); border-color:rgba(255,255,255,.14); }
+  .feat .ic{ font-size:24px; }
+  .feat h3{ font-family:'Montserrat',sans-serif; font-weight:800; font-size:14px; color:#141217; margin:6px 0 4px; }
+  body.dark .feat h3{ color:#fff8ec; }
+  .feat p{ margin:0; font-size:12.5px; line-height:1.5; color:#4a4652; }
+  body.dark .feat p{ color:#d8d2e0; }
+  .group-title{ font-weight:800; color:#c80064; font-size:13px; letter-spacing:1px; margin:18px 0 10px; text-transform:uppercase; }
+  .group-title:first-child{ margin-top:0; }
+  body.dark .group-title{ color:#ff5fae; }
+
+  .ranks{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .ranks span{ font-weight:800; font-size:11.5px; border-radius:8px; padding:2px 8px; color:#fff; }
+
+  .log{ max-height:340px; overflow-y:auto; padding-right:6px; }
+  .log-item{ display:flex; gap:12px; padding:10px 0; border-bottom:2px dashed rgba(255,32,140,.35); }
+  .log-item:last-child{ border-bottom:none; }
+  .log-v{ flex:0 0 auto; font-weight:800; font-size:13px; color:#fff; background:var(--purple); border-radius:10px; padding:3px 10px; height:fit-content; }
+  .log-item.latest .log-v{ background:var(--hotpink); }
+  .log-txt{ font-size:13px; color:#2a2630; line-height:1.5; }
+  .log-txt small{ display:block; color:#6f6a78; font-size:11.5px; }
+  body.dark .log-txt{ color:#f3eee4; } body.dark .log-txt small{ color:#9a95a2; }
+
+  details.faq{ border-bottom:2px dashed rgba(255,32,140,.35); padding:10px 0; }
+  details.faq:last-child{ border-bottom:none; }
+  details.faq summary{ cursor:pointer; font-weight:800; color:#141217; font-size:14px; list-style:none; }
+  details.faq summary::before{ content:"✦ "; color:var(--hotpink); }
+  body.dark details.faq summary{ color:#fff8ec; }
+  details.faq p{ margin:8px 0 0 18px; font-size:13px; color:#4a4652; line-height:1.55; }
+  body.dark details.faq p{ color:#d8d2e0; }
+  .dl-card h3{ font:900 italic 15px 'Montserrat',sans-serif; margin:18px 0 6px; }
+  .dl-card ul{ margin:0 0 6px; padding-left:20px; line-height:1.6; }
+  .dl-card p, .dl-card li{ font-size:14px; }
+  .dl-card a{ color:var(--hotpink); font-weight:700; }
+  .upd{ color:#5c5866; font-size:12px !important; margin-top:14px; }
+</style>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+
+<div class="marquee-wrap">
+  <div class="marquee">✧･ﾟ: *✧･ﾟ:* TWEWY CO-OP *:･ﾟ✧*:･ﾟ✧　　joue à TWEWY à deux, en local ou en ligne　　★彡</div>
+</div>
+
+<nav class="site-nav">
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+  <a href="index.html">🏠 Accueil</a>
+  <a href="chibis.html">🐣 Chibis</a>
+  <a href="dashboard.html">📝 Dashboard</a>
+  <a href="chat.html">💬 Chat</a>
+  <a href="classement.html">🏆 Classement</a>
+  <a href="telecharger.html">⬇ Télécharger</a>
+</nav>
+
+<header>
+  <h1>✧ Confidentialité ✧</h1>
+  <p class="subtitle">règles de confidentialité et conditions d'utilisation de TWEWY Co-op</p>
+</header>
+
+<main class="dl">
+
+  <section class="dl-card" id="confidentialite">
+    <h2 class="section-title">🛡 règles de confidentialité (RGPD)</h2>
+    <p><b>TWEWY Co-op</b> (ce site, le launcher et le mod pour TWEWY Solo Remix PC) est un projet non commercial et gratuit, réservé aux membres d'un serveur Discord. Aucune donnée n'est vendue, utilisée pour de la publicité ou du profilage, et aucun cookie publicitaire ou de mesure d'audience n'est utilisé.</p>
+
+    <h3>Responsable du traitement</h3>
+    <p>Lucas (« Sauce ! »), administrateur du serveur Discord TWEWY Co-op. Contact : par message privé Discord à l'administrateur du serveur, ou depuis la page <a href="mes-donnees.html">Mes données</a>.</p>
+
+    <h3>Données traitées, finalités et bases légales</h3>
+    <ul>
+      <li><b>Connexion</b> : ton identifiant et ton pseudo Discord, et ton appartenance au serveur (vérifiée à chaque connexion). <i>Finalité</i> : réserver le site aux membres. <i>Base légale</i> : exécution du service que tu demandes (art. 6.1.b). Le jeton Discord sert uniquement à cette vérification et n'est pas conservé.</li>
+      <li><b>Contenu que tu publies</b> : chibi adopté, bio, images et légendes, likes, messages du chat. <i>Finalité</i> : faire fonctionner la communauté. <i>Base légale</i> : exécution du service (art. 6.1.b).</li>
+      <li><b>Données de jeu publiées par le launcher</b> : progression (succès, niveau, XP), scores de la mission du jour, temps joué et écouté avec tes partenaires de co-op, tes 5 titres YouTube les plus écoutés (titre et identifiant de la vidéo). <i>Finalité</i> : profils, classement, onglet Amis. <i>Base légale</i> : exécution du service (art. 6.1.b).</li>
+      <li><b>Musique partagée</b> : pendant une partie à deux, le titre en cours et la file d'attente sont partagés avec ton partenaire, puis supprimés à la fin de la partie.</li>
+      <li><b>Modération</b> : les images sont analysées avant publication <i>directement dans ton navigateur</i> (rien n'est envoyé à un service d'analyse). <i>Base légale</i> : intérêt légitime à garder le site sûr (art. 6.1.f).</li>
+    </ul>
+    <p>Ces données ne sont visibles que par les membres connectés du serveur.</p>
+
+    <h3>Compte YouTube (Google)</h3>
+    <ul>
+      <li>Le launcher demande uniquement un accès <b>en lecture seule</b> (<code>youtube.readonly</code>) : il ne peut rien publier, modifier ni supprimer sur ton compte.</li>
+      <li>Il lit le nom de ta chaîne, tes titres likés et tes playlists, seulement pour te les proposer dans l'onglet MUSIQUE et dans le menu musique du jeu.</li>
+      <li>Ces informations et le jeton d'accès restent <b>sur ton PC</b> (<code>%APPDATA%\TWEWYCoop</code>, jeton chiffré par Windows pour ton seul compte) et ne sont envoyés à aucun serveur de TWEWY Co-op.</li>
+      <li>L'utilisation des données reçues des API Google respecte la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">politique relative aux données utilisateur des services d'API Google</a>, y compris ses exigences d'utilisation limitée.</li>
+      <li>Les vidéos sont lues avec le lecteur officiel de YouTube, soumis aux <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">conditions d'utilisation de YouTube</a> et aux <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">règles de confidentialité de Google</a>.</li>
+      <li>Tu peux délier ton compte à tout moment (bouton <b>Délier</b> du launcher : le jeton est supprimé et révoqué) ou depuis <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">les autorisations de ton compte Google</a>.</li>
+    </ul>
+
+    <h3>Où sont les données, et qui les traite (sous-traitants)</h3>
+    <ul>
+      <li><b>Google Firebase</b> (base de données et connexion) : serveurs en Belgique (europe-west1).</li>
+      <li><b>Cloudflare</b> (fonction de connexion) : vérifie ton appartenance au serveur Discord, ne stocke rien.</li>
+      <li><b>Discord</b> : connexion (« Se connecter avec Discord »).</li>
+      <li><b>GitHub Pages</b> (hébergement du site et des mises à jour) et <b>Google Fonts</b> (police Montserrat) : ces services reçoivent ton adresse IP pour afficher le site, comme tout hébergeur.</li>
+      <li><b>YouTube / rss2json</b> : affichage des dernières vidéos de la chaîne sur l'accueil, et lecteur de musique du launcher.</li>
+    </ul>
+    <p>Certains de ces prestataires sont établis aux États-Unis ; les transferts s'appuient sur le cadre de protection des données UE–États-Unis (Data Privacy Framework) ou sur les clauses contractuelles types de la Commission européenne.</p>
+
+    <h3>Durée de conservation</h3>
+    <ul>
+      <li>Profil, chibi, publications, bio, likes, profil de jeu : tant que tu es membre, ou jusqu'à ce que tu les supprimes.</li>
+      <li>Messages du chat : jusqu'à leur suppression par toi ou un admin.</li>
+      <li>Scores de la mission du jour : 1 an au plus.</li>
+      <li>Musique partagée : supprimée à la fin de la partie.</li>
+      <li>Données du launcher sur ton PC : jusqu'à ce que tu les effaces (dossier <code>%APPDATA%\TWEWYCoop</code>).</li>
+    </ul>
+
+    <h3>Stockage dans ton navigateur</h3>
+    <p>Le site utilise le stockage local de ton navigateur uniquement pour ce qui est nécessaire : ta session de connexion (Firebase) et tes préférences (thème clair/sombre, dernier onglet ouvert). Il n'y a ni cookie publicitaire, ni traceur, ni mesure d'audience : aucun bandeau de consentement n'est donc nécessaire.</p>
+
+    <h3>Tes droits</h3>
+    <p>Tu as le droit d'<b>accéder</b> à tes données, de les <b>rectifier</b>, de les <b>effacer</b>, d'en obtenir une <b>copie portable</b>, de t'<b>opposer</b> à un traitement ou d'en demander la <b>limitation</b>. Sur la page <a href="mes-donnees.html">Mes données</a>, tu peux toi-même <b>télécharger toutes tes données</b> (fichier JSON) et <b>tout supprimer</b>. Pour le reste, contacte l'administrateur sur Discord : réponse sous un mois.</p>
+    <p>Si tu estimes que tes droits ne sont pas respectés, tu peux adresser une réclamation à la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL</a>.</p>
+
+    <h3>Mineurs</h3>
+    <p>Le site est réservé aux membres du serveur Discord, qui exige d'avoir au moins 13 ans. En France, si tu as moins de 15 ans, l'accord d'un parent est nécessaire pour utiliser le site.</p>
+  </section>
+
+  <section class="dl-card" id="conditions">
+    <h2 class="section-title">📜 conditions d'utilisation</h2>
+    <ul>
+      <li>TWEWY Co-op est fourni gratuitement, tel quel, sans garantie. Il n'est ni affilié ni approuvé par Square Enix, Google, YouTube ou Discord.</li>
+      <li>Le mod modifie seulement ta propre copie du jeu, qui doit avoir été achetée légalement ; le jeu d'origine est conservé et aucun fichier du jeu n'est distribué.</li>
+      <li>La musique passe par le lecteur officiel de YouTube : son utilisation doit respecter les conditions d'utilisation de YouTube (la vidéo reste visible pendant la lecture).</li>
+      <li>Tu es responsable de ce que tu publies : pas de contenu illégal, haineux, choquant ou qui ne t'appartient pas. L'administrateur peut retirer des publications, des messages ou des scores.</li>
+    </ul>
+    <p class="upd">Dernière mise à jour : 17/11/2026</p>
+  </section>
+
+</main>
+
+
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op · <a href="confidentialite.html">confidentialité</a> · <a href="mes-donnees.html">mes données</a></footer>
+
+<button id="themeToggle" title="mode sombre">🌙</button>
+
+<script>
+/* Page publique : pas besoin d'être connecté pour télécharger (le fichier est déjà public sur GitHub). */
+const REPO_RAW = 'https://raw.githubusercontent.com/saucestar/twewy-coop/main/';
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function formatDay(iso){
+  if(!iso) return '';
+  const p = iso.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+async function loadVersions(){
+  const log = document.getElementById('changelog');
+  try{
+    const res = await fetch(REPO_RAW + 'manifest.json?t=' + Date.now(), { cache: 'no-store' });
+    const m = await res.json();
+    const versions = (m.versions || []);
+    document.getElementById('verBadge').textContent = m.latest || (versions[0] && versions[0].version) || '?';
+    if(!versions.length){ log.innerHTML = '<div class="empty-note">aucune version publiée pour le moment ✧</div>'; return; }
+    log.innerHTML = versions.map((v, i) =>
+      '<div class="log-item' + (i === 0 ? ' latest' : '') + '">' +
+        '<div class="log-v">' + escapeHtml(v.version) + '</div>' +
+        '<div class="log-txt">' + escapeHtml(v.notes || '') + '<small>' + escapeHtml(formatDay(v.date)) + (i === 0 ? ' · dernière version' : '') + '</small></div>' +
+      '</div>').join('');
+  }catch(e){
+    document.getElementById('verBadge').textContent = 'dernière';
+    log.innerHTML = '<div class="empty-note">impossible de charger la liste des versions pour le moment ✧</div>';
+  }
+}
+
+/* ---------- thème clair / sombre (partagé) ---------- */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(dark){
+  document.body.classList.toggle('dark', dark);
+  themeToggle.textContent = dark ? '☀' : '🌙';
+  themeToggle.title = dark ? 'mode clair' : 'mode sombre';
+  try{ localStorage.setItem('theme', dark ? 'dark' : 'light'); }catch(e){}
+}
+themeToggle.addEventListener('click', () => {
+  applyTheme(!document.body.classList.contains('dark'));
+});
+let savedTheme = null;
+try{ savedTheme = localStorage.getItem('theme'); }catch(e){}
+applyTheme(savedTheme === 'dark');
+
+/* ---------- étoiles décoratives (partagées) ---------- */
+const sparkleChars = ['★','✦','✧','☆','✶'];
+for(let i=0;i<20;i++){
+  const s = document.createElement('div');
+  s.className = 'sparkle';
+  s.textContent = sparkleChars[i % sparkleChars.length];
+  s.style.left = Math.random()*100 + 'vw';
+  s.style.top = Math.random()*100 + 'vh';
+  s.style.animationDelay = (Math.random()*6) + 's';
+  s.style.animationDuration = (4 + Math.random()*5) + 's';
+  s.style.fontSize = (14 + Math.random()*24) + 'px';
+  document.body.appendChild(s);
+}
+
+</script>
+<script src="nav.js"></script>
+<script src="texts.js"></script>
+</body>
+</html>

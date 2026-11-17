@@ -436,3 +436,15 @@ body.dark .ad-main textarea, body.dark .ad-post input, body.dark .ad-text input,
 header:has(> h1.pagetitle){ text-align:center; padding:26px 16px 6px; }
 header:has(> h1.pagetitle) .subtitle{ margin:6px 0 0; font:600 14px 'Montserrat',sans-serif; color:var(--muted); }
 body.dark header:has(> h1.pagetitle) .subtitle{ color:#b9b3c4; }
+
+/* ---------- mes données (RGPD) ---------- */
+.md-p{ font:600 13px/1.6 'Montserrat',sans-serif; color:var(--ink); margin:0 0 12px; }
+.md-p code{ background:var(--paper2); padding:1px 5px; border-radius:4px; }
+.md-big{ display:inline-block; margin-top:6px; padding:9px 16px !important; font-size:14px !important; cursor:pointer; }
+.md-big:disabled{ opacity:.4; cursor:default; }
+.md-confirm{ display:flex; align-items:center; gap:8px; font:700 13px 'Montserrat',sans-serif; margin:4px 0 6px; color:var(--ink); }
+.md-log{ margin-top:12px; font:600 12px/1.6 'Montserrat',sans-serif; color:var(--ink); }
+.md-foot{ margin-top:22px; text-align:center; }
+.md-foot a, footer a{ color:var(--accent); font-weight:800; }
+body.dark .md-p, body.dark .md-confirm, body.dark .md-log{ color:var(--paper); }
+body.dark .md-p code{ background:#2a2630; }

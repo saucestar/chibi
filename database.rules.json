@@ -6,7 +6,7 @@
     "assignments": {
       ".read": "auth != null",
       "$chibi": {
-        ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId && root.child('settings/selectionClosed').val() !== true && root.child('hiddenChibis').child($chibi).val() !== true))",
+        ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId && root.child('settings/selectionClosed').val() !== true && root.child('hiddenChibis').child($chibi).val() !== true) || (!newData.exists() && data.child('discordId').val() === auth.token.discordId))",
         ".validate": "newData.hasChildren(['discordId', 'discordUsername'])",
         "discordId": { ".validate": "newData.isString() && newData.val().length <= 25" },
         "discordUsername": { ".validate": "newData.isString() && newData.val().length <= 64" },
