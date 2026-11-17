@@ -75,7 +75,7 @@
   const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
   async function load(db, discordId){
-    const days = []; for (let i = 0; i < 7; i++){ const d = new Date(); d.setDate(d.getDate() - i); days.push({ key: dayKey(d), date: d }); }
+    const days = []; for (let i = 0; i < 7; i++){ const d = new Date(); d.setDate(d.getDate() - i); days.push({ key: dayKey(d), date: d, offset: i }); }
     const [cSnap, aSnap, ...mSnaps] = await Promise.all([
       db.ref('coop/' + discordId).get().catch(() => null),
       db.ref('assignments').get().catch(() => null),
@@ -97,71 +97,76 @@
     return c ? `<a href="membre.html?id=${encodeURIComponent(c)}">@${esc(name)}</a>` : '@' + esc(name);
   }
 
-  // header strip (always visible): level badge + XP bar
-  function summaryHtml(data){
-    if (!data.coop) return `<div class="cp-summary cp-none">pas encore de progression : le launcher TWEWY Co-op la publie après la connexion Discord</div>`;
+  // level / XP / counts of a published profile (null when the launcher never published one)
+  function stats(data){
+    if (!data.coop) return null;
     const info = parse(data.coop.progress), all = build(info), un = data.coop.unlocked || {};
     let xp = +data.coop.bonusXp || 0, n = 0; all.forEach(a => { if (un[a.id] != null){ xp += a.xp; n++; } });
-    const L = level(xp), pct = Math.round(L.into * 100 / L.need);
-    return `<div class="cp-summary">
-      <span class="cp-level">NIVEAU ${L.lv}</span>
-      <div class="cp-bar" title="${L.into} / ${L.need} XP"><i style="width:${pct}%"></i><span>${L.into} / ${L.need} XP</span></div>
-      <div class="cp-sub">${xp} XP au total · ${n}/${all.length} succès${data.coop.updatedAt ? ' · màj ' + ago(+data.coop.updatedAt) : ''}</div>
-    </div>`;
+    return Object.assign({ xp, n, total: all.length, all, un, updated: +data.coop.updatedAt || 0 }, level(xp));
   }
 
-  function progressionHtml(data, discordId){
-    let h = '';
-    // ---- leaderboard
-    const today = data.days[0];
-    const myRank = today.rows.findIndex(r => r.id === discordId);
-    h += `<h3 class="cp-h">✦ MISSION DU JOUR</h3>`;
-    if (!today.rows.length) h += `<div class="cp-empty">Personne n'a encore fait la mission aujourd'hui.</div>`;
-    else {
-      h += `<div class="cp-note">${myRank >= 0 ? `<b>#${myRank + 1}</b> sur ${today.rows.length} joueur${today.rows.length > 1 ? 's' : ''} · <b>${today.rows[myRank].score} pts</b>` : `Pas encore de mission aujourd'hui · ${today.rows.length} joueur${today.rows.length > 1 ? 's' : ''} classé${today.rows.length > 1 ? 's' : ''}`}</div>`;
-      h += `<table class="cp-table"><thead><tr><th>#</th><th>Joueur</th><th>Pts</th><th>Ennemis</th><th>Quêtes</th></tr></thead><tbody>`;
-      today.rows.forEach((r, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
-        h += `<tr class="${r.id === discordId ? 'me' : ''}"><td>${medal}</td><td>${playerLink(data.chibiOf, r.id, r.name)}</td><td>${r.score}</td><td>${r.kills}</td><td>${r.quests}/3</td></tr>`;
+  // ---- the launcher's dark lists (PunkRows): accent header, alternating ink rows, section bands, coloured dots
+  function list(cols, rows, empty){
+    let h = `<div class="lp-list" style="--cols:${cols.map(c => c.w || 'minmax(0,1fr)').join(' ')}"><div class="lp-hrow">`;
+    cols.forEach(c => h += `<span class="${c.r ? 'r' : ''}">${c.t}</span>`);
+    h += `</div><div class="lp-body">`;
+    if (!rows.length) h += `<div class="lp-empty">${empty}</div>`;
+    rows.forEach(r => {
+      if (r.sec){ h += `<div class="lp-sec"><span>✦ ${esc(r.sec)}</span><b>${r.count || ''}</b></div>`; return; }
+      h += `<div class="lp-row${r.me ? ' me' : ''}"${r.tip ? ` title="${esc(r.tip)}"` : ''}>`;
+      r.cells.forEach((c, i) => {
+        h += `<span class="${cols[i].r ? 'r ' : ''}${i && r.dim ? 'dim' : i ? 'hi' : ''}">${i === 0 ? `<i class="dot ${r.dot || ''}"></i>` : ''}${c}</span>`;
       });
-      h += `</tbody></table>`;
-    }
-    // ---- last 7 days of this player
-    const hist = data.days.map(d => { const i = d.rows.findIndex(r => r.id === discordId); return i < 0 ? null : { d, rank: i + 1, of: d.rows.length, r: d.rows[i] }; }).filter(Boolean);
-    h += `<h3 class="cp-h">✦ 7 DERNIERS JOURS</h3>`;
-    if (!hist.length) h += `<div class="cp-empty">Aucune mission sur les 7 derniers jours.</div>`;
-    else {
-      const best = hist.reduce((a, b) => (b.rank < a.rank || (b.rank === a.rank && b.r.score > a.r.score)) ? b : a);
-      h += `<div class="cp-note">${hist.length} mission${hist.length > 1 ? 's' : ''} · meilleur classement <b>#${best.rank}</b> (${DAYS[best.d.date.getDay()]} ${best.d.date.getDate()})</div>`;
-      h += `<table class="cp-table"><thead><tr><th>Jour</th><th>Place</th><th>Pts</th><th>Ennemis</th><th>Quêtes</th></tr></thead><tbody>`;
-      hist.forEach(x => {
-        h += `<tr><td>${x.d === today ? "aujourd'hui" : DAYS[x.d.date.getDay()] + ' ' + x.d.date.getDate()}</td><td>#${x.rank} / ${x.of}</td><td>${x.r.score}</td><td>${x.r.kills}</td><td>${x.r.quests}/3</td></tr>`;
-      });
-      h += `</tbody></table>`;
-    }
-    // ---- achievements
-    if (!data.coop){ h += `<h3 class="cp-h">✦ SUCCÈS</h3><div class="cp-empty">Pas encore de succès publiés.</div>`; return h; }
-    const info = parse(data.coop.progress), all = build(info), un = data.coop.unlocked || {};
-    let sec = null;
-    all.forEach(a => {
-      if (a.sec !== sec){
-        if (sec) h += `</div>`;
-        sec = a.sec;
-        const list = all.filter(x => x.sec === sec), got = list.filter(x => un[x.id] != null).length;
-        h += `<h3 class="cp-h">✦ ${sec} <span>${got}/${list.length}</span></h3><div class="cp-achs">`;
-      }
-      const ok = un[a.id] != null;
-      const prog = !ok && a.prog ? `<div class="cp-pbar"><i style="width:${Math.round(a.prog[0] * 100 / Math.max(1, a.prog[1]))}%"></i></div><span class="cp-ptext">${a.prog[0]}/${a.prog[1]}</span>` : '';
-      h += `<div class="cp-ach ${ok ? 'ok' : ''}">
-        <div class="cp-ico">${ok ? '★' : '☆'}</div>
-        <div class="cp-txt"><b>${esc(a.name)}</b><small>${esc(a.desc)}</small>${prog}</div>
-        <div class="cp-xp">+${a.xp} XP${ok && un[a.id] ? `<small>${fmtDate(un[a.id])}</small>` : ''}</div>
-      </div>`;
+      h += `</div>`;
     });
-    if (sec) h += `</div>`;
-    if (+data.coop.bonusXp) h += `<div class="cp-note">+ ${+data.coop.bonusXp} XP gagnés avec les quêtes du jour</div>`;
-    return h;
+    return h + `</div></div>`;
   }
 
-  window.CoopProgress = { load, summaryHtml, progressionHtml, parse, build, level };
+  function achList(data){
+    const st = stats(data);
+    if (!st) return list([{ t: 'Succès' }], [], 'pas encore de succès publiés : le launcher TWEWY Co-op les publie après la connexion Discord');
+    const rows = [];
+    // same order as the launcher: badges, brands, story
+    const order = ['COLLECTION DE BADGES', 'MARQUES', 'HISTOIRE'];
+    order.forEach(sec => {
+      const l = st.all.filter(a => a.sec === sec);
+      if (!l.length) return;
+      rows.push({ sec, count: l.filter(a => st.un[a.id] != null).length + ' / ' + l.length });
+      l.forEach(a => {
+        const ok = st.un[a.id] != null;
+        rows.push({ dot: ok ? 'acid' : '', dim: !ok, tip: a.desc,
+          cells: [esc(a.name), '+' + a.xp + ' XP', ok ? esc(st.un[a.id] || '✔') : a.prog ? a.prog[0] + '/' + a.prog[1] : '—'] });
+      });
+    });
+    if (!st.all.some(a => a.sec === 'MARQUES')){
+      rows.splice(rows.findIndex(r => r.sec === 'HISTOIRE'), 0, { sec: 'MARQUES' },
+        { dim: true, cells: ['Collection de chaque marque', '+300 XP', '—'], tip: 'apparaît quand le jeu a exporté la collection' });
+    }
+    return list([{ t: 'Succès' }, { t: 'XP', w: '88px' }, { t: 'Obtenu', w: '96px' }], rows, '');
+  }
+
+  function boardList(day, discordId, chibiOf){
+    const rows = day.rows.map((r, i) => ({
+      me: r.id === discordId,
+      dot: i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '',
+      cells: ['#' + (i + 1) + '  ' + playerLink(chibiOf, r.id, r.name), r.score + ' pts', String(r.kills), r.quests + '/3'],
+    }));
+    return list([{ t: 'Joueur' }, { t: 'Points', w: '86px' }, { t: 'Ennemis', w: '72px', r: true }, { t: 'Quêtes', w: '60px', r: true }], rows,
+      day.offset === 0 ? "Personne n'a encore fait la mission aujourd'hui." : "Personne n'a fait la mission ce jour-là.");
+  }
+
+  function historyList(data, discordId){
+    const rows = [];
+    data.days.forEach(d => {
+      const i = d.rows.findIndex(r => r.id === discordId);
+      const label = d.offset === 0 ? "Aujourd'hui" : DAYS[d.date.getDay()] + ' ' + d.date.getDate() + '/' + (d.date.getMonth() + 1);
+      if (i < 0) rows.push({ dim: true, cells: [label, '—', '', ''] });
+      else { const r = d.rows[i]; rows.push({ dot: i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'acid', cells: [label, '#' + (i + 1) + ' / ' + d.rows.length, r.score + ' pts', r.kills + ' · ' + r.quests + '/3'] }); }
+    });
+    return list([{ t: 'Jour' }, { t: 'Place', w: '74px' }, { t: 'Points', w: '82px' }, { t: 'Ennemis · quêtes', w: '120px', r: true }], rows, '');
+  }
+
+  function dayLabel(d){ return (d.offset === 0 ? "Aujourd'hui" : d.offset === 1 ? 'Hier' : DAYS[d.date.getDay()]) + '  ·  ' + String(d.date.getDate()).padStart(2, '0') + '/' + String(d.date.getMonth() + 1).padStart(2, '0'); }
+
+  window.CoopProgress = { load, stats, achList, boardList, historyList, dayLabel, ago, parse, build, level };
 })();

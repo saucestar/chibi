@@ -617,51 +617,82 @@ async function renderProfile(){
 
   const isOwnProfile = !!(discordUser && discordId && discordUser.id === discordId);
 
+  // same layout as the launcher: numbered sticker panels, PROFIL (avatar, level, XP, achievements list) next to
+  // PUBLICATIONS, then CLASSEMENT (daily mission, day by day) next to HISTORIQUE (this player's last 7 missions)
+  const panel = (num, title, body, cls) => `
+    <section class="lp-panel ${cls || ''}">
+      <div class="lp-chip"><i>${num}</i>${title}</div>
+      <div class="lp-win"><b></b><b></b></div><div class="lp-tape"></div>
+      ${body}
+    </section>`;
+  mainEl.classList.add('lp-main');
   mainEl.innerHTML = `
-    <section class="profile-header">
-      <div class="avatar-ring">
-        <div class="avatar-inner">${img ? `<img src="${img}" alt="${escapeHtml(username)}">` : '🌸'}</div>
-      </div>
-      <div class="profile-meta">
-        <div class="profile-name-row">
-          <span class="profile-username">@${escapeHtml(username)}</span>
-          ${discordId ? `<a class="pf-btn" href="https://discord.com/users/${encodeURIComponent(discordId)}" target="_blank" rel="noopener">🎮 Discord</a>` : ''}
-          ${isOwnProfile ? `<a class="pf-btn edit" href="dashboard.html">✏️ modifier mon profil</a>` : ''}
+    <div class="lp-grid">
+      ${panel('05', 'PROFIL', `
+        <div class="lp-head">
+          <div class="avatar-ring">
+            <div class="avatar-inner">${img ? `<img src="${img}" alt="${escapeHtml(username)}">` : '🌸'}</div>
+          </div>
+          <div class="lp-meta">
+            <div class="lp-name-row">
+              <span class="lp-name">@${escapeHtml(username)}</span>
+              ${discordId ? `<a class="lp-btn" href="https://discord.com/users/${encodeURIComponent(discordId)}" target="_blank" rel="noopener">DISCORD ▸</a>` : ''}
+            </div>
+            <div class="lp-level" id="lpLevel">NIVEAU –</div>
+            <div class="lp-xp" id="lpXp"><i style="width:0"></i><span>chargement…</span></div>
+            <div class="lp-stats" id="lpStats"></div>
+          </div>
         </div>
-        <div class="bio">${escapeHtml(bioText)}</div>
-        <div><span class="badge-taken2">adopté ★</span></div>
-        <div id="cpSummary"></div>
-      </div>
-    </section>
-
-    <div class="tabs">
-      <button type="button" class="tab" data-tab="posts">▦ PUBLICATIONS</button>
-      <button type="button" class="tab" data-tab="prog">★ PROGRESSION</button>
+        <div class="lp-bio">${escapeHtml(bioText)}${isOwnProfile ? ` <a class="lp-edit" href="dashboard.html">✏️ modifier</a>` : ''}</div>
+        <div id="lpAch" class="lp-fill"><div class="lp-list"><div class="lp-body"><div class="lp-empty">chargement…</div></div></div></div>
+      `, 'lp-profile')}
+      ${panel('06', 'PUBLICATIONS', `<div class="lp-dark lp-fill"><div id="postsWrap"></div></div>`, 'lp-posts')}
+      ${panel('07', 'CLASSEMENT', `
+        <div class="lp-daynav">
+          <button type="button" class="lp-arrow" id="lpPrev" title="jour précédent">◀</button>
+          <span id="lpDay">Aujourd'hui</span>
+          <button type="button" class="lp-arrow" id="lpNext" title="jour suivant">▶</button>
+        </div>
+        <div id="lpBoard" class="lp-fill"></div>
+        <div class="lp-foot" id="lpBoardFoot"></div>
+      `, 'lp-board')}
+      ${panel('08', 'HISTORIQUE', `<div id="lpHist" class="lp-fill"></div><div class="lp-foot" id="lpHistFoot"></div>`, 'lp-hist')}
     </div>
-
-    <div id="postsWrap"></div>
-    <div id="progWrap" class="cp-wrap" hidden><div class="cp-empty">chargement de la progression…</div></div>
   `;
 
-  // game progression (published by the TWEWY Co-op launcher): level in the header, details in the PROGRESSION tab
-  const progWrap = document.getElementById('progWrap');
-  const tabs = mainEl.querySelectorAll('.tabs .tab');
-  function showTab(t){
-    tabs.forEach(b => b.classList.toggle('on', b.dataset.tab === t));
-    document.getElementById('postsWrap').hidden = t !== 'posts';
-    progWrap.hidden = t !== 'prog';
-    try { localStorage.setItem('profileTab', t); } catch(e){}
-  }
-  tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  let firstTab = 'posts'; try { firstTab = localStorage.getItem('profileTab') === 'prog' ? 'prog' : 'posts'; } catch(e){}
-  if (location.hash === '#progression') firstTab = 'prog';
-  showTab(firstTab);
   if (discordId && window.CoopProgress){
     CoopProgress.load(db, discordId).then(data => {
-      document.getElementById('cpSummary').innerHTML = CoopProgress.summaryHtml(data);
-      progWrap.innerHTML = CoopProgress.progressionHtml(data, discordId);
-    }).catch(() => { progWrap.innerHTML = '<div class="cp-empty">progression indisponible pour le moment.</div>'; });
-  } else progWrap.innerHTML = '<div class="cp-empty">pas de progression.</div>';
+      const st = CoopProgress.stats(data);
+      if (st){
+        document.getElementById('lpLevel').textContent = 'NIVEAU ' + st.lv;
+        const xp = document.getElementById('lpXp');
+        xp.querySelector('i').style.width = Math.round(st.into * 100 / st.need) + '%';
+        xp.querySelector('span').textContent = st.into + ' / ' + st.need + ' XP';
+        document.getElementById('lpStats').textContent = st.n + ' / ' + st.total + ' succès  ·  ' + st.xp + ' XP' + (st.updated ? '  ·  màj ' + CoopProgress.ago(st.updated) : '');
+      } else {
+        document.getElementById('lpLevel').textContent = 'NIVEAU 1';
+        document.getElementById('lpXp').querySelector('span').textContent = '0 / 200 XP';
+        document.getElementById('lpStats').textContent = 'pas encore de profil de jeu publié';
+      }
+      document.getElementById('lpAch').innerHTML = CoopProgress.achList(data);
+      document.getElementById('lpHist').innerHTML = CoopProgress.historyList(data, discordId);
+      const played = data.days.filter(d => d.rows.some(r => r.id === discordId)).length;
+      document.getElementById('lpHistFoot').textContent = played + ' mission' + (played > 1 ? 's' : '') + ' sur les 7 derniers jours';
+      let day = 0;
+      const showDay = () => {
+        const d = data.days[day];
+        document.getElementById('lpDay').textContent = CoopProgress.dayLabel(d);
+        document.getElementById('lpBoard').innerHTML = CoopProgress.boardList(d, discordId, data.chibiOf);
+        document.getElementById('lpPrev').disabled = day >= data.days.length - 1;
+        document.getElementById('lpNext').disabled = day === 0;
+        const i = d.rows.findIndex(r => r.id === discordId);
+        document.getElementById('lpBoardFoot').textContent = d.rows.length + ' joueur' + (d.rows.length > 1 ? 's' : '') + ' classé' + (d.rows.length > 1 ? 's' : '') + (i >= 0 ? '  ·  @' + username + ' est #' + (i + 1) : '');
+      };
+      document.getElementById('lpPrev').onclick = () => { if (day < data.days.length - 1){ day++; showDay(); } };
+      document.getElementById('lpNext').onclick = () => { if (day > 0){ day--; showDay(); } };
+      showDay();
+    }).catch(() => { document.getElementById('lpAch').innerHTML = '<div class="lp-empty">progression indisponible pour le moment.</div>'; });
+  }
 
   const postsWrap = document.getElementById('postsWrap');
 
