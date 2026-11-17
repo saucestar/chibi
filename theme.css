@@ -40,11 +40,13 @@ html::before{
   content:"SHIBUYA";
   position:fixed; left:-1vw; bottom:2vh; z-index:0; pointer-events:none;
   font:900 italic 22vw/1 'Montserrat',sans-serif; letter-spacing:-.02em;
-  color:transparent; -webkit-text-stroke:3px rgba(20,18,23,.08);
+  /* filled with the page colour, stroke painted under the fill: only the outer outline shows,
+     no lines where the glyph shapes overlap inside the letters */
+  color:var(--paper2); -webkit-text-stroke:6px #d4cfc1; paint-order:stroke fill;
   transform:rotate(-5deg);
 }
 body.dark{ color:var(--paper); }
-html:has(body.dark)::before{ -webkit-text-stroke-color:rgba(255,255,255,.06); }
+html:has(body.dark)::before{ color:#16141a; -webkit-text-stroke-color:#252328; }
 
 /* sparkles become little yellow poster stars */
 .sparkle{
