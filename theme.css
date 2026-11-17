@@ -167,10 +167,30 @@ body.dark .login-bar, body.dark .modal-box, body.dark .modal-content, body.dark 
 .msg-row.mine .msg-uname, .msg-row.mine .msg-time{ color:rgba(255,255,255,.85) !important; }
 body.dark .msg-bubble{ background:#2c2832 !important; color:var(--paper) !important; border-color:#000 !important; box-shadow:3px 3px 0 var(--accent) !important; }
 
-/* round avatars get the ink ring */
-.feed-avatar-inner, .msg-avatar-inner, .mini-avatar-inner, .avatar-ring .avatar-inner{
-  background:#fff !important; border:2.5px solid var(--ink) !important;
+/* round avatars, drawn like the launcher's: the chibi's head (avatar.js crops it) filling a soft-pink disc,
+   thick ink ring, a pink ring just inside it, and a hard ink shadow */
+.feed-avatar, .msg-avatar, .mini-avatar, .avatar-ring{
+  padding:0 !important; background:none !important; box-shadow:none !important;
 }
+.feed-avatar-inner, .msg-avatar-inner, .mini-avatar-inner, .avatar-ring .avatar-inner{
+  position:relative; box-sizing:border-box;
+  background:#ff78be !important; border:2.5px solid var(--ink) !important;
+  box-shadow:3px 3px 0 var(--ink) !important;
+}
+.avatar-ring .avatar-inner{ border-width:4px !important; box-shadow:5px 5px 0 var(--ink) !important; }
+.feed-avatar-inner::after, .msg-avatar-inner::after, .mini-avatar-inner::after, .avatar-ring .avatar-inner::after{
+  content:""; position:absolute; inset:1px; border-radius:50%; border:2px solid var(--accent); pointer-events:none;
+}
+.msg-avatar-inner::after{ border-width:1.5px; }
+.avatar-ring .avatar-inner::after{ inset:2px; border-width:3px; }
+.feed-avatar-inner img, .msg-avatar-inner img, .mini-avatar-inner img, .avatar-ring .avatar-inner img{
+  width:100% !important; height:100% !important; object-fit:cover !important; filter:none !important;
+  opacity:0; transition:opacity .2s ease;
+}
+.feed-avatar-inner img.head-ready, .msg-avatar-inner img.head-ready, .mini-avatar-inner img.head-ready,
+.avatar-ring .avatar-inner img.head-ready{ opacity:1; }
+body.dark .feed-avatar-inner, body.dark .msg-avatar-inner, body.dark .mini-avatar-inner,
+body.dark .avatar-ring .avatar-inner{ background:#ff78be !important; border-color:#000 !important; box-shadow:3px 3px 0 var(--accent) !important; }
 
 /* ---------- buttons: flat sticker, ink outline, hard shadow ---------- */
 .btn-confirm, .btn-discord, .send-btn, .pf-btn, .dl-btn, .btn-cancel, .btn-delete, .btn-restore, .backlink,
@@ -281,3 +301,51 @@ body.dark .label.empty{ background:transparent !important; color:#9a95a2 !import
   box-shadow:3px 3px 0 var(--ink) !important;
 }
 .badge-taken2{ background:var(--ink) !important; color:#fff !important; border:2px solid var(--ink) !important; border-radius:6px !important; font-style:italic; font-weight:900 !important; box-shadow:2px 2px 0 var(--accent) !important; }
+
+/* ---------- profile: game progression (progress.js) ---------- */
+.tabs .tab{ background:none; border:none; border-top:2px solid transparent; cursor:pointer; opacity:.55; font-family:'Montserrat',sans-serif !important; font-weight:900 !important; font-style:italic; }
+.tabs .tab.on{ opacity:1; border-top-color:var(--accent) !important; color:var(--ink); }
+body.dark .tabs .tab.on{ color:var(--paper); }
+.cp-summary{ margin-top:12px; display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.cp-summary.cp-none{ font-size:12px; font-weight:600; color:var(--muted); }
+.cp-level{ background:var(--ink); color:#fff; font:900 italic 15px/1 'Montserrat',sans-serif; padding:7px 12px 8px; border-radius:6px; box-shadow:3px 3px 0 var(--accent); transform:rotate(-2deg); }
+.cp-bar{ position:relative; flex:1; min-width:160px; height:24px; background:var(--paper); border:2.5px solid var(--ink); border-radius:6px; overflow:hidden; box-shadow:3px 3px 0 var(--ink); }
+.cp-bar i{ position:absolute; inset:0 auto 0 0; background:repeating-linear-gradient(-45deg, var(--accent) 0 10px, #ff4fa6 10px 20px); animation:cpStripes 1s linear infinite; }
+@keyframes cpStripes{ to{ background-position:28px 0; } }
+.cp-bar span{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); background:var(--ink); color:#fff; padding:2px 8px 3px; border-radius:4px; font:800 11px 'Montserrat',sans-serif; white-space:nowrap; }
+.cp-sub{ flex-basis:100%; font-size:12px; font-weight:700; color:var(--muted); }
+body.dark .cp-sub, body.dark .cp-summary.cp-none{ color:#b9b3c4; }
+
+.cp-wrap{ padding:6px 2px 24px; }
+.cp-h{ display:inline-block; margin:22px 0 10px; background:var(--ink); color:#fff; font:900 italic 13px/1 'Montserrat',sans-serif; letter-spacing:.5px; padding:7px 12px; border-radius:6px; box-shadow:3px 3px 0 var(--accent); }
+.cp-h span{ color:var(--yellow); margin-left:6px; }
+.cp-note{ font-size:13px; font-weight:600; margin:0 0 10px; }
+.cp-note b{ color:var(--accent); }
+.cp-empty{ font-size:13px; font-weight:600; color:var(--muted); padding:10px 0; }
+.cp-table{ width:100%; border-collapse:separate; border-spacing:0; background:var(--paper); border:2.5px solid var(--ink); border-radius:10px; box-shadow:4px 4px 0 var(--ink); overflow:hidden; font-size:13px; }
+.cp-table th{ background:var(--ink); color:#fff; font:900 italic 11px 'Montserrat',sans-serif; text-transform:uppercase; letter-spacing:.5px; text-align:left; padding:8px 10px; }
+.cp-table td{ padding:8px 10px; border-top:1.5px solid rgba(20,18,23,.12); font-weight:600; color:var(--ink); }
+.cp-table tr:first-child td{ border-top:none; }
+.cp-table td:nth-child(n+3), .cp-table th:nth-child(n+3){ text-align:right; }
+.cp-table tr.me td{ background:var(--yellow); font-weight:800; }
+.cp-table a{ color:var(--ink); font-weight:800; text-decoration:none; border-bottom:2px solid var(--accent); }
+.cp-achs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+.cp-ach{ display:flex; align-items:center; gap:10px; background:var(--paper); border:2.5px solid var(--ink); border-radius:10px; padding:9px 11px; box-shadow:3px 3px 0 rgba(20,18,23,.35); opacity:.7; min-width:0; }
+.cp-ach.ok{ opacity:1; box-shadow:3px 3px 0 var(--ink); }
+.cp-ico{ flex-shrink:0; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:var(--paper2); border:2px solid var(--ink); color:var(--muted); }
+.cp-ach.ok .cp-ico{ background:var(--yellow); color:var(--ink); }
+.cp-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; color:var(--ink); }
+.cp-txt b{ font:800 13px/1.2 'Montserrat',sans-serif; overflow-wrap:anywhere; }
+.cp-txt small{ font-size:11px; font-weight:600; color:var(--muted); }
+.cp-pbar{ height:7px; background:var(--paper2); border:1.5px solid var(--ink); border-radius:4px; overflow:hidden; margin-top:4px; }
+.cp-pbar i{ display:block; height:100%; background:var(--accent); }
+.cp-ptext{ font-size:10px; font-weight:800; color:var(--muted); }
+.cp-xp{ flex-shrink:0; text-align:right; font:900 italic 12px 'Montserrat',sans-serif; color:var(--accent); display:flex; flex-direction:column; }
+.cp-xp small{ font:600 normal 10px 'Montserrat',sans-serif; color:var(--muted); }
+body.dark .cp-table, body.dark .cp-ach, body.dark .cp-bar{ background:#2a2630; border-color:#000; }
+body.dark .cp-table td, body.dark .cp-txt{ color:var(--paper); }
+body.dark .cp-table tr.me td{ color:var(--ink); }
+body.dark .cp-table a{ color:var(--paper); }
+body.dark .cp-table tr.me a{ color:var(--ink); }
+body.dark .cp-txt small, body.dark .cp-empty, body.dark .cp-ptext, body.dark .cp-xp small{ color:#b9b3c4; }
+@media (max-width:520px){ .cp-table td:nth-child(4), .cp-table th:nth-child(4){ display:none; } }

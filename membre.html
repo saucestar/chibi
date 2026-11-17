@@ -464,6 +464,7 @@
   }
 </style>
 <link rel="stylesheet" href="theme.css">
+<script src="avatar.js"></script>
 </head>
 <body>
 
@@ -501,6 +502,7 @@
 </div>
 
 <script src="chibi-data.js"></script>
+<script src="progress.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -628,15 +630,38 @@ async function renderProfile(){
         </div>
         <div class="bio">${escapeHtml(bioText)}</div>
         <div><span class="badge-taken2">adopté ★</span></div>
+        <div id="cpSummary"></div>
       </div>
     </section>
 
     <div class="tabs">
-      <div class="tab">▦ PUBLICATIONS</div>
+      <button type="button" class="tab" data-tab="posts">▦ PUBLICATIONS</button>
+      <button type="button" class="tab" data-tab="prog">★ PROGRESSION</button>
     </div>
 
     <div id="postsWrap"></div>
+    <div id="progWrap" class="cp-wrap" hidden><div class="cp-empty">chargement de la progression…</div></div>
   `;
+
+  // game progression (published by the TWEWY Co-op launcher): level in the header, details in the PROGRESSION tab
+  const progWrap = document.getElementById('progWrap');
+  const tabs = mainEl.querySelectorAll('.tabs .tab');
+  function showTab(t){
+    tabs.forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+    document.getElementById('postsWrap').hidden = t !== 'posts';
+    progWrap.hidden = t !== 'prog';
+    try { localStorage.setItem('profileTab', t); } catch(e){}
+  }
+  tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  let firstTab = 'posts'; try { firstTab = localStorage.getItem('profileTab') === 'prog' ? 'prog' : 'posts'; } catch(e){}
+  if (location.hash === '#progression') firstTab = 'prog';
+  showTab(firstTab);
+  if (discordId && window.CoopProgress){
+    CoopProgress.load(db, discordId).then(data => {
+      document.getElementById('cpSummary').innerHTML = CoopProgress.summaryHtml(data);
+      progWrap.innerHTML = CoopProgress.progressionHtml(data, discordId);
+    }).catch(() => { progWrap.innerHTML = '<div class="cp-empty">progression indisponible pour le moment.</div>'; });
+  } else progWrap.innerHTML = '<div class="cp-empty">pas de progression.</div>';
 
   const postsWrap = document.getElementById('postsWrap');
 
