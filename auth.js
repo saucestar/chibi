@@ -9,9 +9,20 @@
   let lastError = '';
 
   // Discord only accepts the exact addresses registered in the app: "/chibi/" becomes "/chibi/index.html"
+  // pages registered as redirects in the Discord app; any other page logs in through index.html and comes back
+  const REGISTERED = ['index.html', 'chibis.html', 'dashboard.html', 'chat.html', 'membre.html'];
+  function pageName(){
+    let path = window.location.pathname;
+    if(path.endsWith('/')) path += 'index.html';
+    return path.slice(path.lastIndexOf('/') + 1);
+  }
   function redirectUri(){
     let path = window.location.pathname;
     if(path.endsWith('/')) path += 'index.html';
+    if(REGISTERED.indexOf(pageName()) < 0){
+      try{ sessionStorage.setItem('loginReturn', window.location.pathname + window.location.search); }catch(e){}
+      path = path.slice(0, path.lastIndexOf('/') + 1) + 'index.html';
+    }
     return window.location.origin + path;
   }
 
@@ -38,6 +49,9 @@
       const data = await res.json().catch(() => ({}));
       if(!res.ok || !data.firebaseToken){ lastError = data.error || 'connexion refusée'; return; }
       await firebase.auth().signInWithCustomToken(data.firebaseToken);
+      let back = null;
+      try{ back = sessionStorage.getItem('loginReturn'); sessionStorage.removeItem('loginReturn'); }catch(e){}
+      if(back && back.charAt(0) === '/' && back.charAt(1) !== '/'){ window.location.replace(back); await new Promise(() => {}); }
     }catch(e){
       lastError = 'serveur de connexion injoignable';
     }

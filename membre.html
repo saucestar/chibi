@@ -478,6 +478,7 @@
   <a href="chibis.html">🐣 Chibis</a>
   <a href="dashboard.html">📝 Dashboard</a>
   <a href="chat.html">💬 Chat</a>
+  <a href="classement.html">🏆 Classement</a>
   <a href="telecharger.html">⬇ Télécharger</a>
 </nav>
 
@@ -618,7 +619,7 @@ async function renderProfile(){
   const isOwnProfile = !!(discordUser && discordId && discordUser.id === discordId);
 
   // same layout as the launcher: numbered sticker panels, PROFIL (avatar, level, XP, achievements list) next to
-  // PUBLICATIONS, then CLASSEMENT (daily mission, day by day) next to HISTORIQUE (this player's last 7 missions)
+  // PUBLICATIONS (the daily mission leaderboard has its own page: classement.html)
   const panel = (num, title, body, cls) => `
     <section class="lp-panel ${cls || ''}">
       <div class="lp-chip"><i>${num}</i>${title}</div>
@@ -647,16 +648,6 @@ async function renderProfile(){
         <div id="lpAch" class="lp-fill"><div class="lp-list"><div class="lp-body"><div class="lp-empty">chargement…</div></div></div></div>
       `, 'lp-profile')}
       ${panel('06', 'PUBLICATIONS', `<div class="lp-dark lp-fill"><div id="postsWrap"></div></div>`, 'lp-posts')}
-      ${panel('07', 'CLASSEMENT', `
-        <div class="lp-daynav">
-          <button type="button" class="lp-arrow" id="lpPrev" title="jour précédent">◀</button>
-          <span id="lpDay">Aujourd'hui</span>
-          <button type="button" class="lp-arrow" id="lpNext" title="jour suivant">▶</button>
-        </div>
-        <div id="lpBoard" class="lp-fill"></div>
-        <div class="lp-foot" id="lpBoardFoot"></div>
-      `, 'lp-board')}
-      ${panel('08', 'HISTORIQUE', `<div id="lpHist" class="lp-fill"></div><div class="lp-foot" id="lpHistFoot"></div>`, 'lp-hist')}
     </div>
   `;
 
@@ -672,25 +663,12 @@ async function renderProfile(){
       } else {
         document.getElementById('lpLevel').textContent = 'NIVEAU 1';
         document.getElementById('lpXp').querySelector('span').textContent = '0 / 200 XP';
-        document.getElementById('lpStats').textContent = 'pas encore de profil de jeu publié';
+        
       }
       document.getElementById('lpAch').innerHTML = CoopProgress.achList(data);
-      document.getElementById('lpHist').innerHTML = CoopProgress.historyList(data, discordId);
-      const played = data.days.filter(d => d.rows.some(r => r.id === discordId)).length;
-      document.getElementById('lpHistFoot').textContent = played + ' mission' + (played > 1 ? 's' : '') + ' sur les 7 derniers jours';
-      let day = 0;
-      const showDay = () => {
-        const d = data.days[day];
-        document.getElementById('lpDay').textContent = CoopProgress.dayLabel(d);
-        document.getElementById('lpBoard').innerHTML = CoopProgress.boardList(d, discordId, data.chibiOf);
-        document.getElementById('lpPrev').disabled = day >= data.days.length - 1;
-        document.getElementById('lpNext').disabled = day === 0;
-        const i = d.rows.findIndex(r => r.id === discordId);
-        document.getElementById('lpBoardFoot').textContent = d.rows.length + ' joueur' + (d.rows.length > 1 ? 's' : '') + ' classé' + (d.rows.length > 1 ? 's' : '') + (i >= 0 ? '  ·  @' + username + ' est #' + (i + 1) : '');
-      };
-      document.getElementById('lpPrev').onclick = () => { if (day < data.days.length - 1){ day++; showDay(); } };
-      document.getElementById('lpNext').onclick = () => { if (day > 0){ day--; showDay(); } };
-      showDay();
+      if (data.errors.length) document.getElementById('lpStats').textContent = '⚠ ' + data.errors.join(' · ');
+      else if (!st) document.getElementById('lpStats').innerHTML = 'pas encore de profil de jeu publié · <a href="classement.html">voir le classement</a>';
+      else document.getElementById('lpStats').innerHTML += '  ·  <a href="classement.html">classement</a>';
     }).catch(() => { document.getElementById('lpAch').innerHTML = '<div class="lp-empty">progression indisponible pour le moment.</div>'; });
   }
 
@@ -814,5 +792,7 @@ async function init(){
 }
 init();
 </script>
+<script src="nav.js"></script>
+<script src="texts.js"></script>
 </body>
 </html>

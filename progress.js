@@ -74,22 +74,33 @@
   function fmtDate(s){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : esc(s); }
   const DAYS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 
+  // read errors are kept (shown on the page) instead of looking like "no data": a refused read means the
+  // database rules for coop/ and missions/ are not the published ones
+  function why(e){ const m = String(e && (e.code || e.message) || e || ''); return /permission|denied/i.test(m) ? 'lecture refusée par la base (règles Firebase)' : (m || 'erreur inconnue'); }
+  async function get(db, path, errs){
+    try { const s = await db.ref(path).get(); return s && s.exists() ? s.val() : null; }
+    catch (e) { errs.push(path.split('/')[0] + ' : ' + why(e)); return null; }
+  }
+
+  // discordId: one player's profile; null: every published profile (leaderboard)
   async function load(db, discordId){
+    const errs = [];
     const days = []; for (let i = 0; i < 7; i++){ const d = new Date(); d.setDate(d.getDate() - i); days.push({ key: dayKey(d), date: d, offset: i }); }
-    const [cSnap, aSnap, ...mSnaps] = await Promise.all([
-      db.ref('coop/' + discordId).get().catch(() => null),
-      db.ref('assignments').get().catch(() => null),
-      ...days.map(d => db.ref('missions/' + d.key).get().catch(() => null)),
+    const [coopV, assignV, ...missionV] = await Promise.all([
+      get(db, discordId ? 'coop/' + discordId : 'coop', errs),
+      get(db, 'assignments', errs),
+      ...days.map(d => get(db, 'missions/' + d.key, errs)),
     ]);
-    const coop = cSnap && cSnap.exists() ? cSnap.val() : null;
     const chibiOf = {};
-    if (aSnap && aSnap.exists()) Object.entries(aSnap.val() || {}).forEach(([chibi, a]) => { if (a && a.discordId) chibiOf[a.discordId] = chibi; });
+    Object.entries(assignV || {}).forEach(([chibi, a]) => { if (a && a.discordId) chibiOf[a.discordId] = chibi; });
     days.forEach((d, i) => {
-      const v = mSnaps[i] && mSnaps[i].exists() ? mSnaps[i].val() : {};
-      d.rows = Object.entries(v || {}).map(([id, e]) => ({ id, name: e.name || 'joueur', score: +e.score || 0, kills: +e.kills || 0, quests: +e.quests || 0, start: +e.start || 0 }))
+      d.rows = Object.entries(missionV[i] || {}).map(([id, e]) => ({ id, name: e.name || 'joueur', score: +e.score || 0, kills: +e.kills || 0, battles: +e.battles || 0, quests: +e.quests || 0, start: +e.start || 0, updated: +e.updatedAt || 0 }))
         .sort((a, b) => b.score - a.score || a.start - b.start);
     });
-    return { coop, days, chibiOf };
+    const out = { days, chibiOf, assign: assignV || {}, errors: Array.from(new Set(errs)) };
+    if (discordId) out.coop = coopV;
+    else out.all = coopV || {};
+    return out;
   }
 
   function playerLink(chibiOf, id, name){
@@ -166,7 +177,39 @@
     return list([{ t: 'Jour' }, { t: 'Place', w: '74px' }, { t: 'Points', w: '82px' }, { t: 'Ennemis · quêtes', w: '120px', r: true }], rows, '');
   }
 
+  // a run lasts 24 min from the save load: still running / finished
+  function missionState(r){
+    if (!r.start) return { t: '—', dim: true };
+    const left = r.start + 24 * 60000 - Date.now();
+    if (left > 0){ const m = Math.floor(left / 60000), s2 = Math.floor(left / 1000) % 60; return { t: 'reste ' + m + ':' + String(s2).padStart(2, '0'), live: true }; }
+    return { t: 'terminée' };
+  }
+
+  function missionBoard(day, chibiOf, me){
+    const rows = day.rows.map((r, i) => {
+      const st = missionState(r);
+      return { me: r.id === me, dot: i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '',
+        cells: ['#' + (i + 1) + '  ' + playerLink(chibiOf, r.id, r.name), r.score + ' pts', String(r.kills), r.quests + '/3', st.t] };
+    });
+    return list([{ t: 'Joueur' }, { t: 'Points', w: '90px' }, { t: 'Ennemis', w: '70px', r: true }, { t: 'Quêtes', w: '60px', r: true }, { t: 'Mission', w: '96px', r: true }], rows,
+      day.offset === 0 ? "Personne n'a encore fait la mission aujourd'hui : à toi de jouer !" : "Personne n'a fait la mission ce jour-là.");
+  }
+
+  // everybody's level from the profiles their launcher published, best first
+  function levelBoard(all, chibiOf, assign, me){
+    const nameOf = id => { const c = chibiOf[id]; const a = c && assign[c]; return (a && (a.discordUsername || a.name)) || null; };
+    const players = Object.entries(all || {}).map(([id, c]) => {
+      const st = stats({ coop: c });
+      return { id, name: nameOf(id) || c.name || 'joueur', st, version: c.version || '' };
+    }).sort((a, b) => b.st.xp - a.st.xp || a.name.localeCompare(b.name));
+    const rows = players.map((p, i) => ({ me: p.id === me, dot: i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'acid',
+      tip: 'launcher ' + p.version + (p.st.updated ? ' · màj ' + ago(p.st.updated) : ''),
+      cells: ['#' + (i + 1) + '  ' + playerLink(chibiOf, p.id, p.name), 'NIV. ' + p.st.lv, p.st.xp + ' XP', p.st.n + '/' + p.st.total, p.st.updated ? ago(p.st.updated) : '—'] }));
+    return { html: list([{ t: 'Joueur' }, { t: 'Niveau', w: '64px' }, { t: 'XP', w: '76px', r: true }, { t: 'Succès', w: '62px', r: true }, { t: 'Màj', w: '96px', r: true }], rows,
+      "Aucun profil publié pour l'instant : il apparaît après la connexion Discord dans le launcher."), count: players.length };
+  }
+
   function dayLabel(d){ return (d.offset === 0 ? "Aujourd'hui" : d.offset === 1 ? 'Hier' : DAYS[d.date.getDay()]) + '  ·  ' + String(d.date.getDate()).padStart(2, '0') + '/' + String(d.date.getMonth() + 1).padStart(2, '0'); }
 
-  window.CoopProgress = { load, stats, achList, boardList, historyList, dayLabel, ago, parse, build, level };
+  window.CoopProgress = { load, stats, achList, boardList, historyList, missionBoard, levelBoard, dayLabel, ago, parse, build, level, esc };
 })();
