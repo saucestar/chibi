@@ -67,6 +67,7 @@
         "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
         "progress": { ".validate": "newData.isString() && newData.val().length <= 4000" },
         "version": { ".validate": "newData.isString() && newData.val().length <= 16" },
+        "bonusXp": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
         "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
         "unlocked": {
           "$ach": { ".validate": "$ach.length <= 32 && newData.isString() && newData.val().length <= 10" }
