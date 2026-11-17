@@ -59,6 +59,22 @@
       }
     },
 
+    "coop": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['updatedAt'])",
+        "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "progress": { ".validate": "newData.isString() && newData.val().length <= 4000" },
+        "version": { ".validate": "newData.isString() && newData.val().length <= 16" },
+        "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "unlocked": {
+          "$ach": { ".validate": "$ach.length <= 32 && newData.isString() && newData.val().length <= 10" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
     "customChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
     "hiddenChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
     "chibiOrder":   { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
