@@ -8,7 +8,12 @@
   const SCOPES = 'identify guilds.members.read';
   let lastError = '';
 
-  function redirectUri(){ return window.location.origin + window.location.pathname; }
+  // Discord only accepts the exact addresses registered in the app: "/chibi/" becomes "/chibi/index.html"
+  function redirectUri(){
+    let path = window.location.pathname;
+    if(path.endsWith('/')) path += 'index.html';
+    return window.location.origin + path;
+  }
 
   function login(){
     const url = 'https://discord.com/api/oauth2/authorize?client_id=' + CLIENT_ID +
