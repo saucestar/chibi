@@ -1,0 +1,281 @@
+/* TWEWY Co-op: the launcher's "street poster" look for every page of the site.
+   Cream paper, thick ink outlines, hard offset shadows, black label chips, Montserrat Black italic,
+   accent pink + yellow, a dark "browser" top bar with pill tabs, a black ticker strip.
+   Loaded after each page's own <style>, so it only restyles (no page logic depends on it). */
+:root{
+  --ink:#141217;
+  --paper:#fff8ec;
+  --paper2:#e6e0d1;
+  --chrome:#1f1d23;
+  --accent:#ff208c;
+  --accent-d:#c80064;
+  --accent-soft:#ffd1e6;
+  --yellow:#ffd633;
+  --muted:#5c5866;
+}
+
+/* ---------- paper background: grid + halftone, dark mode = ink ---------- */
+body{
+  background:var(--paper2) !important;
+  color:var(--ink);
+}
+body::before{
+  background-image:
+    radial-gradient(circle at 100% 100%, rgba(255,32,140,.20) 0 2px, transparent 2.5px),
+    linear-gradient(rgba(20,18,23,.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20,18,23,.07) 1px, transparent 1px) !important;
+  background-size:14px 14px, 24px 24px, 24px 24px !important;
+  -webkit-mask-image:none; mask-image:none;
+  opacity:1 !important;
+  animation:none !important;
+}
+body::after{
+  background:
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px) 0 0/24px 24px,
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px) 0 0/24px 24px,
+    #16141a !important;
+}
+/* giant outlined lettering behind the content */
+html::before{
+  content:"SHIBUYA";
+  position:fixed; left:-1vw; bottom:2vh; z-index:0; pointer-events:none;
+  font:900 italic 22vw/1 'Montserrat',sans-serif; letter-spacing:-.02em;
+  color:transparent; -webkit-text-stroke:3px rgba(20,18,23,.08);
+  transform:rotate(-5deg);
+}
+body.dark{ color:var(--paper); }
+html:has(body.dark)::before{ -webkit-text-stroke-color:rgba(255,255,255,.06); }
+
+/* sparkles become little yellow poster stars */
+.sparkle{
+  color:var(--yellow) !important;
+  filter:none !important;
+  text-shadow:-1.5px -1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink), -1.5px 1.5px 0 var(--ink), 1.5px 1.5px 0 var(--ink) !important;
+  opacity:.85 !important;
+}
+
+/* ---------- ticker strip ---------- */
+.marquee-wrap{
+  background:var(--ink) !important;
+  border-bottom:3px solid var(--accent) !important;
+  box-shadow:none !important;
+}
+.marquee{
+  color:#fff !important;
+  font-family:'Montserrat',sans-serif !important;
+  font-weight:800 !important;
+  letter-spacing:1.5px !important;
+  text-shadow:none !important;
+}
+
+/* ---------- top bar: dark chrome, logo, pill tabs ---------- */
+.site-nav{
+  background:var(--chrome) !important;
+  animation:none !important;
+  border-bottom:4px solid var(--accent) !important;
+  box-shadow:0 4px 0 var(--ink) !important;
+  gap:6px !important;
+  padding:10px 16px !important;
+  min-height:58px;
+  position:relative;
+  z-index:5;
+  display:flex; justify-content:center; align-items:center; flex-wrap:wrap;
+}
+body.dark .site-nav{ background:var(--chrome) !important; }
+.site-nav a, .site-nav button{
+  font-family:'Montserrat',sans-serif !important;
+  font-weight:900 !important; font-style:italic;
+  font-size:13px !important; letter-spacing:.6px !important; text-transform:uppercase;
+  color:#f3eee4 !important;
+  text-shadow:none !important;
+  background:transparent !important;
+  border:none !important;
+  border-radius:999px !important;
+  padding:8px 16px !important;
+  transition:background .15s ease, color .15s ease, transform .15s ease !important;
+  cursor:pointer; text-decoration:none;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.site-nav a:hover, .site-nav button:hover{ background:rgba(255,255,255,.12) !important; opacity:1 !important; transform:translateY(-1px); }
+.site-nav a.active{ background:var(--accent) !important; color:var(--ink) !important; box-shadow:3px 3px 0 #000; }
+.site-nav .brand{
+  position:static; margin-right:14px; transform:rotate(-3deg);
+  font:900 italic 22px/1 'Montserrat',sans-serif !important; letter-spacing:.5px !important;
+  color:#fff !important; padding:0 !important; background:none !important; box-shadow:none !important;
+  -webkit-text-stroke:1px var(--ink);
+  text-shadow:3px 3px 0 var(--ink) !important;
+}
+.site-nav .brand b{ color:var(--accent); font-weight:900; }
+.site-nav .brand:hover{ background:none !important; transform:rotate(-3deg) scale(1.04); }
+.topbar{ display:none !important; }   /* old back links, replaced by the top bar */
+
+/* ---------- titles ---------- */
+header h1, h1.pagetitle, .pagetitle{
+  font-family:'Montserrat',sans-serif !important;
+  font-weight:900 !important; font-style:italic;
+  text-transform:uppercase; letter-spacing:.5px;
+  color:var(--ink) !important;
+  text-shadow:3px 3px 0 var(--accent) !important;
+}
+body.dark header h1, body.dark h1.pagetitle, body.dark .pagetitle{ color:var(--paper) !important; }
+header p.subtitle, .subtitle{ color:var(--muted) !important; font-weight:600; }
+body.dark header p.subtitle, body.dark .subtitle{ color:#b9b3c4 !important; }
+
+/* section titles = black label chips (like the launcher card tabs) */
+h2.section-title{
+  display:inline-flex !important; align-items:center; gap:8px;
+  background:var(--ink); color:#fff !important;
+  font-family:'Montserrat',sans-serif !important; font-weight:900 !important; font-style:italic;
+  font-size:13.5px !important; text-transform:uppercase; letter-spacing:.6px;
+  padding:7px 16px 7px 12px; border-radius:999px;
+  box-shadow:3px 3px 0 var(--accent);
+}
+body.dark h2.section-title{ background:var(--accent); color:var(--ink) !important; box-shadow:3px 3px 0 #000; }
+
+/* ---------- cards: cream, ink outline, hard shadow ---------- */
+.video-card, .feed-card, .dl-card, .feat, .card-box, .post-row, .chat-box, .lightbox-card,
+.admin-chibi-row, #reorderBar, .chat-input-bar, .login-bar, .modal-box, .modal-content, .post-item, .profile-card, .pf-card{
+  background:var(--paper) !important;
+  border:3px solid var(--ink) !important;
+  border-radius:12px !important;
+  box-shadow:6px 6px 0 var(--ink) !important;
+  backdrop-filter:none !important;
+}
+.feat, .post-row, .admin-chibi-row, .post-item{ border-width:2.5px !important; box-shadow:4px 4px 0 var(--ink) !important; }
+.video-card:hover, .feed-card:hover, .feat:hover, .post-item:hover{
+  transform:translate(-2px,-2px) !important;
+  box-shadow:8px 8px 0 var(--ink) !important;
+}
+.feat:hover, .post-item:hover{ box-shadow:6px 6px 0 var(--accent) !important; }
+body.dark .video-card, body.dark .feed-card, body.dark .dl-card, body.dark .feat, body.dark .card-box, body.dark .post-row,
+body.dark .chat-box, body.dark .lightbox-card, body.dark .admin-chibi-row, body.dark #reorderBar, body.dark .chat-input-bar,
+body.dark .login-bar, body.dark .modal-box, body.dark .modal-content, body.dark .post-item{
+  background:#232027 !important;
+  border-color:#000 !important;
+  box-shadow:6px 6px 0 var(--accent) !important;
+}
+
+/* chat bubbles */
+.msg-bubble{
+  background:#fff !important; border:2px solid var(--ink) !important; border-radius:12px !important;
+  box-shadow:3px 3px 0 var(--ink) !important; color:var(--ink) !important;
+}
+.msg-row.mine .msg-bubble{ background:var(--accent) !important; color:#fff !important; }
+.msg-row.mine .msg-text{ color:#fff !important; }
+.msg-row.mine .msg-uname, .msg-row.mine .msg-time{ color:rgba(255,255,255,.85) !important; }
+body.dark .msg-bubble{ background:#2c2832 !important; color:var(--paper) !important; border-color:#000 !important; box-shadow:3px 3px 0 var(--accent) !important; }
+
+/* round avatars get the ink ring */
+.feed-avatar-inner, .msg-avatar-inner, .mini-avatar-inner, .avatar-ring .avatar-inner{
+  background:#fff !important; border:2.5px solid var(--ink) !important;
+}
+
+/* ---------- buttons: flat sticker, ink outline, hard shadow ---------- */
+.btn-confirm, .btn-discord, .send-btn, .pf-btn, .dl-btn, .btn-cancel, .btn-delete, .btn-restore, .backlink,
+button.primary, .modal button{
+  font-family:'Montserrat',sans-serif !important;
+  font-weight:900 !important; font-style:italic; text-transform:uppercase; letter-spacing:.4px;
+  background:var(--accent) !important;
+  color:#fff !important;
+  border:2.5px solid var(--ink) !important;
+  border-radius:8px !important;
+  box-shadow:3px 3px 0 var(--ink) !important;
+  text-shadow:none !important;
+  transition:transform .12s ease, box-shadow .12s ease, background .15s ease !important;
+}
+.btn-confirm:hover, .btn-discord:hover, .send-btn:hover, .pf-btn:hover, .dl-btn:hover, .btn-cancel:hover, .btn-delete:hover,
+.btn-restore:hover, .backlink:hover, button.primary:hover, .modal button:hover{
+  transform:translate(-1px,-1px) !important; box-shadow:5px 5px 0 var(--ink) !important;
+}
+.btn-confirm:active, .btn-discord:active, .send-btn:active, .pf-btn:active, .dl-btn:active, .btn-cancel:active, .btn-delete:active,
+.btn-restore:active, .backlink:active, button.primary:active, .modal button:active{
+  transform:translate(2px,2px) !important; box-shadow:1px 1px 0 var(--ink) !important;
+}
+.btn-cancel, .pf-btn.edit, .btn-restore{ background:var(--paper) !important; color:var(--ink) !important; }
+.btn-delete{ background:#ff3b3b !important; }
+.btn-discord{ background:#5865f2 !important; }
+.dl-btn{
+  font-size:18px !important; padding:16px 30px !important; border-width:3px !important; border-radius:10px !important;
+  box-shadow:6px 6px 0 var(--ink) !important;
+  background-image:repeating-linear-gradient(115deg, transparent 0 78%, rgba(255,255,255,.18) 78% 82%, transparent 82% 86%) !important;
+  background-color:var(--accent) !important;
+}
+.dl-btn:hover{ box-shadow:8px 8px 0 var(--ink) !important; }
+
+/* ---------- inputs ---------- */
+input[type="text"], input[type="password"], input:not([type]), textarea, select, #chatInput{
+  background:#fff !important; color:var(--ink) !important;
+  border:2.5px solid var(--ink) !important; border-radius:8px !important;
+  box-shadow:none !important;
+  font-family:'Montserrat',sans-serif;
+}
+input:focus, textarea:focus, select:focus, #chatInput:focus{ outline:3px solid var(--accent) !important; outline-offset:1px; }
+body.dark input[type="text"], body.dark textarea, body.dark #chatInput, body.dark select{ background:#2c2832 !important; color:var(--paper) !important; border-color:#000 !important; }
+
+/* ---------- small pieces ---------- */
+.badge, .log-v{ background:var(--ink) !important; color:#fff !important; border-radius:6px !important; font-style:italic; }
+.log-item.latest .log-v{ background:var(--accent) !important; color:var(--ink) !important; }
+.need span{ background:#fff !important; border:2px solid var(--ink) !important; color:var(--ink) !important; box-shadow:2px 2px 0 var(--ink); }
+ol.steps li::before{ background:var(--ink) !important; color:var(--accent) !important; border:2px solid var(--ink) !important; box-shadow:2px 2px 0 var(--accent) !important; font-style:italic; }
+.hero .logo{ color:#fff !important; -webkit-text-stroke:2.5px var(--ink) !important; text-shadow:5px 5px 0 var(--ink) !important; font-weight:900 !important; font-style:italic; text-transform:uppercase; }
+.hero .logo span{ color:var(--accent) !important; -webkit-text-stroke:2.5px var(--ink) !important; text-shadow:5px 5px 0 var(--ink) !important; }
+.group-title{ color:var(--accent-d) !important; font-weight:900 !important; font-style:italic; }
+code{ background:var(--accent-soft) !important; color:var(--ink); border:1.5px solid var(--ink); }
+footer{ color:var(--muted) !important; font-weight:700; }
+body.dark footer{ color:#b9b3c4 !important; }
+a{ color:var(--accent-d); }
+
+#themeToggle{
+  background:var(--ink) !important; color:var(--yellow) !important;
+  border:2.5px solid var(--ink) !important; box-shadow:3px 3px 0 var(--accent) !important; opacity:1 !important;
+}
+body.dark #themeToggle{ background:var(--yellow) !important; color:var(--ink) !important; box-shadow:3px 3px 0 #000 !important; }
+
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background:var(--accent); border:2px solid var(--ink); border-radius:6px; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+@media (max-width:640px){
+  .site-nav a, .site-nav button{ padding:6px 10px !important; font-size:12px !important; }
+  html::before{ font-size:34vw; }
+}
+
+/* ---------- chibi picker cards ---------- */
+.card{
+  background-image:none !important;
+  background-color:var(--paper) !important;
+  border:3px solid var(--ink) !important;
+  border-radius:14px !important;
+  box-shadow:6px 6px 0 var(--ink) !important;
+}
+.card::before{ background:repeating-linear-gradient(-45deg, rgba(20,18,23,.05) 0 2px, transparent 2px 9px) !important; opacity:1 !important; }
+.card::after{ background:var(--accent-soft) !important; opacity:.55; }
+.card:hover{ transform:translate(-2px,-3px) rotate(-.6deg) !important; box-shadow:9px 9px 0 var(--accent) !important; }
+.card.mine{ border-color:var(--ink) !important; box-shadow:6px 6px 0 var(--yellow), 6px 6px 0 3px var(--ink) !important; background-color:#fff3c4 !important; }
+.card.taken{ filter:none !important; }
+.label{
+  background:#fff !important; color:var(--ink) !important;
+  border:2.5px solid var(--ink) !important; border-radius:8px !important;
+  box-shadow:3px 3px 0 var(--ink) !important;
+  font-weight:900 !important; font-style:italic;
+}
+.label.empty{ background:transparent !important; color:var(--muted) !important; border-style:dashed !important; box-shadow:none !important; font-style:normal; }
+.badge-taken{ background:var(--ink) !important; color:#fff !important; border:2px solid var(--ink) !important; font-style:italic; box-shadow:none !important; }
+.badge-mine{ background:var(--yellow) !important; color:var(--ink) !important; border:2px solid var(--ink) !important; font-style:italic; box-shadow:2px 2px 0 var(--ink) !important; }
+body.dark .card{ background-color:#232027 !important; border-color:#000 !important; box-shadow:6px 6px 0 var(--accent) !important; }
+body.dark .card::after{ background:rgba(255,32,140,.12) !important; }
+body.dark .label{ background:#2c2832 !important; color:var(--paper) !important; border-color:#000 !important; box-shadow:3px 3px 0 var(--accent) !important; }
+body.dark .label.empty{ background:transparent !important; color:#9a95a2 !important; }
+
+/* login gate (auth.js) */
+#chibiAuthGate > div{
+  background:var(--paper) !important; border:3px solid var(--ink) !important; border-radius:14px !important;
+  box-shadow:8px 8px 0 var(--ink) !important; color:var(--ink) !important;
+}
+#chibiAuthGate h2, #chibiAuthGate h3{ font-family:'Montserrat',sans-serif !important; font-weight:900 !important; font-style:italic; text-transform:uppercase; color:var(--ink) !important; }
+#chibiAuthGate button{
+  font-family:'Montserrat',sans-serif !important; font-weight:900 !important; font-style:italic; text-transform:uppercase;
+  background:#5865f2 !important; color:#fff !important; border:2.5px solid var(--ink) !important; border-radius:8px !important;
+  box-shadow:3px 3px 0 var(--ink) !important;
+}
+.badge-taken2{ background:var(--ink) !important; color:#fff !important; border:2px solid var(--ink) !important; border-radius:6px !important; font-style:italic; font-weight:900 !important; box-shadow:2px 2px 0 var(--accent) !important; }

@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✧･ﾟ Mon dashboard ﾟ･✧ | CHIBI</title>
+<title>✧･ﾟ Mon dashboard ﾟ･✧ | TWEWY Co-op</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pink:#d9c2ff;
-    --purple:#a988e8;
-    --blue:#c9b6ff;
-    --cyan:#e0d0ff;
-    --yellow:#f3e6ff;
-    --hotpink:#9b6bd6;
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
   }
   *{box-sizing:border-box;}
   body{
@@ -40,7 +40,7 @@
     opacity:0;
     transition:opacity 1s ease;
     background:
-      radial-gradient(circle at 20% 20%, #2a3568 0%, transparent 45%),
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
       radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
       radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
       linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
@@ -133,7 +133,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     text-decoration:none;
     background:rgba(255,255,255,.65);
     padding:7px 14px;
@@ -142,7 +142,7 @@
     transition:color .7s ease, background .7s ease, transform .15s ease;
   }
   .backlink:hover{ transform:translateY(-1px); }
-  body.dark .backlink{ color:#c7d2f5; background:rgba(28,36,82,.6); }
+  body.dark .backlink{ color:#d8d2e0; background:rgba(30,28,36,.6); }
 
   main{
     max-width:700px;
@@ -156,19 +156,19 @@
     font-family:'Montserrat',sans-serif;
     font-weight:800;
     font-size:26px;
-    color:#5a2d82;
+    color:#141217;
     margin:10px 0 4px;
     transition:color .7s ease;
   }
-  body.dark h1.pagetitle{ color:#dbe2ff; }
+  body.dark h1.pagetitle{ color:#fff8ec; }
   p.subtext{
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#7a5aa8;
+    color:#5c5866;
     margin:0 0 24px;
     transition:color .7s ease;
   }
-  body.dark p.subtext{ color:#b7c3f5; }
+  body.dark p.subtext{ color:#b9b3c4; }
 
   .card-box{
     background:rgba(255,255,255,.75);
@@ -179,17 +179,17 @@
     box-shadow:0 8px 20px rgba(140,90,200,.18);
     transition:background .7s ease, border-color .7s ease;
   }
-  body.dark .card-box{ background:rgba(28,36,82,.55); border-color:rgba(255,255,255,.15); }
+  body.dark .card-box{ background:rgba(30,28,36,.55); border-color:rgba(255,255,255,.15); }
 
   .card-box h2{
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:16px;
-    color:#5a2d82;
+    color:#141217;
     margin:0 0 14px;
     transition:color .7s ease;
   }
-  body.dark .card-box h2{ color:#dbe2ff; }
+  body.dark .card-box h2{ color:#fff8ec; }
 
   .mini-profile{
     display:flex;
@@ -215,16 +215,16 @@
     justify-content:center;
     overflow:hidden;
   }
-  body.dark .mini-avatar-inner{ background:#1c2452; }
+  body.dark .mini-avatar-inner{ background:#1e1c24; }
   .mini-avatar-inner img{ width:80%; height:80%; object-fit:contain; }
   .mini-username{
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:17px;
-    color:#5a2d82;
+    color:#141217;
     transition:color .7s ease;
   }
-  body.dark .mini-username{ color:#dbe2ff; }
+  body.dark .mini-username{ color:#fff8ec; }
 
   textarea, input[type="text"], input[type="file"]{
     width:100%;
@@ -236,12 +236,12 @@
     outline:none;
     margin-bottom:10px;
     background:#fff;
-    color:#3a2555;
+    color:#141217;
     transition:background .7s ease, color .7s ease, border-color .7s ease;
   }
   body.dark textarea, body.dark input[type="text"]{
-    background:#141b3d;
-    color:#e3e8fb;
+    background:#141217;
+    color:#f3eee4;
   }
   textarea{ resize:vertical; min-height:80px; }
   textarea:focus, input[type="text"]:focus{
@@ -262,20 +262,20 @@
     transition:transform .1s ease, background .7s ease;
   }
   .btn:active{ transform:translateY(2px); }
-  .btn-confirm{ background:linear-gradient(135deg,#a988e8,#7d5cc7); }
-  body.dark .btn-confirm{ background:linear-gradient(135deg,#6b7fd7,#3a4aa0); }
+  .btn-confirm{ background:linear-gradient(135deg,#a988e8,#ff208c); }
+  body.dark .btn-confirm{ background:linear-gradient(135deg,#2a2630,#1f1d23); }
   .btn-discord{ background:linear-gradient(135deg,#7289da,#5865f2); }
   .btn-delete{ background:linear-gradient(135deg,#e07a9b,#c2456e); font-size:12px; padding:7px 12px; }
 
   .msg{
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     min-height:18px;
     margin:6px 0 0;
     transition:color .7s ease;
   }
-  body.dark .msg{ color:#c7d2f5; }
+  body.dark .msg{ color:#d8d2e0; }
   .msg.error{ color:#c0392b; }
 
   .posts-list{
@@ -305,42 +305,42 @@
     flex:1;
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#5a2d82;
+    color:#141217;
     word-break:break-word;
     transition:color .7s ease;
   }
-  body.dark .post-row .cap{ color:#dbe2ff; }
+  body.dark .post-row .cap{ color:#fff8ec; }
 
   .empty-note{
     font-family:'Montserrat',sans-serif;
     font-size:13px;
     font-style:italic;
-    color:#a98fd0;
+    color:#9a95a2;
     transition:color .7s ease;
   }
-  body.dark .empty-note{ color:#8b9bd8; }
+  body.dark .empty-note{ color:#9a95a2; }
 
   .center-state{
     text-align:center;
     padding:60px 20px;
     font-family:'Montserrat',sans-serif;
-    color:#7d5cc7;
+    color:#ff208c;
     transition:color .7s ease;
   }
-  body.dark .center-state{ color:#c7d2f5; }
+  body.dark .center-state{ color:#d8d2e0; }
   .center-state .big{ font-size:44px; margin-bottom:12px; }
 
   footer{
     text-align:center;
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:13px;
     padding:20px;
     position:relative;
     z-index:2;
     transition:color .7s ease;
   }
-  body.dark footer{ color:#b7c3f5; }
+  body.dark footer{ color:#b9b3c4; }
 
   #themeToggle{
     position:fixed;
@@ -350,8 +350,8 @@
     height:38px;
     border-radius:50%;
     border:2px solid rgba(255,255,255,.8);
-    background:rgba(169,136,232,.35);
-    color:#5a3d8a;
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
     font-size:17px;
     cursor:pointer;
     z-index:40;
@@ -361,10 +361,11 @@
   #themeToggle:hover{opacity:1; transform:rotate(15deg);}
   body.dark #themeToggle{
     background:rgba(107,127,215,.35);
-    color:#cdd6fa;
+    color:#f3eee4;
     border-color:rgba(255,255,255,.4);
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -372,17 +373,20 @@
   <div class="marquee">✧･ﾟ: *✧･ﾟ:* MON DASHBOARD *:･ﾟ✧*:･ﾟ✧　　modifie ta bio et publie ce que tu veux　　★彡</div>
 </div>
 
-<div class="topbar">
-  <a class="backlink" href="index.html">← accueil</a>
-  <a class="backlink" href="chibis.html">🐣 chibis</a>
-  <a class="backlink" href="chat.html">💬 chat</a>
-</div>
+<nav class="site-nav">
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+  <a href="index.html">🏠 Accueil</a>
+  <a href="chibis.html">🐣 Chibis</a>
+  <a href="dashboard.html" class="active">📝 Dashboard</a>
+  <a href="chat.html">💬 Chat</a>
+  <a href="telecharger.html">⬇ Télécharger</a>
+</nav>
 
 <main id="main">
   <div class="center-state"><div class="big">✧</div>chargement...</div>
 </main>
 
-<footer>site pensé par Lucas &amp; fait par Claude — Chibi</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 

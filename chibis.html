@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✧･ﾟ CHIBI ﾟ･✧</title>
+<title>✧･ﾟ TWEWY Co-op ﾟ･✧</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pink:#d9c2ff;
-    --purple:#a988e8;
-    --blue:#c9b6ff;
-    --cyan:#e0d0ff;
-    --yellow:#f3e6ff;
-    --hotpink:#9b6bd6;
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
   }
   *{box-sizing:border-box;}
   body{
@@ -42,7 +42,7 @@
     opacity:0;
     transition:opacity 1s ease;
     background:
-      radial-gradient(circle at 20% 20%, #2a3568 0%, transparent 45%),
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
       radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
       radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
       linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
@@ -148,7 +148,7 @@
   }
   header p.subtitle{
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:16px;
     margin-top:6px;
     text-shadow:0 1px 0 #fff;
@@ -256,7 +256,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:15px;
-    color:#5a2d82;
+    color:#141217;
     background:rgba(255,255,255,.75);
     border-radius:12px;
     padding:5px 8px;
@@ -266,7 +266,7 @@
     transition:color .7s ease, background .7s ease;
   }
   .label.empty{
-    color:#a98fd0;
+    color:#9a95a2;
     font-weight:500;
     font-size:13px;
     background:rgba(255,255,255,.45);
@@ -339,7 +339,7 @@
   }
   .modal h2{
     font-family:'Montserrat',sans-serif;
-    color:#7d5cc7;
+    color:#ff208c;
     margin:4px 0 14px;
     font-size:20px;
     transition:color .7s ease;
@@ -364,7 +364,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:18px;
-    color:#7d5cc7;
+    color:#ff208c;
     background:#f2e8ff;
     border:3px solid var(--purple);
     border-radius:14px;
@@ -390,13 +390,13 @@
     transition:transform .1s ease;
   }
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.15);}
-  .btn-confirm{background:linear-gradient(135deg,#a988e8,#7d5cc7); transition:background .7s ease;}
+  .btn-confirm{background:linear-gradient(135deg,#a988e8,#ff208c); transition:background .7s ease;}
   .btn-cancel{background:linear-gradient(135deg,#c9bdd9,#9a8bb3); transition:background .7s ease;}
   .close-x{
     position:absolute;
     top:10px;right:14px;
     font-size:20px;
-    color:#7d5cc7;
+    color:#ff208c;
     cursor:pointer;
     font-family:'Montserrat',sans-serif;
     background:none;
@@ -414,7 +414,7 @@
   footer{
     text-align:center;
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:13px;
     padding:20px;
     position:relative;
@@ -439,7 +439,7 @@
   .admin-modal{max-width:400px;}
   .admin-hint{
     font-size:12px;
-    color:#7a5aa8;
+    color:#5c5866;
     font-family:'Montserrat',sans-serif;
     margin:8px 0;
     transition:color .7s ease;
@@ -472,11 +472,11 @@
     flex:1;
     font-size:12px;
     font-family:'Montserrat',sans-serif;
-    color:#7a5aa8;
+    color:#5c5866;
     transition:color .7s ease;
     word-break:break-all;
   }
-  body.dark .admin-chibi-row .admin-chibi-name{color:#b7c3f5;}
+  body.dark .admin-chibi-row .admin-chibi-name{color:#b9b3c4;}
   .admin-chibi-row .btn-delete{
     border:none;
     border-radius:10px;
@@ -496,11 +496,11 @@
   .admin-chibi-empty{
     font-size:12px;
     font-family:'Montserrat',sans-serif;
-    color:#7a5aa8;
+    color:#5c5866;
     font-style:italic;
     transition:color .7s ease;
   }
-  body.dark .admin-chibi-empty{color:#b7c3f5;}
+  body.dark .admin-chibi-empty{color:#b9b3c4;}
 
   #adminPassword, #adminLabelInput{
     width:100%;
@@ -529,8 +529,8 @@
     height:38px;
     border-radius:50%;
     border:2px solid rgba(255,255,255,.8);
-    background:rgba(169,136,232,.35);
-    color:#5a3d8a;
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
     font-size:17px;
     cursor:pointer;
     z-index:40;
@@ -555,11 +555,11 @@
     gap:14px;
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#5a2d82;
+    color:#141217;
     transition:background .7s ease, color .7s ease, border-color .7s ease;
   }
   #reorderBar.show{display:flex;}
-  body.dark #reorderBar{background:rgba(28,36,82,.95); color:#dbe2ff;}
+  body.dark #reorderBar{background:rgba(30,28,36,.95); color:#fff8ec;}
   .card.reorderable{cursor:grab;}
   .card.dragging{opacity:.35; cursor:grabbing;}
   .card.drag-over{outline:3px dashed var(--hotpink); outline-offset:3px;}
@@ -567,47 +567,47 @@
   /* ---------- mode sombre : bleu nuit / roi, toujours pastel ---------- */
   body.dark{
     --pink:#a9b8f0;
-    --purple:#6b7fd7;
+    --purple:#2a2630;
     --blue:#8fa3e8;
-    --cyan:#c7d2f5;
-    --yellow:#e3e8fb;
+    --cyan:#d8d2e0;
+    --yellow:#f3eee4;
     --hotpink:#4a5fd0;
   }
   body.dark h1{
-    background:linear-gradient(180deg,#eef1ff 0%, #c7d2f5 20%, #97a8e8 45%, #6b7fd7 70%, #4a5fc0 100%);
+    background:linear-gradient(180deg,#eef1ff 0%, #d8d2e0 20%, #97a8e8 45%, #2a2630 70%, #4a5fc0 100%);
     -webkit-background-clip:text;
     background-clip:text;
     -webkit-text-stroke:2px #ffffff55;
     filter:drop-shadow(3px 4px 0 #3a4a9a) drop-shadow(0 0 18px rgba(180,195,255,.7));
   }
-  body.dark header p.subtitle{color:#b7c3f5;}
-  body.dark .label{color:#dbe2ff; background:rgba(20,28,64,.6); box-shadow:0 2px 0 rgba(255,255,255,.15) inset;}
-  body.dark .label.empty{color:#8b9bd8; background:rgba(20,28,64,.35);}
-  body.dark .badge-taken{background:linear-gradient(135deg,#5b6bc4,#33408c);}
-  body.dark .card{border-color:rgba(199,210,245,.5);}
-  body.dark .card::after{background:rgba(220,228,255,.18);}
+  body.dark header p.subtitle{color:#b9b3c4;}
+  body.dark .label{color:#fff8ec; background:rgba(20,18,23,.6); box-shadow:0 2px 0 rgba(255,255,255,.15) inset;}
+  body.dark .label.empty{color:#9a95a2; background:rgba(20,18,23,.35);}
+  body.dark .badge-taken{background:linear-gradient(135deg,#ff208c,#1f1d23);}
+  body.dark .card{border-color:rgba(216,210,224,.5);}
+  body.dark .card::after{background:rgba(255,248,236,.18);}
   body.dark .modal{
-    background:linear-gradient(160deg,#1c2452 0%, #222c5e 60%, #2a3568 100%);
+    background:linear-gradient(160deg,#1e1c24 0%, #1e1c24 60%, #1f1d23 100%);
     border-color:#4a5aa0;
     box-shadow:0 0 0 4px #4a5aa0, 0 20px 50px rgba(0,0,0,.5);
   }
-  body.dark .modal h2{color:#c7d2f5;}
-  body.dark .close-x{color:#aab8f5;}
+  body.dark .modal h2{color:#d8d2e0;}
+  body.dark .close-x{color:#d8d2e0;}
   body.dark .modal input, body.dark #adminPassword, body.dark #adminLabelInput{
-    background:#141b3d;
-    color:#e3e8fb;
+    background:#141217;
+    color:#f3eee4;
     border-color:var(--purple);
   }
-  body.dark .picked-name{color:#c7d2f5; background:#222c5e; border-color:var(--purple);}
-  body.dark .btn-confirm{background:linear-gradient(135deg,#6b7fd7,#3a4aa0);}
-  body.dark .btn-cancel{background:linear-gradient(135deg,#4a5578,#333d66);}
-  body.dark footer{color:#b7c3f5;}
+  body.dark .picked-name{color:#d8d2e0; background:#1e1c24; border-color:var(--purple);}
+  body.dark .btn-confirm{background:linear-gradient(135deg,#2a2630,#1f1d23);}
+  body.dark .btn-cancel{background:linear-gradient(135deg,#4a4652,#2a2630);}
+  body.dark footer{color:#b9b3c4;}
   body.dark #themeToggle{
     background:rgba(107,127,215,.35);
-    color:#cdd6fa;
+    color:#f3eee4;
     border-color:rgba(255,255,255,.4);
   }
-  body.dark .admin-hint{color:#b7c3f5;}
+  body.dark .admin-hint{color:#b9b3c4;}
 
   /* ---------- barre de navigation (façon toolbar), centrée ---------- */
   .site-nav{
@@ -628,7 +628,7 @@
     transition:background .7s ease;
   }
   body.dark .site-nav{
-    background:linear-gradient(90deg,#3a4aa0,#6b7fd7,#8fa0e8,#3a4aa0);
+    background:linear-gradient(90deg,#1f1d23,#2a2630,#8fa0e8,#1f1d23);
     background-size:300% 100%;
   }
   .site-nav button, .site-nav a{
@@ -663,7 +663,7 @@
     justify-content:center;
     text-align:center;
     padding:20px;
-    background:linear-gradient(135deg,#5a2d82,#9b6bd6,#7d5cc7);
+    background:linear-gradient(135deg,#141217,#9b6bd6,#ff208c);
   }
   .closed-screen.open{ display:flex; }
   .closed-screen h1{
@@ -677,20 +677,23 @@
     margin:0;
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
 <div class="marquee-wrap">
-  <div class="marquee">✧･ﾟ: *✧･ﾟ:* BIENVENUE SUR CHIBI *:･ﾟ✧*:･ﾟ✧　　clique sur un chibi pour l'adopter !　　un seul chibi par personne ★彡</div>
+  <div class="marquee">✧･ﾟ: *✧･ﾟ:* BIENVENUE SUR TWEWY CO-OP *:･ﾟ✧*:･ﾟ✧　　clique sur un chibi pour l'adopter !　　un seul chibi par personne ★彡</div>
 </div>
 
 <nav class="site-nav">
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
   <a href="index.html">🏠 Accueil</a>
-  <button id="adminGear" type="button">⚙ Admin</button>
+  <a href="chibis.html" class="active">🐣 Chibis</a>
   <a id="dashboardBtn" href="dashboard.html">📝 Dashboard</a>
   <a id="chatBtn" href="chat.html">💬 Chat</a>
   <a href="telecharger.html">⬇ Télécharger</a>
   <a id="myProfileBtn" href="#">🌸 Mon profil</a>
+  <button id="adminGear" type="button">⚙ Admin</button>
 </nav>
 
 <header>
@@ -707,7 +710,7 @@
   <button class="btn btn-confirm" id="reorderDoneBtn">terminé ✅</button>
 </div>
 
-<footer>site pensé par Lucas &amp; fait par Claude — Chibi</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 

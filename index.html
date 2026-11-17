@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✧･ﾟ CHIBI ﾟ･✧ | Accueil</title>
+<title>✧･ﾟ TWEWY Co-op ﾟ･✧ | Accueil</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pink:#d9c2ff;
-    --purple:#a988e8;
-    --blue:#c9b6ff;
-    --cyan:#e0d0ff;
-    --yellow:#f3e6ff;
-    --hotpink:#9b6bd6;
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
   }
   *{box-sizing:border-box;}
   body{
@@ -40,7 +40,7 @@
     opacity:0;
     transition:opacity 1s ease;
     background:
-      radial-gradient(circle at 20% 20%, #2a3568 0%, transparent 45%),
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
       radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
       radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
       linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
@@ -135,7 +135,7 @@
     transition:background .7s ease;
   }
   body.dark .site-nav{
-    background:linear-gradient(90deg,#3a4aa0,#6b7fd7,#8fa0e8,#3a4aa0);
+    background:linear-gradient(90deg,#1f1d23,#2a2630,#8fa0e8,#1f1d23);
     background-size:300% 100%;
   }
   .site-nav button, .site-nav a{
@@ -170,19 +170,19 @@
     font-family:'Montserrat',sans-serif;
     font-weight:800;
     font-size:30px;
-    color:#5a2d82;
+    color:#141217;
     margin:0 0 6px;
     transition:color .7s ease;
   }
-  body.dark header h1{ color:#dbe2ff; }
+  body.dark header h1{ color:#fff8ec; }
   header p.subtitle{
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#7a5aa8;
+    color:#5c5866;
     margin:0;
     transition:color .7s ease;
   }
-  body.dark header p.subtitle{ color:#b7c3f5; }
+  body.dark header p.subtitle{ color:#b9b3c4; }
 
   main{
     max-width:640px;
@@ -197,14 +197,14 @@
     font-family:'Montserrat',sans-serif;
     font-weight:800;
     font-size:17px;
-    color:#5a2d82;
+    color:#141217;
     margin:0 0 14px;
     display:flex;
     align-items:center;
     gap:8px;
     transition:color .7s ease;
   }
-  body.dark h2.section-title{ color:#dbe2ff; }
+  body.dark h2.section-title{ color:#fff8ec; }
 
   /* ---------- rangée de vidéos (asymétrique, défilement horizontal) ---------- */
   .videos-row{
@@ -236,7 +236,7 @@
   .video-card:nth-child(3n+2){ transform:translateY(10px); }
   .video-card:nth-child(3n){ transform:translateY(-6px); }
   .video-card:hover{ transform:translateY(-4px) scale(1.03); }
-  body.dark .video-card{ background:rgba(28,36,82,.6); border-color:rgba(255,255,255,.15); }
+  body.dark .video-card{ background:rgba(30,28,36,.6); border-color:rgba(255,255,255,.15); }
   .video-thumb{
     width:100%;
     aspect-ratio:16/9;
@@ -248,7 +248,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:12.5px;
-    color:#3a2555;
+    color:#141217;
     padding:8px 10px 10px;
     display:-webkit-box;
     -webkit-line-clamp:2;
@@ -256,7 +256,7 @@
     overflow:hidden;
     transition:color .7s ease;
   }
-  body.dark .video-title{ color:#e3e8fb; }
+  body.dark .video-title{ color:#f3eee4; }
 
   /* ---------- fil d'actualité, centré mais asymétrique ---------- */
   .feed-list{
@@ -273,7 +273,7 @@
     box-shadow:0 8px 20px rgba(140,90,200,.16);
     transition:background .7s ease, border-color .7s ease;
   }
-  body.dark .feed-card{ background:rgba(28,36,82,.5); border-color:rgba(255,255,255,.14); }
+  body.dark .feed-card{ background:rgba(30,28,36,.5); border-color:rgba(255,255,255,.14); }
 
   .feed-head{
     display:flex;
@@ -299,24 +299,24 @@
     justify-content:center;
     overflow:hidden;
   }
-  body.dark .feed-avatar-inner{ background:#1c2452; }
+  body.dark .feed-avatar-inner{ background:#1e1c24; }
   .feed-avatar-inner img{ width:80%; height:80%; object-fit:contain; }
   .feed-meta{ display:flex; flex-direction:column; }
   .feed-uname{
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13.5px;
-    color:#5a2d82;
+    color:#141217;
     text-decoration:none;
     transition:color .7s ease;
   }
-  body.dark .feed-uname{ color:#dbe2ff; }
+  body.dark .feed-uname{ color:#fff8ec; }
   .feed-time{
     font-family:'Montserrat',sans-serif;
     font-size:11px;
-    color:#a98fd0;
+    color:#9a95a2;
   }
-  body.dark .feed-time{ color:#8b9bd8; }
+  body.dark .feed-time{ color:#9a95a2; }
 
   .feed-photo-wrap{
     display:flex;
@@ -340,13 +340,13 @@
   .feed-caption{
     font-family:'Montserrat',sans-serif;
     font-size:13.5px;
-    color:#3a2555;
+    color:#141217;
     margin:0 0 10px;
     white-space:pre-wrap;
     word-break:break-word;
     transition:color .7s ease;
   }
-  body.dark .feed-caption{ color:#e3e8fb; }
+  body.dark .feed-caption{ color:#f3eee4; }
 
   .feed-actions{
     display:flex;
@@ -367,31 +367,31 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     transition:color .7s ease;
   }
-  body.dark .like-count{ color:#c7d2f5; }
+  body.dark .like-count{ color:#d8d2e0; }
 
   .empty-note, .loading-msg{
     text-align:center;
     padding:30px 20px;
     font-family:'Montserrat',sans-serif;
-    color:#a98fd0;
+    color:#9a95a2;
     transition:color .7s ease;
   }
-  body.dark .empty-note, body.dark .loading-msg{ color:#8b9bd8; }
+  body.dark .empty-note, body.dark .loading-msg{ color:#9a95a2; }
 
   footer{
     text-align:center;
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:13px;
     padding:20px;
     position:relative;
     z-index:2;
     transition:color .7s ease;
   }
-  body.dark footer{ color:#b7c3f5; }
+  body.dark footer{ color:#b9b3c4; }
 
   #themeToggle{
     position:fixed;
@@ -401,8 +401,8 @@
     height:38px;
     border-radius:50%;
     border:2px solid rgba(255,255,255,.8);
-    background:rgba(169,136,232,.35);
-    color:#5a3d8a;
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
     font-size:17px;
     cursor:pointer;
     z-index:40;
@@ -412,19 +412,21 @@
   #themeToggle:hover{opacity:1; transform:rotate(15deg);}
   body.dark #themeToggle{
     background:rgba(107,127,215,.35);
-    color:#cdd6fa;
+    color:#f3eee4;
     border-color:rgba(255,255,255,.4);
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
 <div class="marquee-wrap">
-  <div class="marquee">✧･ﾟ: *✧･ﾟ:* BIENVENUE SUR CHIBI *:･ﾟ✧*:･ﾟ✧　　le fil d'actualité de la communauté　　★彡</div>
+  <div class="marquee">✧･ﾟ: *✧･ﾟ:* BIENVENUE SUR TWEWY CO-OP *:･ﾟ✧*:･ﾟ✧　　le fil d'actualité de la communauté　　★彡</div>
 </div>
 
 <nav class="site-nav">
-  <a href="index.html">🏠 Accueil</a>
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+  <a href="index.html" class="active">🏠 Accueil</a>
   <a href="chibis.html">🐣 Chibis</a>
   <a href="dashboard.html">📝 Dashboard</a>
   <a href="chat.html">💬 Chat</a>
@@ -453,7 +455,7 @@
   </section>
 </main>
 
-<footer>site pensé par Lucas &amp; fait par Claude — Chibi</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 

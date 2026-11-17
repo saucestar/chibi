@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✧･ﾟ Profil ﾟ･✧ | CHIBI</title>
+<title>✧･ﾟ Profil ﾟ･✧ | TWEWY Co-op</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pink:#d9c2ff;
-    --purple:#a988e8;
-    --blue:#c9b6ff;
-    --cyan:#e0d0ff;
-    --yellow:#f3e6ff;
-    --hotpink:#9b6bd6;
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
   }
   *{box-sizing:border-box;}
   body{
@@ -40,7 +40,7 @@
     opacity:0;
     transition:opacity 1s ease;
     background:
-      radial-gradient(circle at 20% 20%, #2a3568 0%, transparent 45%),
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
       radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
       radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
       linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
@@ -133,7 +133,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     text-decoration:none;
     background:rgba(255,255,255,.65);
     padding:7px 14px;
@@ -142,7 +142,7 @@
     transition:color .7s ease, background .7s ease, transform .15s ease;
   }
   .backlink:hover{ transform:translateY(-1px); }
-  body.dark .backlink{ color:#c7d2f5; background:rgba(28,36,82,.6); }
+  body.dark .backlink{ color:#d8d2e0; background:rgba(30,28,36,.6); }
 
   main{
     max-width:600px;
@@ -188,7 +188,7 @@
     font-size:56px;
     overflow:hidden;
   }
-  body.dark .avatar-ring .avatar-inner{ background:#1c2452; }
+  body.dark .avatar-ring .avatar-inner{ background:#1e1c24; }
   .avatar-ring .avatar-inner img{
     width:80%;
     height:80%;
@@ -211,11 +211,11 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:24px;
-    color:#5a2d82;
+    color:#141217;
     transition:color .7s ease;
     word-break:break-word;
   }
-  body.dark .profile-username{ color:#dbe2ff; }
+  body.dark .profile-username{ color:#fff8ec; }
 
   .pf-btn{
     font-family:'Montserrat',sans-serif;
@@ -235,19 +235,19 @@
     gap:6px;
   }
   .pf-btn:active{ transform:translateY(2px); }
-  .pf-btn.edit{ background:linear-gradient(135deg,#a988e8,#7d5cc7); }
-  body.dark .pf-btn.edit{ background:linear-gradient(135deg,#6b7fd7,#3a4aa0); }
+  .pf-btn.edit{ background:linear-gradient(135deg,#a988e8,#ff208c); }
+  body.dark .pf-btn.edit{ background:linear-gradient(135deg,#2a2630,#1f1d23); }
 
   .bio{
     font-family:'Montserrat',sans-serif;
     font-size:14px;
-    color:#7a5aa8;
+    color:#5c5866;
     line-height:1.5;
     max-width:420px;
     white-space:pre-wrap;
     transition:color .7s ease;
   }
-  body.dark .bio{ color:#b7c3f5; }
+  body.dark .bio{ color:#b9b3c4; }
   .badge-taken2{
     display:inline-block;
     background:linear-gradient(135deg,#b498e0,#8064c9);
@@ -273,13 +273,13 @@
     font-weight:700;
     font-size:12px;
     letter-spacing:1px;
-    color:#5a2d82;
+    color:#141217;
     padding:14px 4px;
-    border-top:2px solid #5a2d82;
+    border-top:2px solid #141217;
     margin-top:-2px;
     transition:color .7s ease, border-color .7s ease;
   }
-  body.dark .tab{ color:#dbe2ff; border-top-color:#dbe2ff; }
+  body.dark .tab{ color:#fff8ec; border-top-color:#fff8ec; }
 
   /* ---------- grille de publications ---------- */
   .posts-grid{
@@ -328,10 +328,10 @@
     text-align:center;
     padding:60px 20px;
     font-family:'Montserrat',sans-serif;
-    color:#a98fd0;
+    color:#9a95a2;
     transition:color .7s ease;
   }
-  body.dark .empty-state{ color:#8b9bd8; }
+  body.dark .empty-state{ color:#9a95a2; }
   .empty-state .big{
     font-size:44px;
     margin-bottom:12px;
@@ -342,22 +342,22 @@
     padding:60px 20px;
     font-family:'Montserrat',sans-serif;
     font-weight:600;
-    color:#7d5cc7;
+    color:#ff208c;
     transition:color .7s ease;
   }
-  body.dark .loading-msg{ color:#c7d2f5; }
+  body.dark .loading-msg{ color:#d8d2e0; }
 
   footer{
     text-align:center;
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:13px;
     padding:20px;
     position:relative;
     z-index:2;
     transition:color .7s ease;
   }
-  body.dark footer{ color:#b7c3f5; }
+  body.dark footer{ color:#b9b3c4; }
 
   #themeToggle{
     position:fixed;
@@ -367,8 +367,8 @@
     height:38px;
     border-radius:50%;
     border:2px solid rgba(255,255,255,.8);
-    background:rgba(169,136,232,.35);
-    color:#5a3d8a;
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
     font-size:17px;
     cursor:pointer;
     z-index:40;
@@ -378,7 +378,7 @@
   #themeToggle:hover{opacity:1; transform:rotate(15deg);}
   body.dark #themeToggle{
     background:rgba(107,127,215,.35);
-    color:#cdd6fa;
+    color:#f3eee4;
     border-color:rgba(255,255,255,.4);
   }
 
@@ -406,7 +406,7 @@
     position:relative;
     transition:background .7s ease;
   }
-  body.dark .lightbox-card{ background:#1c2452; }
+  body.dark .lightbox-card{ background:#1e1c24; }
   .lightbox-card img{
     width:100%;
     aspect-ratio:1/1;
@@ -422,11 +422,11 @@
     padding:14px 18px 6px;
     font-family:'Montserrat',sans-serif;
     font-size:14px;
-    color:#5a2d82;
+    color:#141217;
     white-space:pre-wrap;
     transition:color .7s ease;
   }
-  body.dark .lightbox-cap{ color:#dbe2ff; }
+  body.dark .lightbox-cap{ color:#fff8ec; }
   .lightbox-likes{
     padding:0 18px 18px;
     display:flex;
@@ -447,10 +447,10 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     transition:color .7s ease;
   }
-  body.dark .like-count{ color:#c7d2f5; }
+  body.dark .like-count{ color:#d8d2e0; }
   .lightbox-close{
     position:absolute;
     top:10px;right:14px;
@@ -463,6 +463,7 @@
     cursor:pointer;
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
@@ -470,17 +471,20 @@
   <div class="marquee">✧･ﾟ: *✧･ﾟ:* PROFIL DU MEMBRE *:･ﾟ✧*:･ﾟ✧　　un chibi, un pseudo, ses publications　　★彡</div>
 </div>
 
-<div class="topbar">
-  <a class="backlink" href="index.html">← accueil</a>
-  <a class="backlink" href="chibis.html">🐣 chibis</a>
-  <a class="backlink" href="chat.html">💬 chat</a>
-</div>
+<nav class="site-nav">
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+  <a href="index.html">🏠 Accueil</a>
+  <a href="chibis.html">🐣 Chibis</a>
+  <a href="dashboard.html">📝 Dashboard</a>
+  <a href="chat.html">💬 Chat</a>
+  <a href="telecharger.html">⬇ Télécharger</a>
+</nav>
 
 <main id="main">
   <div class="loading-msg">chargement du profil... ✧</div>
 </main>
 
-<footer>site pensé par Lucas &amp; fait par Claude — Chibi</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 
@@ -602,7 +606,7 @@ async function renderProfile(){
   const customBio = bSnap && bSnap.exists() ? bSnap.val() : '';
   const bioText = customBio && customBio.trim()
     ? customBio
-    : '✧ membre de la communauté CHIBI ✧\na adopté ce chibi pour toujours.';
+    : '✧ membre de la communauté TWEWY Co-op ✧\na adopté ce chibi pour toujours.';
 
   const postsRaw = pSnap && pSnap.exists() ? pSnap.val() : {};
   const posts = Object.entries(postsRaw)

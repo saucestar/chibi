@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>✧･ﾟ Chat ﾟ･✧ | CHIBI</title>
+<title>✧･ﾟ Chat ﾟ･✧ | TWEWY Co-op</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
 <style>
   :root{
-    --pink:#d9c2ff;
-    --purple:#a988e8;
-    --blue:#c9b6ff;
-    --cyan:#e0d0ff;
-    --yellow:#f3e6ff;
-    --hotpink:#9b6bd6;
+    --pink:#ffd1e6;
+    --purple:#e0157a;
+    --blue:#ffe0ef;
+    --cyan:#fff3d6;
+    --yellow:#fff8ec;
+    --hotpink:#ff208c;
   }
   *{box-sizing:border-box;}
   html, body{ height:100%; }
@@ -42,7 +42,7 @@
     opacity:0;
     transition:opacity 1s ease;
     background:
-      radial-gradient(circle at 20% 20%, #2a3568 0%, transparent 45%),
+      radial-gradient(circle at 20% 20%, #1f1d23 0%, transparent 45%),
       radial-gradient(circle at 80% 10%, #1f2a5c 0%, transparent 45%),
       radial-gradient(circle at 50% 90%, #232f66 0%, transparent 50%),
       linear-gradient(135deg, #131a3a 0%, #1a2350 40%, #202b5e 70%, #161d42 100%);
@@ -138,7 +138,7 @@
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:13px;
-    color:#7d5cc7;
+    color:#ff208c;
     text-decoration:none;
     background:rgba(255,255,255,.65);
     padding:7px 14px;
@@ -147,7 +147,7 @@
     transition:color .7s ease, background .7s ease, transform .15s ease;
   }
   .backlink:hover{ transform:translateY(-1px); }
-  body.dark .backlink{ color:#c7d2f5; background:rgba(28,36,82,.6); }
+  body.dark .backlink{ color:#d8d2e0; background:rgba(30,28,36,.6); }
 
   main{
     max-width:700px;
@@ -166,21 +166,21 @@
     font-family:'Montserrat',sans-serif;
     font-weight:800;
     font-size:24px;
-    color:#5a2d82;
+    color:#141217;
     margin:6px 0 2px;
     transition:color .7s ease;
     flex-shrink:0;
   }
-  body.dark h1.pagetitle{ color:#dbe2ff; }
+  body.dark h1.pagetitle{ color:#fff8ec; }
   p.subtext{
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#7a5aa8;
+    color:#5c5866;
     margin:0 0 14px;
     transition:color .7s ease;
     flex-shrink:0;
   }
-  body.dark p.subtext{ color:#b7c3f5; }
+  body.dark p.subtext{ color:#b9b3c4; }
 
   /* ---------- fenêtre de chat ---------- */
   .chat-box{
@@ -195,7 +195,7 @@
     overflow:hidden;
     transition:background .7s ease, border-color .7s ease;
   }
-  body.dark .chat-box{ background:rgba(28,36,82,.45); border-color:rgba(255,255,255,.15); }
+  body.dark .chat-box{ background:rgba(30,28,36,.45); border-color:rgba(255,255,255,.15); }
 
   .messages{
     flex:1;
@@ -235,7 +235,7 @@
     font-size:16px;
     overflow:hidden;
   }
-  body.dark .msg-avatar-inner{ background:#1c2452; }
+  body.dark .msg-avatar-inner{ background:#1e1c24; }
   .msg-avatar-inner img{ width:80%; height:80%; object-fit:contain; }
 
   .msg-bubble{
@@ -246,39 +246,39 @@
     box-shadow:0 2px 6px rgba(140,90,200,.15);
     transition:background .7s ease;
   }
-  body.dark .msg-bubble{ background:#2a3568; }
+  body.dark .msg-bubble{ background:#1f1d23; }
   .msg-row.mine .msg-bubble{
-    background:linear-gradient(135deg,#a988e8,#7d5cc7);
+    background:linear-gradient(135deg,#a988e8,#ff208c);
     color:#fff;
   }
-  body.dark .msg-row.mine .msg-bubble{ background:linear-gradient(135deg,#6b7fd7,#3a4aa0); }
+  body.dark .msg-row.mine .msg-bubble{ background:linear-gradient(135deg,#2a2630,#1f1d23); }
 
   .msg-uname{
     font-family:'Montserrat',sans-serif;
     font-weight:700;
     font-size:11px;
-    color:#7d5cc7;
+    color:#ff208c;
     margin-bottom:2px;
     transition:color .7s ease;
   }
-  body.dark .msg-uname{ color:#c7d2f5; }
+  body.dark .msg-uname{ color:#d8d2e0; }
   .msg-row.mine .msg-uname{ color:rgba(255,255,255,.85); }
 
   .msg-text{
     font-family:'Montserrat',sans-serif;
     font-size:14px;
-    color:#3a2555;
+    color:#141217;
     word-break:break-word;
     white-space:pre-wrap;
     transition:color .7s ease;
   }
-  body.dark .msg-text{ color:#e3e8fb; }
+  body.dark .msg-text{ color:#f3eee4; }
   .msg-row.mine .msg-text{ color:#fff; }
 
   .msg-time{
     font-family:'Montserrat',sans-serif;
     font-size:9px;
-    color:#a98fd0;
+    color:#9a95a2;
     margin-top:3px;
     text-align:right;
   }
@@ -300,10 +300,10 @@
     text-align:center;
     padding:40px 20px;
     font-family:'Montserrat',sans-serif;
-    color:#a98fd0;
+    color:#9a95a2;
     transition:color .7s ease;
   }
-  body.dark .empty-note, body.dark .loading-msg{ color:#8b9bd8; }
+  body.dark .empty-note, body.dark .loading-msg{ color:#9a95a2; }
 
   /* ---------- zone de saisie ---------- */
   .chat-input-bar{
@@ -316,7 +316,7 @@
     align-items:flex-end;
     transition:background .7s ease, border-color .7s ease;
   }
-  body.dark .chat-input-bar{ background:rgba(20,27,61,.7); border-color:rgba(255,255,255,.15); }
+  body.dark .chat-input-bar{ background:rgba(20,18,23,.7); border-color:rgba(255,255,255,.15); }
 
   #chatInput{
     flex:1;
@@ -327,13 +327,13 @@
     border:3px solid var(--purple);
     outline:none;
     background:#fff;
-    color:#3a2555;
+    color:#141217;
     resize:none;
     max-height:90px;
     min-height:40px;
     transition:background .7s ease, color .7s ease, border-color .7s ease;
   }
-  body.dark #chatInput{ background:#141b3d; color:#e3e8fb; }
+  body.dark #chatInput{ background:#141217; color:#f3eee4; }
   #chatInput:focus{ border-color:var(--hotpink); box-shadow:0 0 0 3px rgba(255,46,166,.2); }
 
   .send-btn{
@@ -345,13 +345,13 @@
     padding:10px 18px;
     cursor:pointer;
     color:#fff;
-    background:linear-gradient(135deg,#a988e8,#7d5cc7);
+    background:linear-gradient(135deg,#a988e8,#ff208c);
     box-shadow:0 3px 0 rgba(0,0,0,.12);
     transition:transform .1s ease, background .7s ease;
     flex-shrink:0;
   }
   .send-btn:active{ transform:translateY(2px); }
-  body.dark .send-btn{ background:linear-gradient(135deg,#6b7fd7,#3a4aa0); }
+  body.dark .send-btn{ background:linear-gradient(135deg,#2a2630,#1f1d23); }
 
   .login-bar{
     flex-shrink:0;
@@ -361,15 +361,15 @@
     text-align:center;
     transition:background .7s ease, border-color .7s ease;
   }
-  body.dark .login-bar{ background:rgba(20,27,61,.7); border-color:rgba(255,255,255,.15); }
+  body.dark .login-bar{ background:rgba(20,18,23,.7); border-color:rgba(255,255,255,.15); }
   .login-bar p{
     margin:0 0 10px;
     font-family:'Montserrat',sans-serif;
     font-size:13px;
-    color:#7a5aa8;
+    color:#5c5866;
     transition:color .7s ease;
   }
-  body.dark .login-bar p{ color:#b7c3f5; }
+  body.dark .login-bar p{ color:#b9b3c4; }
   .btn-discord{
     font-family:'Montserrat',sans-serif;
     font-weight:700;
@@ -386,7 +386,7 @@
   footer{
     text-align:center;
     font-family:'Montserrat',sans-serif;
-    color:#8a4fb8;
+    color:#c80064;
     font-size:12px;
     padding:8px;
     position:relative;
@@ -394,7 +394,7 @@
     transition:color .7s ease;
     flex-shrink:0;
   }
-  body.dark footer{ color:#b7c3f5; }
+  body.dark footer{ color:#b9b3c4; }
 
   #themeToggle{
     position:fixed;
@@ -404,8 +404,8 @@
     height:38px;
     border-radius:50%;
     border:2px solid rgba(255,255,255,.8);
-    background:rgba(169,136,232,.35);
-    color:#5a3d8a;
+    background:rgba(255,32,140,.35);
+    color:#2a2630;
     font-size:17px;
     cursor:pointer;
     z-index:40;
@@ -415,21 +415,26 @@
   #themeToggle:hover{opacity:1; transform:rotate(15deg);}
   body.dark #themeToggle{
     background:rgba(107,127,215,.35);
-    color:#cdd6fa;
+    color:#f3eee4;
     border-color:rgba(255,255,255,.4);
   }
 </style>
+<link rel="stylesheet" href="theme.css">
 </head>
 <body>
 
 <div class="marquee-wrap">
-  <div class="marquee">✧･ﾟ: *✧･ﾟ:* LE CHAT DE LA COMMUNAUTÉ CHIBI *:･ﾟ✧*:･ﾟ✧　　sois sympa, c'est tout　　★彡</div>
+  <div class="marquee">✧･ﾟ: *✧･ﾟ:* LE CHAT DE LA COMMUNAUTÉ TWEWY CO-OP *:･ﾟ✧*:･ﾟ✧　　sois sympa, c'est tout　　★彡</div>
 </div>
 
-<div class="topbar">
-  <a class="backlink" href="index.html">← accueil</a>
-  <a class="backlink" href="chibis.html">🐣 chibis</a>
-</div>
+<nav class="site-nav">
+  <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+  <a href="index.html">🏠 Accueil</a>
+  <a href="chibis.html">🐣 Chibis</a>
+  <a href="dashboard.html">📝 Dashboard</a>
+  <a href="chat.html" class="active">💬 Chat</a>
+  <a href="telecharger.html">⬇ Télécharger</a>
+</nav>
 
 <main>
   <h1 class="pagetitle">Chat ✧</h1>
@@ -443,7 +448,7 @@
   </div>
 </main>
 
-<footer>site pensé par Lucas &amp; fait par Claude — Chibi</footer>
+<footer>site pensé par Lucas &amp; fait par Claude — TWEWY Co-op</footer>
 
 <button id="themeToggle" title="mode sombre">🌙</button>
 
