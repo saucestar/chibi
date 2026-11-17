@@ -777,6 +777,8 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="auth.js"></script>
 <script>
 /* ====================== CONFIGURATION ======================
    1) Crée une application sur https://discord.com/developers/applications
@@ -788,7 +790,6 @@
    4) Change le mot de passe admin ci-dessous si tu veux.
 ================================================================ */
 const DISCORD_CLIENT_ID = '1005172482539524286';
-const ADMIN_PASSWORD = 'Le28022007!!'; // <-- change-moi si tu veux
 
 /* 3) Va sur https://console.firebase.google.com, crée un projet gratuit,
       ajoute une "Realtime Database" (mode test), puis colle ici la config
@@ -1140,16 +1141,10 @@ function getRedirectUri(){
 }
 
 function startDiscordLogin(){
-  if(!DISCORD_CLIENT_ID || DISCORD_CLIENT_ID === 'PASTE_YOUR_DISCORD_CLIENT_ID_HERE'){
-    discordMsg.textContent = "Discord n'est pas encore configuré (demande à Lucas de finir la config) !";
-    return;
-  }
   if(pendingChibiId){
     sessionStorage.setItem('pendingChibiId', pendingChibiId);
   }
-  const redirect = encodeURIComponent(getRedirectUri());
-  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=identify`;
-  window.location.href = url;
+  ChibiAuth.login();
 }
 
 document.getElementById('discordLoginBtn').addEventListener('click', startDiscordLogin);
@@ -1157,32 +1152,13 @@ document.getElementById('discordCloseBtn').addEventListener('click', ()=>discord
 discordOverlay.addEventListener('click', (e)=>{ if(e.target === discordOverlay) discordOverlay.classList.remove('open'); });
 
 async function handleDiscordRedirect(){
-  if(window.location.hash && window.location.hash.includes('access_token')){
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    const token = params.get('access_token');
-    if(token){
-      try{
-        const res = await fetch('https://discord.com/api/users/@me', {
-          headers:{ Authorization: 'Bearer ' + token }
-        });
-        if(res.ok){
-          const user = await res.json();
-          discordUser = { id: user.id, username: user.global_name || user.username };
-          try{ localStorage.setItem('discordUser', JSON.stringify(discordUser)); }catch(e){}
-        }
-      }catch(e){ /* ignore, user stays logged out */ }
-      history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }
+  await ChibiAuth.handleRedirect();
 }
 
 async function loadDiscordUser(){
-  try{
-    const raw = localStorage.getItem('discordUser');
-    discordUser = raw ? JSON.parse(raw) : null;
-  }catch(e){
-    discordUser = null;
-  }
+  // verified identity from the Firebase session (members of the Discord server only)
+  discordUser = await ChibiAuth.current();
+  if(!discordUser) ChibiAuth.gate();
 }
 
 /* ====================== ADMIN DASHBOARD ====================== */
@@ -1191,7 +1167,8 @@ adminGear.addEventListener('click', async () => {
   adminOverlay.classList.add('open');
   document.getElementById('adminPassword').value = '';
   document.getElementById('adminMsg').textContent = '';
-  if(adminUnlocked){
+  if(adminUnlocked || (discordUser && discordUser.admin)){
+    adminUnlocked = true;
     document.getElementById('adminLoginView').style.display = 'none';
     document.getElementById('adminPanelView').style.display = 'block';
     updateAdminCount();
@@ -1207,7 +1184,7 @@ adminOverlay.addEventListener('click', (e)=>{ if(e.target === adminOverlay) admi
 
 document.getElementById('adminUnlockBtn').addEventListener('click', async () => {
   const pw = document.getElementById('adminPassword').value;
-  if(pw === ADMIN_PASSWORD){
+  if(discordUser && discordUser.admin){
     adminUnlocked = true;
     document.getElementById('adminLoginView').style.display = 'none';
     document.getElementById('adminPanelView').style.display = 'block';
@@ -1466,7 +1443,9 @@ applyTheme(savedTheme === 'dark');
 
 async function init(){
   await handleDiscordRedirect();
-  await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshChibiOrder(), refreshHiddenChibis(), refreshSelectionStatus(), loadDiscordUser()]);
+  await loadDiscordUser();   // reads need a signed-in member
+  adminGear.style.display = discordUser && discordUser.admin ? '' : 'none';
+  await Promise.all([refreshAssignments(), refreshCustomChibis(), refreshChibiOrder(), refreshHiddenChibis(), refreshSelectionStatus()]);
   renderGrid();
 
   if(selectionClosed && discordUser && !hasAlreadyPicked()){

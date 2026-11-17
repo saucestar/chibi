@@ -1,0 +1,15 @@
+name = "chibi-auth"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+# ID of the Discord server whose members may use the site (Discord: right-click the server > Copy Server ID)
+GUILD_ID = "REMPLACE_PAR_ID_DU_SERVEUR"
+# Discord IDs of the admins (comma separated)
+ADMIN_IDS = "REMPLACE_PAR_TON_ID_DISCORD"
+# pages allowed to call the worker from a browser
+ALLOWED_ORIGINS = "https://saucestar.github.io"
+
+# Secrets (never in this file), set them with:
+#   npx wrangler secret put FIREBASE_CLIENT_EMAIL
+#   npx wrangler secret put FIREBASE_PRIVATE_KEY

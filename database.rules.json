@@ -1,0 +1,67 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "assignments": {
+      ".read": "auth != null",
+      "$chibi": {
+        ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId && root.child('settings/selectionClosed').val() !== true && root.child('hiddenChibis').child($chibi).val() !== true))",
+        ".validate": "newData.hasChildren(['discordId', 'discordUsername'])",
+        "discordId": { ".validate": "newData.isString() && newData.val().length <= 25" },
+        "discordUsername": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "posts": {
+      ".read": "auth != null",
+      "$chibi": {
+        "$post": {
+          ".write": "auth != null && (auth.token.admin === true || root.child('assignments').child($chibi).child('discordId').val() === auth.token.discordId)",
+          ".validate": "newData.hasChildren(['image', 'createdAt'])",
+          "image": { ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 700000" },
+          "caption": { ".validate": "newData.isString() && newData.val().length <= 150" },
+          "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+          "likes": {
+            "$uid": {
+              ".write": "auth != null && auth.token.discordId === $uid",
+              ".validate": "newData.val() === true"
+            }
+          },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+
+    "profiles": {
+      ".read": "auth != null",
+      "$chibi": {
+        ".write": "auth != null && (auth.token.admin === true || root.child('assignments').child($chibi).child('discordId').val() === auth.token.discordId)",
+        "bio": { ".validate": "newData.isString() && newData.val().length <= 300" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "chat": {
+      ".read": "auth != null",
+      ".indexOn": ["createdAt"],
+      "$msg": {
+        ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId) || (data.child('discordId').val() === auth.token.discordId && !newData.exists()))",
+        ".validate": "newData.hasChildren(['text', 'discordId', 'createdAt'])",
+        "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000" },
+        "discordId": { ".validate": "newData.isString()" },
+        "discordUsername": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "chibiId": { ".validate": "newData.isString() && newData.val().length <= 64" },
+        "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "customChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
+    "hiddenChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
+    "chibiOrder":   { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
+    "settings":     { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" }
+  }
+}

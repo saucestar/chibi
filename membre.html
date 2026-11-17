@@ -499,6 +499,8 @@
 <script src="chibi-data.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="auth.js"></script>
 <script>
 /* Même client Discord que les autres pages. Si cette page est hébergée sur une
    URL différente, ajoute-la dans OAuth2 > Redirects sur
@@ -527,29 +529,11 @@ function getRedirectUri(){
 }
 
 function startDiscordLogin(){
-  const redirect = encodeURIComponent(getRedirectUri());
-  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${redirect}&response_type=token&scope=identify`;
-  window.location.href = url;
+  ChibiAuth.login();
 }
 
 async function handleDiscordRedirect(){
-  if(window.location.hash && window.location.hash.includes('access_token')){
-    const params = new URLSearchParams(window.location.hash.slice(1));
-    const token = params.get('access_token');
-    if(token){
-      try{
-        const res = await fetch('https://discord.com/api/users/@me', {
-          headers:{ Authorization: 'Bearer ' + token }
-        });
-        if(res.ok){
-          const user = await res.json();
-          discordUser = { id: user.id, username: user.global_name || user.username };
-          try{ localStorage.setItem('discordUser', JSON.stringify(discordUser)); }catch(e){}
-        }
-      }catch(e){ /* ignore */ }
-      history.replaceState(null, '', window.location.pathname + window.location.search);
-    }
-  }
+  await ChibiAuth.handleRedirect();
 }
 
 const mainEl = document.getElementById('main');
@@ -569,11 +553,10 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-function loadDiscordUser(){
-  try{
-    const raw = localStorage.getItem('discordUser');
-    discordUser = raw ? JSON.parse(raw) : null;
-  }catch(e){ discordUser = null; }
+async function loadDiscordUser(){
+  // verified identity from the Firebase session (members of the Discord server only)
+  discordUser = await ChibiAuth.current();
+  if(!discordUser) ChibiAuth.gate();
 }
 
 function renderNotFound(){
@@ -766,7 +749,7 @@ for(let i=0;i<20;i++){
 
 async function init(){
   await handleDiscordRedirect();
-  loadDiscordUser();
+  await loadDiscordUser();
   await renderProfile();
 }
 init();
