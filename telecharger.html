@@ -449,6 +449,17 @@
     transition:transform .15s ease, box-shadow .15s ease;
   }
   .dl-btn:hover{ transform:translateY(-3px); box-shadow:0 9px 0 #141217, 0 14px 28px rgba(20,18,23,.4); }
+  .app-dl{ display:flex; gap:22px; align-items:center; flex-wrap:wrap; }
+  .app-dl-txt{ flex:1; min-width:240px; }
+  .app-dl-txt p{ margin:0 0 14px; font-size:14px; line-height:1.55; }
+  .app-dl-how{ margin-top:14px; font-size:13px; line-height:1.6; color:#4a4652; }
+  body.dark .app-dl-how{ color:#d8d2e0; }
+  .app-dl-qr{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .app-dl-qr #appQr{ background:#fff; padding:10px; border:3px solid #141217; border-radius:12px; box-shadow:5px 5px 0 #141217; }
+  .app-dl-qr #appQr img, .app-dl-qr #appQr canvas{ display:block; width:150px; height:150px; }
+  .app-dl-qr small{ font-weight:700; font-size:12px; color:#4a4652; }
+  #appInstall{ margin-top:12px; }
+  @media (max-width:760px){ .app-dl-qr{ display:none; } }
   .dl-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #141217, 0 4px 12px rgba(20,18,23,.3); }
   .dl-meta{ margin-top:14px; font-size:13px; color:#5c5866; }
   body.dark .dl-meta{ color:#b9b3c4; }
@@ -551,6 +562,22 @@
       <span>🎮 TWEWY Solo Remix (PC) installé</span>
       <span>💬 un compte Discord</span>
       <span>🛡 ton jeu d'origine est conservé</span>
+    </div>
+  </section>
+
+  <section class="dl-card" id="appli">
+    <h2 class="section-title">📱 l'appli téléphone</h2>
+    <div class="app-dl">
+      <div class="app-dl-txt">
+        <p>Le launcher dans ta poche : <b>profil, niveau, mission du jour, classement, amis, musique</b> (recherche YouTube, tes playlists du launcher, import Spotify), communauté et chat. Tout sauf lancer le jeu, qui reste sur PC.</p>
+        <a class="dl-btn" href="app.html">📱 Ouvrir l'appli</a>
+        <div class="app-dl-how" id="appHow">
+          <b>Android</b> : ouvre l'appli dans Chrome, puis menu ⋮ → « Installer l'application ».<br>
+          <b>iPhone</b> : ouvre l'appli dans Safari, puis Partager ⬆ → « Sur l'écran d'accueil ».
+        </div>
+        <button type="button" class="dl-btn" id="appInstall" hidden>⬇ Installer l'appli sur cet appareil</button>
+      </div>
+      <div class="app-dl-qr"><div id="appQr"></div><small>scanne avec ton téléphone</small></div>
     </div>
   </section>
 
@@ -678,6 +705,23 @@ for(let i=0;i<20;i++){
 loadVersions();
 </script>
 <script src="nav.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* QR code of the phone app (drawn in the page, nothing is sent anywhere) */
+try{ new QRCode(document.getElementById('appQr'), { text: new URL('app.html', location.href).href, width: 300, height: 300, colorDark: '#141217', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M }); }
+catch(e){ document.querySelector('.app-dl-qr').style.display = 'none'; }
+if(location.hash === '#appli') setTimeout(() => document.getElementById('appli').scrollIntoView(), 50);
+</script>
+<script>
+function appInstallBtn(){
+  const b = document.getElementById('appInstall');
+  if(!window.TwewyInstall || !TwewyInstall.prompt || TwewyInstall.standalone){ b.hidden = true; return; }
+  b.hidden = false;
+  b.onclick = async () => { const p = TwewyInstall.prompt; TwewyInstall.prompt = null; p.prompt(); try{ await p.userChoice; }catch(e){} appInstallBtn(); };
+}
+document.addEventListener('twewy-installable', appInstallBtn);
+appInstallBtn();
+</script>
 <script src="texts.js"></script>
 </body>
 </html>
