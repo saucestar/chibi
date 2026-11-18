@@ -43,12 +43,13 @@ type Fighter = {
   attackFrames?: number;
 };
 
-const initialTeam: Fighter[] = [
+const characterRoster: Fighter[] = [
   { name: "NEKU", role: "PSYCH USER", hp: 118, maxHp: 118, sprite: nekuSprite, accent: "#ff5f29", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: nekuAttackSprite, attackFrames: 7 },
   { name: "BEAT", role: "BRAWLER", hp: 142, maxHp: 142, sprite: beatSprite, accent: "#f8d742", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: beatAttackSprite, attackFrames: 5 },
   { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 80, frameHeight: 116, attackSprite: shikiAttackSprite, attackFrames: 7 },
   { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 10, frameWidth: 80, frameHeight: 116 },
 ];
+const initialTeam: Fighter[] = characterRoster.filter((fighter) => fighter.name === "NEKU" || fighter.name === "SHIKI");
 
 const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" | "star" }) => {
   const paths = {
@@ -357,7 +358,7 @@ function App() {
         <aside className="squad-panel">
           <div className="section-label">
             <span>PLAYER SQUAD</span>
-            <b>04 / 04</b>
+            <b>{String(team.length).padStart(2, "0")} / 04</b>
           </div>
           {team.map((fighter, index) => (
             <article className={`fighter-card ${fighter.hp <= 0 ? "down" : ""}`} key={fighter.name}>

@@ -20,7 +20,7 @@ const fierySpiritPin = "./assets/game/pin-fiery-spirit.png";
 const masamunePin = "./assets/game/pin-masamune.png";
 const konohanaPin = "./assets/game/pin-konohana.png";
 const battleBackground = "./assets/game/battle-bg.jpg";
-const initialTeam = [{
+const characterRoster = [{
   name: "NEKU",
   role: "PSYCH USER",
   hp: 118,
@@ -67,6 +67,7 @@ const initialTeam = [{
   frameWidth: 80,
   frameHeight: 116
 }];
+const initialTeam = characterRoster.filter(fighter => fighter.name === "NEKU" || fighter.name === "SHIKI");
 const Icon = ({
   name
 }) => {
@@ -409,7 +410,7 @@ function App() {
     className: "squad-panel"
   }, React.createElement("div", {
     className: "section-label"
-  }, React.createElement("span", null, "PLAYER SQUAD"), React.createElement("b", null, "04 / 04")), team.map((fighter, index) => React.createElement("article", {
+  }, React.createElement("span", null, "PLAYER SQUAD"), React.createElement("b", null, String(team.length).padStart(2, "0"), " / 04")), team.map((fighter, index) => React.createElement("article", {
     className: `fighter-card ${fighter.hp <= 0 ? "down" : ""}`,
     key: fighter.name
   }, React.createElement("div", {
