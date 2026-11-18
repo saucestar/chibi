@@ -47,7 +47,7 @@ const initialTeam = [{
   sprite: shikiSprite,
   accent: "#ff70ae",
   frames: 3,
-  frameWidth: 32,
+  frameWidth: 45,
   frameHeight: 92
 }, {
   name: "JOSHUA",
