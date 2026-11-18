@@ -443,7 +443,7 @@ function App() {
             }}
           >
             <div className="turn-badge">TURN {String(turn).padStart(2, "0")}</div>
-            <div className="enemy-line">
+            <div className={`enemy-line enemies-count-${enemies.length}`}>
               {enemies.map((enemy) => (
                 <button
                   key={enemy.id}

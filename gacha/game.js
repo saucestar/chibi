@@ -482,7 +482,7 @@ function App() {
   }, React.createElement("div", {
     className: "turn-badge"
   }, "TURN ", String(turn).padStart(2, "0")), React.createElement("div", {
-    className: "enemy-line"
+    className: `enemy-line enemies-count-${enemies.length}`
   }, enemies.map(enemy => React.createElement("button", {
     key: enemy.id,
     className: `enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`,
