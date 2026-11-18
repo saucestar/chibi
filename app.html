@@ -57,6 +57,15 @@ button{ font-family:inherit; }
   .tabs button b{ display:none; }
 }
 @media (max-width:420px){ .tabs button{ font-size:9px; letter-spacing:-.25px; } .tabs button[data-p="board"]{ font-size:8px; } }
+/* the big round pin in the middle of the bar: opens the game */
+.tabs button.pin{ flex:0 0 74px; height:74px; margin:-30px 4px 0; padding:0; border-radius:50%; background:none; position:relative; z-index:2;
+  filter:drop-shadow(3px 3px 0 var(--ink)); transition:transform .15s ease; }
+.tabs button.pin svg{ width:100%; height:100%; display:block; }
+.tabs button.pin:active{ transform:scale(.92); }
+.tabs button.pin.on{ background:none; transform:rotate(-12deg) scale(1.06); }
+.tabs button.pin.on svg{ animation:pinGlow 1.6s ease-in-out infinite; }
+@keyframes pinGlow{ 50%{ filter:drop-shadow(0 0 7px var(--ac)); } }
+@media (min-width:900px){ .tabs button.pin{ flex:0 0 46px; height:46px; margin:0 6px; } }
 
 /* ---------- pages + sticker panels ---------- */
 main{ max-width:1180px; margin:0 auto; padding:22px 12px 10px; }
@@ -219,10 +228,23 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
 <nav class="tabs" id="tabs">
   <button type="button" data-p="home" class="on"><b>🏠</b>Accueil</button>
   <button type="button" data-p="music"><b>🎵</b>Musique</button>
+  <button type="button" data-p="game" class="pin" aria-label="Jeu" title="Jeu">
+    <svg viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <radialGradient id="pinMetal" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#d9d6de"/><stop offset="1" stop-color="#8d8996"/></radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="47" fill="#0e0c12"/>
+      <circle cx="50" cy="50" r="42" fill="url(#pinMetal)"/>
+      <circle cx="50" cy="50" r="34" fill="var(--ac)" stroke="#0e0c12" stroke-width="3"/>
+      <path d="M50 26c-11.5 0-20 8-20 18.5 0 6.2 3 10.6 7.5 13.2V64a3 3 0 0 0 3 3h19a3 3 0 0 0 3-3v-6.3c4.5-2.6 7.5-7 7.5-13.2C70 34 61.5 26 50 26z" fill="#fff" stroke="#0e0c12" stroke-width="3" stroke-linejoin="round"/>
+      <ellipse cx="42" cy="46" rx="5.2" ry="6" fill="#0e0c12"/><ellipse cx="58" cy="46" rx="5.2" ry="6" fill="#0e0c12"/>
+      <path d="M50 52.5l-3 5h6z" fill="#0e0c12"/>
+      <path d="M44 61v6M50 61v6M56 61v6" stroke="#0e0c12" stroke-width="2.4"/>
+      <path d="M24 31a30 30 0 0 1 14-10" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7" fill="none"/>
+    </svg>
+  </button>
   <button type="button" data-p="board"><b>🏆</b>Classement</button>
   <button type="button" data-p="friends"><b>👥</b>Amis</button>
-  <button type="button" data-p="profile"><b>🌸</b>Profil</button>
-  <button type="button" data-p="game"><b>🎮</b>Jeu</button>
 </nav>
 
 <main>
@@ -237,6 +259,7 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
         <div class="pm"><div class="pname" id="hName">…</div><div class="ps" id="hSub"></div></div>
       </div>
       <div class="row2">
+        <button type="button" class="btn pri" id="toProfile">mon profil</button>
         <a class="btn" href="index.html">le site</a>
         <button type="button" class="btn" id="logout">déconnexion</button>
       </div>
@@ -471,6 +494,9 @@ async function loadHome(){
   }catch(e){ $('feed').innerHTML = '<div class="empty" style="color:var(--muted)">feed indisponible : ' + esc(why(e)) + '</div>'; }
 }
 $('logout').onclick = () => ChibiAuth.logout();
+$('toProfile').onclick = () => show('profile');
+$('hAv').style.cursor = 'pointer';
+$('hAv').onclick = () => show('profile');
 
 // install hint
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__ip = e; renderInstall(); });
