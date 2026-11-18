@@ -1,0 +1,6 @@
+﻿Character and Noise sprite sheets were supplied by the user.
+
+- Shiki Misaki and Joshua Kiryu: ripped from *Subarashiki Kono Sekai (It's a Wonderful World)* by menos_grante.
+- Shinigami, Jey Pengi, Electro Pengi, and Psyche Fox: ripped from *Subarashiki Kono Sekai (It's a Wonderful World)* by menos_grante.
+
+Original sprite sheets include the request to credit menos_grante. The game uses cropped idle frames derived from those sheets.

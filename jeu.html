@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1f1d23">
+  <title>Jeu test - TWEWY Co-op</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:#1f1d23;color:#fff3d6;font-family:Montserrat,Arial,sans-serif}
+    .site-nav{height:54px;display:flex;align-items:center;gap:clamp(12px,2vw,26px);padding:0 18px;overflow-x:auto;white-space:nowrap;background:linear-gradient(90deg,#ff208c,#e0157a,#ffd1e6,#ff208c);background-size:300% 100%;animation:nav-glow 10s linear infinite}
+    @keyframes nav-glow{to{background-position:300% 0}}
+    .site-nav a{color:#211827;text-decoration:none;font-size:12px;font-weight:800}
+    .site-nav a:hover{opacity:.75}
+    .site-nav .brand{margin-right:auto;font-size:15px;letter-spacing:.05em}
+    .site-nav .brand b{font-weight:900}
+    .site-nav .active{padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.42)}
+    main{height:calc(100vh - 54px);min-height:520px}
+    iframe{display:block;width:100%;height:100%;border:0;background:#111516}
+    @media(max-width:560px){.site-nav{gap:14px;padding:0 12px}.site-nav a{font-size:10px}.site-nav .brand{font-size:12px}}
+  </style>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="index.html">TWEWY <b>CO-OP</b></a>
+    <a href="index.html">Accueil</a>
+    <a href="chibis.html">Chibis</a>
+    <a class="active" href="jeu.html">Jeu test</a>
+  </nav>
+  <main><iframe src="gacha/index.html" title="Reaper's Run - jeu de combat test" allow="fullscreen"></iframe></main>
+  <script src="nav.js"></script>
+</body>
+</html>

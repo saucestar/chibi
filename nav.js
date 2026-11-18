@@ -83,4 +83,10 @@
     const a = document.createElement('a'); a.href = 'app.html'; a.textContent = '📱 Appli';
     nav.appendChild(a);
   }
+
+  if(nav && !nav.querySelector('a[href="jeu.html"]')){
+    const a = document.createElement('a'); a.href = 'jeu.html'; a.textContent = '🎮 Jeu test';
+    if(page === 'jeu.html') a.className = 'active';
+    nav.appendChild(a);
+  }
 })();
