@@ -619,30 +619,25 @@ button, input { font: inherit; }
   position: absolute;
   z-index: 3;
   left: 3%;
-  top: 52%;
+  top: 0;
   bottom: 58px;
   width: clamp(120px, 20%, 200px);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
 }
 .arena-hero {
-  position: relative;
-  flex: 0 0 25%;
+  position: absolute;
+  left: 0;
   width: 100%;
-  height: 25%;
-  min-height: 0;
+  height: 116px;
   display: flex;
   justify-content: center;
   align-items: center;
   filter: drop-shadow(0 8px 2px rgba(0, 0, 0, 0.35));
 }
 .arena-hero:first-child {
-  top: 12px;
+  top: 44%;
 }
 .arena-hero:last-child {
-  top: 26px;
+  top: 70%;
 }
 .arena-hero .hero-sprite {
   transform: scale(-1.5, 1.5);
@@ -1165,7 +1160,7 @@ button, input { font: inherit; }
   }
   .player-line {
     left: 1%;
-    top: 52%;
+    top: 0;
     bottom: 58px;
     width: 29%;
   }
@@ -1173,10 +1168,10 @@ button, input { font: inherit; }
     width: 100%;
   }
   .arena-hero:first-child {
-    top: 5px;
+    top: 44%;
   }
   .arena-hero:last-child {
-    top: 20px;
+    top: 70%;
   }
   .arena-hero .hero-sprite {
     transform: scale(-1.18, 1.18);
