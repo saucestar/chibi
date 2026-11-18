@@ -450,28 +450,6 @@ body.dark .md-p, body.dark .md-confirm, body.dark .md-log{ color:var(--paper); }
 body.dark .md-p code{ background:#2a2630; }
 
 /* ================= phone app (PWA) ================= */
-/* bottom tab bar (built by nav.js) instead of the top links on phones */
-.app-tabs{ display:none; }
-@media (max-width:760px){
-  .site-nav a:not(.brand), .site-nav button{ display:none !important; }
-  .site-nav{ justify-content:center !important; }
-  .app-tabs{ display:flex; position:fixed; left:0; right:0; bottom:0; z-index:9000; background:var(--ink);
-    border-top:3px solid var(--accent); padding:4px 2px calc(4px + env(safe-area-inset-bottom)); }
-  .app-tabs a{ flex:1; display:flex; flex-direction:column; align-items:center; gap:1px; padding:5px 0 3px; text-decoration:none;
-    color:#cfc9d6; font:800 10px 'Montserrat',sans-serif; border-radius:10px; }
-  .app-tabs a b{ font-size:20px; line-height:1; font-weight:400; }
-  .app-tabs a.on{ color:var(--ink); background:var(--accent); }
-  body{ padding-bottom:calc(76px + env(safe-area-inset-bottom)) !important; }
-  #themeToggle{ bottom:calc(84px + env(safe-area-inset-bottom)) !important; }
-  footer{ margin-bottom:8px; }
-  .lp-main{ padding-left:12px !important; padding-right:12px !important; }
-}
-.app-more{ position:fixed; inset:0; z-index:9500; background:rgba(10,8,14,.6); display:flex; align-items:flex-end; }
-.app-more[hidden]{ display:none; }
-.app-more div{ width:100%; background:var(--paper); border-top:3px solid var(--ink); border-radius:18px 18px 0 0; padding:14px 14px calc(18px + env(safe-area-inset-bottom)); display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.app-more a, .app-more button{ display:block; text-align:center; padding:14px 8px; background:#fff; color:var(--ink); border:2.5px solid var(--ink); border-radius:12px; box-shadow:3px 3px 0 var(--ink); font:800 14px 'Montserrat',sans-serif; text-decoration:none; cursor:pointer; }
-body.dark .app-more div{ background:#1e1b22; }
-
 /* home of the app */
 .ap-hero{ text-align:center; margin:6px 0 18px; }
 .ap-hero img{ width:96px; height:96px; border-radius:22px; border:3px solid var(--ink); box-shadow:5px 5px 0 var(--ink); }

@@ -1,8 +1,7 @@
 // TWEWY Co-op app (PWA): pages and site files come from the network first (always up to date) and fall back to the
 // last copy when offline; data (Firebase, Discord, YouTube, the auth worker) is never cached here.
-const CACHE = 'twewy-coop-v1';
-const SHELL = ['app.html', 'musique.html', 'amis.html', 'classement.html', 'membre.html', 'index.html', 'theme.css', 'auth.js', 'nav.js',
-  'texts.js', 'avatar.js', 'progress.js', 'chibi-data.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
+const CACHE = 'twewy-coop-v3';
+const SHELL = ['app.html', 'auth.js', 'avatar.js', 'progress.js', 'chibi-data.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting()));
@@ -18,7 +17,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin !== location.origin) return;           // Firebase, Discord, YouTube, fonts: straight to the network
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: 'no-cache' }).then(res => {          // always check the server: a new version shows at once
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('app.html')))

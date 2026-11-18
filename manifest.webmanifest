@@ -7,16 +7,16 @@
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#141217",
-  "theme_color": "#141217",
+  "background_color": "#e6e0d1",
+  "theme_color": "#1f1d23",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Musique", "url": "./musique.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Classement", "url": "./classement.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Amis", "url": "./amis.html", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Musique", "url": "./app.html#music", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Classement", "url": "./app.html#board", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Amis", "url": "./app.html#friends", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }
