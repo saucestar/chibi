@@ -459,9 +459,9 @@ button, input { font: inherit; }
 .enemy-line {
   position: absolute;
   z-index: 2;
-  top: 17%;
+  top: 35%;
   right: 3%;
-  bottom: 64px;
+  bottom: 17%;
   width: clamp(145px, 22%, 230px);
   display: flex;
   flex-direction: column;
@@ -1144,9 +1144,9 @@ button, input { font: inherit; }
     height: 430px;
   }
   .enemy-line {
-    top: 17%;
+    top: 35%;
     right: 1%;
-    bottom: 58px;
+    bottom: 17%;
     width: 30%;
   }
   .enemy-sprite {
