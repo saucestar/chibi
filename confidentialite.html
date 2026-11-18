@@ -568,7 +568,8 @@
     <ul>
       <li>Le launcher demande uniquement un accès <b>en lecture seule</b> (<code>youtube.readonly</code>) : il ne peut rien publier, modifier ni supprimer sur ton compte.</li>
       <li>Il lit le nom de ta chaîne, tes titres likés et tes playlists, seulement pour te les proposer dans l'onglet MUSIQUE et dans le menu musique du jeu.</li>
-      <li>Ces informations et le jeton d'accès restent <b>sur ton PC</b> (<code>%APPDATA%\TWEWYCoop</code>, jeton chiffré par Windows pour ton seul compte) et ne sont envoyés à aucun serveur de TWEWY Co-op.</li>
+      <li>Le jeton d'accès reste <b>sur ton PC</b> (<code>%APPDATA%\TWEWYCoop</code>, chiffré par Windows pour ton seul compte) et n'est envoyé à aucun serveur de TWEWY Co-op.</li>
+      <li>Pour que tu les retrouves dans l'<b>appli téléphone</b> (page Musique), le nom de tes playlists et la liste de leurs vidéos (identifiant et titre) sont copiés dans la base TWEWY Co-op, <b>lisibles par toi seul</b>. Rien d'autre (nom de chaîne, historique, jeton) n'y est copié. Quand tu délies ton compte YouTube, ces playlists sont retirées de la base à la synchronisation suivante ; « Mes données » les supprime aussi.</li>
       <li>L'utilisation des données reçues des API Google respecte la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">politique relative aux données utilisateur des services d'API Google</a>, y compris ses exigences d'utilisation limitée.</li>
       <li>Les vidéos sont lues avec le lecteur officiel de YouTube, soumis aux <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener">conditions d'utilisation de YouTube</a> et aux <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">règles de confidentialité de Google</a>.</li>
       <li>Tu peux délier ton compte à tout moment (bouton <b>Délier</b> du launcher : le jeton est supprimé et révoqué) ou depuis <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">les autorisations de ton compte Google</a>.</li>
@@ -577,7 +578,7 @@
     <h3>Où sont les données, et qui les traite (sous-traitants)</h3>
     <ul>
       <li><b>Google Firebase</b> (base de données et connexion) : serveurs en Belgique (europe-west1).</li>
-      <li><b>Cloudflare</b> (fonction de connexion) : vérifie ton appartenance au serveur Discord, ne stocke rien.</li>
+      <li><b>Cloudflare</b> (fonction de connexion) : vérifie ton appartenance au serveur Discord ; pour l'appli téléphone, fait aussi les recherches YouTube et lit les playlists Spotify publiques que tu importes. Ne stocke rien.</li>
       <li><b>Discord</b> : connexion (« Se connecter avec Discord »).</li>
       <li><b>GitHub Pages</b> (hébergement du site et des mises à jour) et <b>Google Fonts</b> (police Montserrat) : ces services reçoivent ton adresse IP pour afficher le site, comme tout hébergeur.</li>
       <li><b>YouTube / rss2json</b> : affichage des dernières vidéos de la chaîne sur l'accueil, et lecteur de musique du launcher.</li>
@@ -590,6 +591,7 @@
       <li>Messages du chat : jusqu'à leur suppression par toi ou un admin.</li>
       <li>Scores de la mission du jour : 1 an au plus.</li>
       <li>Musique partagée : supprimée à la fin de la partie.</li>
+      <li>Playlists de l'appli téléphone : tant que tu les gardes (suppression playlist par playlist, ou tout via « Mes données »).</li>
       <li>Données du launcher sur ton PC : jusqu'à ce que tu les effaces (dossier <code>%APPDATA%\TWEWYCoop</code>).</li>
     </ul>
 

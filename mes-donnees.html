@@ -562,10 +562,10 @@ async function getVal(path){ const s = await db.ref(path).get(); return s.exists
 
 async function collect(){
   const me = discordUser.id;
-  const [assign, posts, profiles, chat, coop, missions] = await Promise.all(
-    ['assignments', 'posts', 'profiles', 'chat', 'coop/' + me, 'missions'].map(p => getVal(p).catch(() => null)));
+  const [assign, posts, profiles, chat, coop, missions, library] = await Promise.all(
+    ['assignments', 'posts', 'profiles', 'chat', 'coop/' + me, 'missions', 'library/' + me].map(p => getVal(p).catch(() => null)));
   const d = { exportedAt: new Date().toISOString(), discordId: me, discordName: discordUser.username,
-              chibi: null, bio: null, posts: {}, likesGiven: [], chatMessages: {}, gameProfile: coop || null, missionScores: {} };
+              chibi: null, bio: null, posts: {}, likesGiven: [], chatMessages: {}, gameProfile: coop || null, musicLibrary: library || null, missionScores: {} };
   let myChibi = null;
   Object.entries(assign || {}).forEach(([id, a]) => { if (a && a.discordId === me) { myChibi = id; d.chibi = Object.assign({ id }, a); } });
   if (myChibi){
@@ -605,6 +605,7 @@ async function deleteAll(){
   await step('profil de jeu supprimé', () => db.ref('coop/' + me).remove());
   for (const day of Object.keys(d.missionScores)) await step('score du ' + day + ' supprimé', () => db.ref('missions/' + day + '/' + me).remove());
   await step('musique partagée supprimée', () => db.ref('jam/' + me).remove());
+  await step('playlists de l'appli supprimées', () => db.ref('library/' + me).remove());
   if (d.chibi) await step('chibi libéré', () => db.ref('assignments/' + d.chibi.id).remove());
   log('<b>Terminé.</b> Tu vas être déconnecté.');
   setTimeout(() => ChibiAuth.logout(), 2500);

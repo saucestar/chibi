@@ -42,3 +42,81 @@
     }
   });
 })();
+
+// ---- phone app (PWA): install tags, offline shell, bottom tab bar
+(function(){
+  const head = document.head;
+  function tag(name, attrs){
+    if(head.querySelector(name + '[' + Object.keys(attrs)[0] + '="' + attrs[Object.keys(attrs)[0]] + '"]')) return;
+    const el = document.createElement(name);
+    for(const k in attrs) el.setAttribute(k, attrs[k]);
+    head.appendChild(el);
+  }
+  tag('link', { rel: 'manifest', href: 'manifest.webmanifest' });
+  tag('meta', { name: 'theme-color', content: '#141217' });
+  tag('link', { rel: 'apple-touch-icon', href: 'icons/apple-touch-icon.png' });
+  tag('meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+  tag('meta', { name: 'mobile-web-app-capable', content: 'yes' });
+  tag('meta', { name: 'apple-mobile-web-app-title', content: 'TWEWY Co-op' });
+  tag('meta', { name: 'apple-mobile-web-app-status-bar-style', content: 'black' });
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+  // "install the app": Android/Chrome gives a prompt event, iPhone needs Share > Add to Home Screen
+  window.TwewyInstall = { prompt: null, standalone: matchMedia('(display-mode: standalone)').matches || navigator.standalone === true };
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); TwewyInstall.prompt = e; document.dispatchEvent(new Event('twewy-installable')); });
+
+  const page = (location.pathname.split('/').pop() || 'index.html');
+  const nav = document.querySelector('.site-nav');
+  // top bar (computer): the app's new pages next to Classement
+  if(nav){
+    const after = nav.querySelector('a[href="classement.html"]');
+    [['amis.html', '👥 Amis'], ['musique.html', '🎵 Musique']].forEach(([href, label]) => {
+      if(nav.querySelector('a[href="' + href + '"]')) return;
+      const a = document.createElement('a'); a.href = href; a.textContent = label;
+      if(page === href) a.className = 'active';
+      if(after && after.nextSibling) nav.insertBefore(a, after.nextSibling); else nav.appendChild(a);
+    });
+  }
+
+  // bottom tab bar (phone)
+  const tabs = document.createElement('nav');
+  tabs.className = 'app-tabs';
+  const items = [['app.html', '🏠', 'Accueil'], ['musique.html', '🎵', 'Musique'], ['amis.html', '👥', 'Amis'], ['classement.html', '🏆', 'Classement'], ['#more', '☰', 'Plus']];
+  items.forEach(([href, icon, label]) => {
+    const a = document.createElement('a');
+    a.href = href; a.innerHTML = '<b>' + icon + '</b>' + label;
+    if(page === href) a.className = 'on';
+    tabs.appendChild(a);
+  });
+  const sheet = document.createElement('div');
+  sheet.className = 'app-more'; sheet.hidden = true;
+  sheet.innerHTML = '<div>' +
+    '<a href="chibis.html" id="appMoreProfile">🌸 Mon profil</a>' +
+    '<a href="index.html">✧ Communauté</a>' +
+    '<a href="chat.html">💬 Chat</a>' +
+    '<a href="dashboard.html">📝 Dashboard</a>' +
+    '<a href="telecharger.html">⬇ Jeu (PC)</a>' +
+    '<a href="mes-donnees.html">🔒 Mes données</a>' +
+    '<a href="admin.html" id="appMoreAdmin" hidden>⚙ Admin</a>' +
+    '<button type="button" id="appMoreTheme">🌙 Thème</button>' +
+    '</div>';
+  sheet.addEventListener('click', e => { if(e.target === sheet) sheet.hidden = true; });
+  tabs.querySelector('a[href="#more"]').addEventListener('click', e => { e.preventDefault(); sheet.hidden = false; });
+  document.body.appendChild(tabs);
+  document.body.appendChild(sheet);
+  sheet.querySelector('#appMoreTheme').addEventListener('click', () => { const t = document.getElementById('themeToggle'); if(t) t.click(); sheet.hidden = true; });
+
+  // the member's own profile / admin page, once known (same rules as the top bar above)
+  if(typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length || !firebase.auth) return;
+  firebase.auth().onAuthStateChanged(async user => {
+    if(!user) return;
+    try{
+      const t = await user.getIdTokenResult();
+      if(t.claims.admin === true) sheet.querySelector('#appMoreAdmin').hidden = false;
+      const id = String(t.claims.discordId || '');
+      const snap = await firebase.database().ref('assignments').get();
+      const hit = Object.entries(snap.exists() ? snap.val() : {}).find(([, a]) => a && a.discordId === id);
+      if(hit) sheet.querySelector('#appMoreProfile').href = 'membre.html?id=' + encodeURIComponent(hit[0]);
+    }catch(e){}
+  });
+})();

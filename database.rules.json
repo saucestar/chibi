@@ -152,6 +152,30 @@
       }
     },
 
+    "library": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        ".write": "auth != null && (auth.token.discordId === $uid || (auth.token.admin === true && !newData.exists()))",
+        "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "lists": {
+          "$key": {
+            ".validate": "$key.length <= 80 && newData.hasChildren(['n', 'k'])",
+            "n": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "k": { ".validate": "newData.val() === 'yt' || newData.val() === 'sp'" },
+            "u": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+            "t": {
+              "$i": { ".validate": "$i.length <= 4 && newData.isString() && newData.val().length <= 260" }
+            },
+            "$other": { ".validate": false }
+          }
+        },
+        "gone": {
+          "$key": { ".validate": "$key.length <= 80 && newData.isNumber()" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
     "customChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
     "hiddenChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
     "chibiOrder":   { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
