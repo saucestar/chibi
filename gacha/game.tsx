@@ -128,7 +128,7 @@ function Sprite({
 }) {
   const isAttacking =
     combat &&
-    ((fighter.name === "NEKU" && ["pyro", "shockwave", "heal", "burst"].includes(action ?? "")) ||
+    ((fighter.name === "NEKU" && ["pyro", "shockwave", "burst"].includes(action ?? "")) ||
       ((fighter.name === "BEAT" || fighter.name === "SHIKI") && ["shockwave", "burst"].includes(action ?? "")));
   const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
   const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;

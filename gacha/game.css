@@ -460,9 +460,9 @@ button, input { font: inherit; }
   position: absolute;
   z-index: 2;
   top: 17%;
-  right: 4%;
+  right: 3%;
   bottom: 64px;
-  width: clamp(130px, 19%, 210px);
+  width: clamp(145px, 22%, 230px);
   display: flex;
   flex-direction: column;
   justify-content: space-around;
@@ -545,8 +545,8 @@ button, input { font: inherit; }
   animation: seven-frame-idle 600ms steps(1, end) infinite;
 }
 .enemy-sprite {
-  transform: scale(0.95);
-  transform-origin: bottom;
+  transform: scale(1.12);
+  transform-origin: center bottom;
 }
 .boss-noise {
   animation: five-frame-idle 1s steps(1, end) infinite, boss-pulse 1.2s ease-in-out infinite alternate;
@@ -618,10 +618,10 @@ button, input { font: inherit; }
 .player-line {
   position: absolute;
   z-index: 3;
-  left: 2%;
-  top: 6%;
+  left: 3%;
+  top: 4%;
   bottom: 58px;
-  width: clamp(100px, 17%, 180px);
+  width: clamp(120px, 20%, 200px);
   display: flex;
   flex-direction: column;
   justify-content: space-around;
@@ -638,12 +638,12 @@ button, input { font: inherit; }
   filter: drop-shadow(0 8px 2px rgba(0, 0, 0, 0.35));
 }
 .arena-hero .hero-sprite {
-  transform: scale(0.78);
+  transform: scale(-1.12, 1.12);
   transform-origin: bottom;
   margin-bottom: 0;
 }
 .arena-hero .attack-sprite {
-  transform: scale(0.78);
+  transform: scale(-1.12, 1.12);
 }
 .arena-hero > span {
   position: absolute;
@@ -1143,12 +1143,12 @@ button, input { font: inherit; }
   }
   .enemy-line {
     top: 17%;
-    right: 2%;
+    right: 1%;
     bottom: 58px;
-    width: 27%;
+    width: 30%;
   }
   .enemy-sprite {
-    transform: scale(0.75);
+    transform: scale(0.9);
   }
   .enemy-tag {
     bottom: 0;
@@ -1158,18 +1158,18 @@ button, input { font: inherit; }
   }
   .player-line {
     left: 1%;
-    top: 5%;
+    top: 3%;
     bottom: 58px;
-    width: 26%;
+    width: 29%;
   }
   .arena-hero {
     width: 100%;
   }
   .arena-hero .hero-sprite {
-    transform: scale(0.58);
+    transform: scale(-0.84, 0.84);
   }
   .arena-hero .attack-sprite {
-    transform: scale(0.58);
+    transform: scale(-0.84, 0.84);
   }
   .arena-hero > span {
     bottom: -1px;
