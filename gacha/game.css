@@ -24,34 +24,11 @@ button, input { font: inherit; }
   }
 }
 
-@keyframes sprite-idle {
-  0%,
-  22% {
-    background-position: 0 0;
-  }
-  25%,
-  47% {
-    background-position: 33.333% 0;
-  }
-  50%,
-  72% {
-    background-position: 66.666% 0;
-  }
-  75%,
-  100% {
-    background-position: 100% 0;
-  }
-}
-
-@keyframes hero-idle {
+@keyframes four-frame-idle {
   0% { background-position: 0 0; }
-  12.5% { background-position: 14.2857% 0; }
-  25% { background-position: 28.5714% 0; }
-  37.5% { background-position: 42.8571% 0; }
-  50% { background-position: 57.1429% 0; }
-  62.5% { background-position: 71.4286% 0; }
-  75% { background-position: 85.7143% 0; }
-  87.5%, 100% { background-position: 100% 0; }
+  25% { background-position: 33.333% 0; }
+  50% { background-position: 66.667% 0; }
+  75%, 100% { background-position: 100% 0; }
 }
 
 @keyframes five-frame-idle {
@@ -62,15 +39,15 @@ button, input { font: inherit; }
   80%, 100% { background-position: 100% 0; }
 }
 
+@keyframes two-frame-idle {
+  0% { background-position: 0 0; }
+  50%, 100% { background-position: 100% 0; }
+}
+
 @keyframes three-frame-idle {
   0% { background-position: 0 0; }
   33.333% { background-position: 50% 0; }
   66.667%, 100% { background-position: 100% 0; }
-}
-
-@keyframes two-frame-idle {
-  0% { background-position: 0 0; }
-  50%, 100% { background-position: 100% 0; }
 }
 
 @keyframes six-frame-idle {
@@ -80,6 +57,16 @@ button, input { font: inherit; }
   50% { background-position: 60% 0; }
   66.667% { background-position: 80% 0; }
   83.333%, 100% { background-position: 100% 0; }
+}
+
+@keyframes seven-frame-idle {
+  0% { background-position: 0 0; }
+  14.286% { background-position: 16.667% 0; }
+  28.571% { background-position: 33.333% 0; }
+  42.857% { background-position: 50% 0; }
+  57.143% { background-position: 66.667% 0; }
+  71.429% { background-position: 83.333% 0; }
+  85.714%, 100% { background-position: 100% 0; }
 }
 
 @keyframes ten-frame-idle {
@@ -93,15 +80,6 @@ button, input { font: inherit; }
   70% { background-position: 77.778% 0; }
   80% { background-position: 88.889% 0; }
   90%, 100% { background-position: 100% 0; }
-}
-
-@keyframes sprite-attack {
-  0% { background-position: 0 0; }
-  16.667% { background-position: 20% 0; }
-  33.333% { background-position: 40% 0; }
-  50% { background-position: 60% 0; }
-  66.667% { background-position: 80% 0; }
-  83.333%, 100% { background-position: 100% 0; }
 }
 
 @keyframes hit-shake {
@@ -525,72 +503,52 @@ button, input { font: inherit; }
 .pixel-sprite {
   image-rendering: pixelated;
   background-repeat: no-repeat;
-  animation: sprite-idle 166.667ms steps(1) infinite;
+  animation: none;
 }
 .hero-sprite {
-  width: 72px;
-  height: 92px;
-  background-size: 800% 100%;
-  animation: hero-idle 333.333ms steps(1, end) infinite;
+  width: 80px;
+  height: 116px;
   flex: none;
 }
 .hero-sprite.attack-sprite {
-  width: 90px;
-  background-size: 600% 100%;
-  animation: sprite-attack 250ms steps(1, end) infinite;
+  animation-duration: 600ms;
 }
-.hero-sprite.character-idle-2 {
-  animation: two-frame-idle 83.333ms steps(1, end) infinite;
+.sprite-frames-2 {
+  animation: two-frame-idle 1s steps(1, end) infinite;
 }
-.hero-sprite.character-idle-3 {
-  animation: three-frame-idle 125ms steps(1, end) infinite;
+.sprite-frames-3 {
+  animation: three-frame-idle 1s steps(1, end) infinite;
 }
-.hero-sprite.character-idle-6 {
-  animation: six-frame-idle 250ms steps(1, end) infinite;
+.sprite-frames-4 {
+  animation: four-frame-idle 1s steps(1, end) infinite;
 }
-.hero-sprite.character-idle-10 {
-  animation: ten-frame-idle 416.667ms steps(1, end) infinite;
+.sprite-frames-5 {
+  animation: five-frame-idle 1s steps(1, end) infinite;
 }
-.frog-sprite {
-  width: 87px;
-  height: 92px;
-  background-size: 400% 100%;
-  background-position: bottom;
+.sprite-frames-6 {
+  animation: six-frame-idle 1s steps(1, end) infinite;
+}
+.sprite-frames-7 {
+  animation: seven-frame-idle 1s steps(1, end) infinite;
+}
+.sprite-frames-10 {
+  animation: ten-frame-idle 1s steps(1, end) infinite;
+}
+.attack-sprite.sprite-frames-5 {
+  animation: five-frame-idle 500ms steps(1, end) infinite;
+}
+.attack-sprite.sprite-frames-6 {
+  animation: six-frame-idle 600ms steps(1, end) infinite;
+}
+.attack-sprite.sprite-frames-7 {
+  animation: seven-frame-idle 600ms steps(1, end) infinite;
+}
+.enemy-sprite {
   transform: scale(1.65);
   transform-origin: bottom;
-}
-.wolf-sprite {
-  width: 97px;
-  height: 92px;
-  background-size: 400% 100%;
-  transform: scale(1.65);
-  transform-origin: bottom;
-}
-.shinigami-sprite,
-.jey-pengi-sprite,
-.electro-pengi-sprite,
-.psyche-fox-sprite {
-  animation: five-frame-idle 208.333ms steps(1, end) infinite;
-  transform-origin: bottom;
-}
-.shinigami-sprite {
-  width: 60px;
-  height: 92px;
-  transform: scale(1.65);
-}
-.jey-pengi-sprite,
-.electro-pengi-sprite {
-  width: 60px;
-  height: 92px;
-  transform: scale(1.65);
-}
-.psyche-fox-sprite {
-  width: 64px;
-  height: 92px;
-  transform: scale(1.65);
 }
 .boss-noise {
-  animation: five-frame-idle 208.333ms steps(1, end) infinite, boss-pulse 1.2s ease-in-out infinite alternate;
+  animation: five-frame-idle 1s steps(1, end) infinite, boss-pulse 1.2s ease-in-out infinite alternate;
 }
 @keyframes boss-pulse {
   from { filter: drop-shadow(0 0 4px rgba(255, 83, 57, 0.35)); }
@@ -678,7 +636,7 @@ button, input { font: inherit; }
   margin-bottom: 26px;
 }
 .arena-hero .attack-sprite {
-  transform: scale(1.72) translateX(10px);
+  transform: scale(1.65);
 }
 .arena-hero > span {
   background: #15191a;

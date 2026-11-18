@@ -15,6 +15,7 @@ const electroPengiSprite = "./assets/game/electro-pengi-idle.png";
 const psycheFoxSprite = "./assets/game/psyche-fox-idle.png";
 const nekuAttackSprite = "./assets/game/neku-attack.png";
 const beatAttackSprite = "./assets/game/beat-attack.png";
+const shikiAttackSprite = "./assets/game/shiki-attack.png";
 const fierySpiritPin = "./assets/game/pin-fiery-spirit.png";
 const masamunePin = "./assets/game/pin-masamune.png";
 const konohanaPin = "./assets/game/pin-konohana.png";
@@ -27,8 +28,10 @@ const initialTeam = [{
   sprite: nekuSprite,
   accent: "#ff5f29",
   frames: 6,
-  frameWidth: 46,
-  frameHeight: 92
+  frameWidth: 80,
+  frameHeight: 116,
+  attackSprite: nekuAttackSprite,
+  attackFrames: 7
 }, {
   name: "BEAT",
   role: "BRAWLER",
@@ -37,8 +40,10 @@ const initialTeam = [{
   sprite: beatSprite,
   accent: "#f8d742",
   frames: 6,
-  frameWidth: 71,
-  frameHeight: 92
+  frameWidth: 80,
+  frameHeight: 116,
+  attackSprite: beatAttackSprite,
+  attackFrames: 5
 }, {
   name: "SHIKI",
   role: "THREAD USER",
@@ -47,8 +52,10 @@ const initialTeam = [{
   sprite: shikiSprite,
   accent: "#ff70ae",
   frames: 3,
-  frameWidth: 45,
-  frameHeight: 92
+  frameWidth: 80,
+  frameHeight: 116,
+  attackSprite: shikiAttackSprite,
+  attackFrames: 7
 }, {
   name: "JOSHUA",
   role: "ANGEL USER",
@@ -57,8 +64,8 @@ const initialTeam = [{
   sprite: joshuaSprite,
   accent: "#92dcce",
   frames: 10,
-  frameWidth: 48,
-  frameHeight: 92
+  frameWidth: 80,
+  frameHeight: 116
 }];
 const Icon = ({
   name
@@ -105,6 +112,8 @@ const enemyCatalog = {
     name: "BIG BANG FROG",
     sprite: frogSprite,
     frames: 4,
+    frameWidth: 68,
+    frameHeight: 72,
     hp: 50,
     attack: 10
   },
@@ -112,6 +121,8 @@ const enemyCatalog = {
     name: "GARAGE WOLF",
     sprite: wolfSprite,
     frames: 4,
+    frameWidth: 82,
+    frameHeight: 78,
     hp: 72,
     attack: 15
   },
@@ -119,6 +130,8 @@ const enemyCatalog = {
     name: "SHINIGAMI",
     sprite: shinigamiSprite,
     frames: 5,
+    frameWidth: 52,
+    frameHeight: 80,
     hp: 92,
     attack: 17
   },
@@ -126,6 +139,8 @@ const enemyCatalog = {
     name: "JEY PENGI",
     sprite: jeyPengiSprite,
     frames: 5,
+    frameWidth: 42,
+    frameHeight: 65,
     hp: 64,
     attack: 12
   },
@@ -133,6 +148,8 @@ const enemyCatalog = {
     name: "ELECTRO PENGI",
     sprite: electroPengiSprite,
     frames: 5,
+    frameWidth: 42,
+    frameHeight: 65,
     hp: 82,
     attack: 16
   },
@@ -140,6 +157,8 @@ const enemyCatalog = {
     name: "PSYCHE FOX",
     sprite: psycheFoxSprite,
     frames: 5,
+    frameWidth: 50,
+    frameHeight: 72,
     hp: 126,
     attack: 21
   }
@@ -173,14 +192,15 @@ function Sprite({
   action = null,
   combat = false
 }) {
-  const isAttacking = combat && (fighter.name === "NEKU" && ["pyro", "shockwave", "heal", "burst"].includes(action ?? "") || fighter.name === "BEAT" && ["shockwave", "burst"].includes(action ?? ""));
-  const sprite = isAttacking ? fighter.name === "NEKU" ? nekuAttackSprite : beatAttackSprite : fighter.sprite;
+  const isAttacking = combat && (fighter.name === "NEKU" && ["pyro", "shockwave", "heal", "burst"].includes(action ?? "") || (fighter.name === "BEAT" || fighter.name === "SHIKI") && ["shockwave", "burst"].includes(action ?? ""));
+  const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
+  const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
   return React.createElement("div", {
-    className: `pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? `character-idle-${fighter.frames}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
+    className: `pixel-sprite hero-sprite ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
-      ...(fighter.frames ? {
-        backgroundSize: `${fighter.frames * 100}% 100%`
+      ...(frameCount ? {
+        backgroundSize: `${frameCount * 100}% 100%`
       } : {}),
       ...(fighter.frameWidth ? {
         width: `${fighter.frameWidth}px`,
@@ -443,10 +463,12 @@ function App() {
     onClick: () => enemy.hp > 0 && setSelected(enemy.id),
     "aria-label": `Target ${enemy.name}`
   }, React.createElement("div", {
-    className: `pixel-sprite enemy-sprite ${enemy.kind}-sprite ${enemy.boss ? "boss-noise" : ""}`,
+    className: `pixel-sprite enemy-sprite sprite-frames-${enemyCatalog[enemy.kind].frames} ${enemy.boss ? "boss-noise" : ""}`,
     style: {
       backgroundImage: `url(${enemyCatalog[enemy.kind].sprite})`,
-      backgroundSize: `${enemyCatalog[enemy.kind].frames * 100}% 100%`
+      backgroundSize: `${enemyCatalog[enemy.kind].frames * 100}% 100%`,
+      width: `${Math.round(92 * enemyCatalog[enemy.kind].frameWidth / enemyCatalog[enemy.kind].frameHeight)}px`,
+      height: "92px"
     }
   }), React.createElement("div", {
     className: "enemy-tag"

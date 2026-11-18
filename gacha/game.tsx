@@ -11,6 +11,7 @@ const electroPengiSprite = "./assets/game/electro-pengi-idle.png";
 const psycheFoxSprite = "./assets/game/psyche-fox-idle.png";
 const nekuAttackSprite = "./assets/game/neku-attack.png";
 const beatAttackSprite = "./assets/game/beat-attack.png";
+const shikiAttackSprite = "./assets/game/shiki-attack.png";
 const fierySpiritPin = "./assets/game/pin-fiery-spirit.png";
 const masamunePin = "./assets/game/pin-masamune.png";
 const konohanaPin = "./assets/game/pin-konohana.png";
@@ -38,13 +39,15 @@ type Fighter = {
   frames?: number;
   frameWidth?: number;
   frameHeight?: number;
+  attackSprite?: string;
+  attackFrames?: number;
 };
 
 const initialTeam: Fighter[] = [
-  { name: "NEKU", role: "PSYCH USER", hp: 118, maxHp: 118, sprite: nekuSprite, accent: "#ff5f29", frames: 6, frameWidth: 46, frameHeight: 92 },
-  { name: "BEAT", role: "BRAWLER", hp: 142, maxHp: 142, sprite: beatSprite, accent: "#f8d742", frames: 6, frameWidth: 71, frameHeight: 92 },
-  { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 45, frameHeight: 92 },
-  { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 10, frameWidth: 48, frameHeight: 92 },
+  { name: "NEKU", role: "PSYCH USER", hp: 118, maxHp: 118, sprite: nekuSprite, accent: "#ff5f29", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: nekuAttackSprite, attackFrames: 7 },
+  { name: "BEAT", role: "BRAWLER", hp: 142, maxHp: 142, sprite: beatSprite, accent: "#f8d742", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: beatAttackSprite, attackFrames: 5 },
+  { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 80, frameHeight: 116, attackSprite: shikiAttackSprite, attackFrames: 7 },
+  { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 10, frameWidth: 80, frameHeight: 116 },
 ];
 
 const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" | "star" }) => {
@@ -78,13 +81,13 @@ const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" |
   );
 };
 
-const enemyCatalog: Record<EnemyKind, { name: string; sprite: string; frames: number; hp: number; attack: number }> = {
-  frog: { name: "BIG BANG FROG", sprite: frogSprite, frames: 4, hp: 50, attack: 10 },
-  wolf: { name: "GARAGE WOLF", sprite: wolfSprite, frames: 4, hp: 72, attack: 15 },
-  shinigami: { name: "SHINIGAMI", sprite: shinigamiSprite, frames: 5, hp: 92, attack: 17 },
-  "jey-pengi": { name: "JEY PENGI", sprite: jeyPengiSprite, frames: 5, hp: 64, attack: 12 },
-  "electro-pengi": { name: "ELECTRO PENGI", sprite: electroPengiSprite, frames: 5, hp: 82, attack: 16 },
-  "psyche-fox": { name: "PSYCHE FOX", sprite: psycheFoxSprite, frames: 5, hp: 126, attack: 21 },
+const enemyCatalog: Record<EnemyKind, { name: string; sprite: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number }> = {
+  frog: { name: "BIG BANG FROG", sprite: frogSprite, frames: 4, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
+  wolf: { name: "GARAGE WOLF", sprite: wolfSprite, frames: 4, frameWidth: 82, frameHeight: 78, hp: 72, attack: 15 },
+  shinigami: { name: "SHINIGAMI", sprite: shinigamiSprite, frames: 5, frameWidth: 52, frameHeight: 80, hp: 92, attack: 17 },
+  "jey-pengi": { name: "JEY PENGI", sprite: jeyPengiSprite, frames: 5, frameWidth: 42, frameHeight: 65, hp: 64, attack: 12 },
+  "electro-pengi": { name: "ELECTRO PENGI", sprite: electroPengiSprite, frames: 5, frameWidth: 42, frameHeight: 65, hp: 82, attack: 16 },
+  "psyche-fox": { name: "PSYCHE FOX", sprite: psycheFoxSprite, frames: 5, frameWidth: 50, frameHeight: 72, hp: 126, attack: 21 },
 };
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
@@ -126,19 +129,16 @@ function Sprite({
   const isAttacking =
     combat &&
     ((fighter.name === "NEKU" && ["pyro", "shockwave", "heal", "burst"].includes(action ?? "")) ||
-      (fighter.name === "BEAT" && ["shockwave", "burst"].includes(action ?? "")));
-  const sprite = isAttacking
-    ? fighter.name === "NEKU"
-      ? nekuAttackSprite
-      : beatAttackSprite
-    : fighter.sprite;
+      ((fighter.name === "BEAT" || fighter.name === "SHIKI") && ["shockwave", "burst"].includes(action ?? "")));
+  const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
+  const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
 
   return (
     <div
-      className={`pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? `character-idle-${fighter.frames}` : ""} ${isAttacking ? "attack-sprite" : ""}`}
+      className={`pixel-sprite hero-sprite ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`}
       style={{
         backgroundImage: `url(${sprite})`,
-        ...(fighter.frames ? { backgroundSize: `${fighter.frames * 100}% 100%` } : {}),
+        ...(frameCount ? { backgroundSize: `${frameCount * 100}% 100%` } : {}),
         ...(fighter.frameWidth ? { width: `${fighter.frameWidth}px`, height: `${fighter.frameHeight}px` } : {}),
       }}
       role="img"
@@ -424,10 +424,12 @@ function App() {
                   aria-label={`Target ${enemy.name}`}
                 >
                   <div
-                    className={`pixel-sprite enemy-sprite ${enemy.kind}-sprite ${enemy.boss ? "boss-noise" : ""}`}
+                    className={`pixel-sprite enemy-sprite sprite-frames-${enemyCatalog[enemy.kind].frames} ${enemy.boss ? "boss-noise" : ""}`}
                     style={{
                       backgroundImage: `url(${enemyCatalog[enemy.kind].sprite})`,
                       backgroundSize: `${enemyCatalog[enemy.kind].frames * 100}% 100%`,
+                      width: `${Math.round((92 * enemyCatalog[enemy.kind].frameWidth) / enemyCatalog[enemy.kind].frameHeight)}px`,
+                      height: "92px",
                     }}
                   />
                   <div className="enemy-tag">
