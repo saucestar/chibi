@@ -542,18 +542,18 @@ button, input { font: inherit; }
   animation: three-frame-idle 1.05s steps(1, end) infinite;
 }
 .frog-sprite {
-  width: 68px;
-  height: 72px;
+  width: 87px;
+  height: 92px;
   background-size: 400% 100%;
   background-position: bottom;
   transform: scale(1.65);
   transform-origin: bottom;
 }
 .wolf-sprite {
-  width: 82px;
-  height: 78px;
+  width: 97px;
+  height: 92px;
   background-size: 400% 100%;
-  transform: scale(1.55);
+  transform: scale(1.65);
   transform-origin: bottom;
 }
 .shinigami-sprite,
@@ -564,19 +564,19 @@ button, input { font: inherit; }
   transform-origin: bottom;
 }
 .shinigami-sprite {
-  width: 84px;
-  height: 80px;
-  transform: scale(1.4);
+  width: 60px;
+  height: 92px;
+  transform: scale(1.65);
 }
 .jey-pengi-sprite,
 .electro-pengi-sprite {
-  width: 68px;
-  height: 65px;
-  transform: scale(1.55);
+  width: 60px;
+  height: 92px;
+  transform: scale(1.65);
 }
 .psyche-fox-sprite {
-  width: 82px;
-  height: 72px;
+  width: 64px;
+  height: 92px;
   transform: scale(1.65);
 }
 .boss-noise {
@@ -1178,8 +1178,7 @@ button, input { font: inherit; }
     top: 12%;
     height: 36%;
   }
-  .frog-sprite,
-  .wolf-sprite {
+  .enemy-sprite {
     transform: scale(1.25);
   }
   .enemy-tag {

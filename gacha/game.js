@@ -25,14 +25,16 @@ const initialTeam = [{
   hp: 118,
   maxHp: 118,
   sprite: nekuSprite,
-  accent: "#ff5f29"
+  accent: "#ff5f29",
+  frames: 2
 }, {
   name: "BEAT",
   role: "BRAWLER",
   hp: 142,
   maxHp: 142,
   sprite: beatSprite,
-  accent: "#f8d742"
+  accent: "#f8d742",
+  frames: 2
 }, {
   name: "SHIKI",
   role: "THREAD USER",
@@ -51,8 +53,8 @@ const initialTeam = [{
   sprite: joshuaSprite,
   accent: "#92dcce",
   frames: 3,
-  frameWidth: 38,
-  frameHeight: 88
+  frameWidth: 40,
+  frameHeight: 92
 }];
 const Icon = ({
   name
