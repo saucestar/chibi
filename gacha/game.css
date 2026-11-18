@@ -619,7 +619,7 @@ button, input { font: inherit; }
   position: absolute;
   z-index: 3;
   left: 3%;
-  top: 4%;
+  top: 46%;
   bottom: 58px;
   width: clamp(120px, 20%, 200px);
   display: flex;
@@ -1160,7 +1160,7 @@ button, input { font: inherit; }
   }
   .player-line {
     left: 1%;
-    top: 3%;
+    top: 47%;
     bottom: 58px;
     width: 29%;
   }
