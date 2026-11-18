@@ -166,6 +166,31 @@ const enemyCatalog = {
 };
 const enemyKinds = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = wave => wave % 5 === 0;
+function EnemySprite({
+  kind,
+  boss
+}) {
+  const spec = enemyCatalog[kind];
+  const [frame, setFrame] = useState(0);
+  const displayFrameWidth = 92 * spec.frameWidth / spec.frameHeight;
+  useEffect(() => {
+    setFrame(0);
+    const timer = window.setInterval(() => {
+      setFrame(current => (current + 1) % spec.frames);
+    }, 1000 / spec.frames);
+    return () => window.clearInterval(timer);
+  }, [kind, spec.frames]);
+  return React.createElement("div", {
+    className: `pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`,
+    style: {
+      backgroundImage: `url(${spec.sprite})`,
+      backgroundSize: `${spec.frames * displayFrameWidth}px 92px`,
+      backgroundPosition: `${-frame * displayFrameWidth}px 0`,
+      width: `${displayFrameWidth}px`,
+      height: "92px"
+    }
+  });
+}
 const makeWave = wave => {
   const bossWave = isBossWave(wave);
   const count = bossWave ? 2 + Math.min(1, Math.floor(wave / 25)) : Math.min(2 + Math.floor((wave - 1) / 2), 4);
@@ -463,14 +488,9 @@ function App() {
     className: `enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`,
     onClick: () => enemy.hp > 0 && setSelected(enemy.id),
     "aria-label": `Target ${enemy.name}`
-  }, React.createElement("div", {
-    className: `pixel-sprite enemy-sprite sprite-frames-${enemyCatalog[enemy.kind].frames} ${enemy.boss ? "boss-noise" : ""}`,
-    style: {
-      backgroundImage: `url(${enemyCatalog[enemy.kind].sprite})`,
-      backgroundSize: `${enemyCatalog[enemy.kind].frames * 100}% 100%`,
-      width: `${Math.round(92 * enemyCatalog[enemy.kind].frameWidth / enemyCatalog[enemy.kind].frameHeight)}px`,
-      height: "92px"
-    }
+  }, React.createElement(EnemySprite, {
+    kind: enemy.kind,
+    boss: enemy.boss
   }), React.createElement("div", {
     className: "enemy-tag"
   }, React.createElement("strong", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp), React.createElement("div", null, React.createElement("i", {

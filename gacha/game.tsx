@@ -93,6 +93,33 @@ const enemyCatalog: Record<EnemyKind, { name: string; sprite: string; frames: nu
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
 
+function EnemySprite({ kind, boss }: { kind: EnemyKind; boss: boolean }) {
+  const spec = enemyCatalog[kind];
+  const [frame, setFrame] = useState(0);
+  const displayFrameWidth = (92 * spec.frameWidth) / spec.frameHeight;
+
+  useEffect(() => {
+    setFrame(0);
+    const timer = window.setInterval(() => {
+      setFrame((current) => (current + 1) % spec.frames);
+    }, 1000 / spec.frames);
+    return () => window.clearInterval(timer);
+  }, [kind, spec.frames]);
+
+  return (
+    <div
+      className={`pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`}
+      style={{
+        backgroundImage: `url(${spec.sprite})`,
+        backgroundSize: `${spec.frames * displayFrameWidth}px 92px`,
+        backgroundPosition: `${-frame * displayFrameWidth}px 0`,
+        width: `${displayFrameWidth}px`,
+        height: "92px",
+      }}
+    />
+  );
+}
+
 const makeWave = (wave: number): Enemy[] => {
   const bossWave = isBossWave(wave);
   const count = bossWave ? 2 + Math.min(1, Math.floor(wave / 25)) : Math.min(2 + Math.floor((wave - 1) / 2), 4);
@@ -424,15 +451,7 @@ function App() {
                   onClick={() => enemy.hp > 0 && setSelected(enemy.id)}
                   aria-label={`Target ${enemy.name}`}
                 >
-                  <div
-                    className={`pixel-sprite enemy-sprite sprite-frames-${enemyCatalog[enemy.kind].frames} ${enemy.boss ? "boss-noise" : ""}`}
-                    style={{
-                      backgroundImage: `url(${enemyCatalog[enemy.kind].sprite})`,
-                      backgroundSize: `${enemyCatalog[enemy.kind].frames * 100}% 100%`,
-                      width: `${Math.round((92 * enemyCatalog[enemy.kind].frameWidth) / enemyCatalog[enemy.kind].frameHeight)}px`,
-                      height: "92px",
-                    }}
-                  />
+                  <EnemySprite kind={enemy.kind} boss={enemy.boss} />
                   <div className="enemy-tag">
                     <strong>{enemy.name}</strong>
                     <span>

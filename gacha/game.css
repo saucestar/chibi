@@ -549,7 +549,7 @@ button, input { font: inherit; }
   transform-origin: center bottom;
 }
 .boss-noise {
-  animation: five-frame-idle 1s steps(1, end) infinite, boss-pulse 1.2s ease-in-out infinite alternate;
+  animation: boss-pulse 1.2s ease-in-out infinite alternate;
 }
 @keyframes boss-pulse {
   from { filter: drop-shadow(0 0 4px rgba(255, 83, 57, 0.35)); }
