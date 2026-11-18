@@ -40,9 +40,9 @@ const initialTeam = [{
   maxHp: 108,
   sprite: shikiSprite,
   accent: "#ff70ae",
-  frames: 5,
+  frames: 2,
   frameWidth: 44,
-  frameHeight: 88
+  frameHeight: 92
 }, {
   name: "JOSHUA",
   role: "ANGEL USER",
@@ -50,7 +50,7 @@ const initialTeam = [{
   maxHp: 96,
   sprite: joshuaSprite,
   accent: "#92dcce",
-  frames: 5,
+  frames: 3,
   frameWidth: 38,
   frameHeight: 88
 }];
@@ -170,7 +170,7 @@ function Sprite({
   const isAttacking = combat && (fighter.name === "NEKU" && ["pyro", "shockwave", "heal", "burst"].includes(action ?? "") || fighter.name === "BEAT" && ["shockwave", "burst"].includes(action ?? ""));
   const sprite = isAttacking ? fighter.name === "NEKU" ? nekuAttackSprite : beatAttackSprite : fighter.sprite;
   return React.createElement("div", {
-    className: `pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? "character-idle" : ""} ${isAttacking ? "attack-sprite" : ""}`,
+    className: `pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? `character-idle-${fighter.frames}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
       ...(fighter.frames ? {

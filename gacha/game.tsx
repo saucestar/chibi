@@ -43,8 +43,8 @@ type Fighter = {
 const initialTeam: Fighter[] = [
   { name: "NEKU", role: "PSYCH USER", hp: 118, maxHp: 118, sprite: nekuSprite, accent: "#ff5f29" },
   { name: "BEAT", role: "BRAWLER", hp: 142, maxHp: 142, sprite: beatSprite, accent: "#f8d742" },
-  { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 5, frameWidth: 44, frameHeight: 88 },
-  { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 5, frameWidth: 38, frameHeight: 88 },
+  { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 2, frameWidth: 44, frameHeight: 92 },
+  { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 3, frameWidth: 38, frameHeight: 88 },
 ];
 
 const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" | "star" }) => {
@@ -135,7 +135,7 @@ function Sprite({
 
   return (
     <div
-      className={`pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? "character-idle" : ""} ${isAttacking ? "attack-sprite" : ""}`}
+      className={`pixel-sprite hero-sprite ${fighter.frames && !isAttacking ? `character-idle-${fighter.frames}` : ""} ${isAttacking ? "attack-sprite" : ""}`}
       style={{
         backgroundImage: `url(${sprite})`,
         ...(fighter.frames ? { backgroundSize: `${fighter.frames * 100}% 100%` } : {}),
