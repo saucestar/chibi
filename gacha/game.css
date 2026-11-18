@@ -74,13 +74,25 @@ button, input { font: inherit; }
 }
 
 @keyframes six-frame-idle {
-  from { background-position: 0 0; }
-  to { background-position: 100% 0; }
+  0% { background-position: 0 0; }
+  16.667% { background-position: 20% 0; }
+  33.333% { background-position: 40% 0; }
+  50% { background-position: 60% 0; }
+  66.667% { background-position: 80% 0; }
+  83.333%, 100% { background-position: 100% 0; }
 }
 
 @keyframes ten-frame-idle {
-  from { background-position: 0 0; }
-  to { background-position: 100% 0; }
+  0% { background-position: 0 0; }
+  10% { background-position: 11.111% 0; }
+  20% { background-position: 22.222% 0; }
+  30% { background-position: 33.333% 0; }
+  40% { background-position: 44.444% 0; }
+  50% { background-position: 55.556% 0; }
+  60% { background-position: 66.667% 0; }
+  70% { background-position: 77.778% 0; }
+  80% { background-position: 88.889% 0; }
+  90%, 100% { background-position: 100% 0; }
 }
 
 @keyframes sprite-attack {
@@ -552,10 +564,10 @@ button, input { font: inherit; }
   animation: three-frame-idle 1.05s steps(1, end) infinite;
 }
 .hero-sprite.character-idle-6 {
-  animation: six-frame-idle 1.2s steps(6, end) infinite;
+  animation: six-frame-idle 1.2s steps(1, end) infinite;
 }
 .hero-sprite.character-idle-10 {
-  animation: ten-frame-idle 1.8s steps(10, end) infinite;
+  animation: ten-frame-idle 1.8s steps(1, end) infinite;
 }
 .frog-sprite {
   width: 87px;
