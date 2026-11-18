@@ -73,6 +73,16 @@ button, input { font: inherit; }
   50%, 100% { background-position: 100% 0; }
 }
 
+@keyframes six-frame-idle {
+  from { background-position: 0 0; }
+  to { background-position: 100% 0; }
+}
+
+@keyframes ten-frame-idle {
+  from { background-position: 0 0; }
+  to { background-position: 100% 0; }
+}
+
 @keyframes sprite-attack {
   0%,
   14% {
@@ -540,6 +550,12 @@ button, input { font: inherit; }
 }
 .hero-sprite.character-idle-3 {
   animation: three-frame-idle 1.05s steps(1, end) infinite;
+}
+.hero-sprite.character-idle-6 {
+  animation: six-frame-idle 1.2s steps(6, end) infinite;
+}
+.hero-sprite.character-idle-10 {
+  animation: ten-frame-idle 1.8s steps(10, end) infinite;
 }
 .frog-sprite {
   width: 87px;

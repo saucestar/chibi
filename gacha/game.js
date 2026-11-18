@@ -26,7 +26,9 @@ const initialTeam = [{
   maxHp: 118,
   sprite: nekuSprite,
   accent: "#ff5f29",
-  frames: 2
+  frames: 6,
+  frameWidth: 46,
+  frameHeight: 92
 }, {
   name: "BEAT",
   role: "BRAWLER",
@@ -34,7 +36,9 @@ const initialTeam = [{
   maxHp: 142,
   sprite: beatSprite,
   accent: "#f8d742",
-  frames: 2
+  frames: 6,
+  frameWidth: 71,
+  frameHeight: 92
 }, {
   name: "SHIKI",
   role: "THREAD USER",
@@ -42,8 +46,8 @@ const initialTeam = [{
   maxHp: 108,
   sprite: shikiSprite,
   accent: "#ff70ae",
-  frames: 2,
-  frameWidth: 44,
+  frames: 3,
+  frameWidth: 32,
   frameHeight: 92
 }, {
   name: "JOSHUA",
@@ -52,8 +56,8 @@ const initialTeam = [{
   maxHp: 96,
   sprite: joshuaSprite,
   accent: "#92dcce",
-  frames: 3,
-  frameWidth: 40,
+  frames: 10,
+  frameWidth: 48,
   frameHeight: 92
 }];
 const Icon = ({
