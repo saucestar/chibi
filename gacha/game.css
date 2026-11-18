@@ -39,21 +39,6 @@ button, input { font: inherit; }
   80%, 100% { background-position: 100% 0; }
 }
 
-@keyframes enemy-four-frame {
-  0%, 24.999% { background-position: 0 0; }
-  25%, 49.999% { background-position: 33.333% 0; }
-  50%, 74.999% { background-position: 66.667% 0; }
-  75%, 100% { background-position: 100% 0; }
-}
-
-@keyframes enemy-five-frame {
-  0%, 19.999% { background-position: 0 0; }
-  20%, 39.999% { background-position: 25% 0; }
-  40%, 59.999% { background-position: 50% 0; }
-  60%, 79.999% { background-position: 75% 0; }
-  80%, 100% { background-position: 100% 0; }
-}
-
 @keyframes two-frame-idle {
   0% { background-position: 0 0; }
   50%, 100% { background-position: 100% 0; }
@@ -563,17 +548,8 @@ button, input { font: inherit; }
   transform: scale(1.12);
   transform-origin: center bottom;
 }
-.enemy-sprite.sprite-frames-4 {
-  animation: enemy-four-frame 1s linear infinite;
-}
-.enemy-sprite.sprite-frames-5 {
-  animation: enemy-five-frame 1s linear infinite;
-}
 .boss-noise {
-  animation: enemy-five-frame 1s linear infinite, boss-pulse 1.2s ease-in-out infinite alternate;
-}
-.enemy-sprite.sprite-frames-5.boss-noise {
-  animation: enemy-five-frame 1s linear infinite, boss-pulse 1.2s ease-in-out infinite alternate;
+  animation: five-frame-idle 1s steps(1, end) infinite, boss-pulse 1.2s ease-in-out infinite alternate;
 }
 @keyframes boss-pulse {
   from { filter: drop-shadow(0 0 4px rgba(255, 83, 57, 0.35)); }
