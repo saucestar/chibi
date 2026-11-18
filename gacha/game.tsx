@@ -107,12 +107,12 @@ function EnemySprite({ kind, boss }: { kind: EnemyKind; boss: boolean }) {
   }, [kind, spec.frames]);
 
   return (
-    <div
+    <img
       className={`pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`}
+      src={`./assets/game/enemy-frames/${kind}-${frame}.png`}
+      alt=""
+      draggable={false}
       style={{
-        backgroundImage: `url(${spec.sprite})`,
-        backgroundSize: `${spec.frames * displayFrameWidth}px 92px`,
-        backgroundPosition: `${-frame * displayFrameWidth}px 0`,
         width: `${displayFrameWidth}px`,
         height: "92px",
       }}

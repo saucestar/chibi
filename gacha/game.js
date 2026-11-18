@@ -180,12 +180,12 @@ function EnemySprite({
     }, 1000 / spec.frames);
     return () => window.clearInterval(timer);
   }, [kind, spec.frames]);
-  return React.createElement("div", {
+  return React.createElement("img", {
     className: `pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`,
+    src: `./assets/game/enemy-frames/${kind}-${frame}.png`,
+    alt: "",
+    draggable: false,
     style: {
-      backgroundImage: `url(${spec.sprite})`,
-      backgroundSize: `${spec.frames * displayFrameWidth}px 92px`,
-      backgroundPosition: `${-frame * displayFrameWidth}px 0`,
       width: `${displayFrameWidth}px`,
       height: "92px"
     }
