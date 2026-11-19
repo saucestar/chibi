@@ -289,6 +289,27 @@ function portalPool(id:string, profile:Profile) {
   const pool=missing.length ? missing : available.length ? available : roster;
   return id==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
 }
+function PortalVideo({src,poster}:{src:string;poster:string}) {
+  const ref=React.useRef<HTMLVideoElement>(null);
+  const [playing,setPlaying]=useState(false);
+  useEffect(()=>{
+    const video=ref.current!;let visible=true,disposed=false;
+    const resume=()=>{
+      if(disposed)return;
+      if(document.hidden||!visible){video.pause();setPlaying(false);return;}
+      if(video.ended)video.currentTime=0;
+      video.play().catch(()=>{if(!disposed)setPlaying(false);});
+    };
+    const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;resume();});
+    observer.observe(video);document.addEventListener("visibilitychange",resume);resume();
+    return ()=>{disposed=true;observer.disconnect();document.removeEventListener("visibilitychange",resume);video.pause();};
+  },[src]);
+  return <>
+    <img className="portal-art" src={poster} alt="" aria-hidden="true"/>
+    <video ref={ref} className="portal-art" src={src} poster={poster} autoPlay muted loop playsInline aria-hidden="true"
+      style={{opacity:playing?1:0}} onPlaying={()=>setPlaying(true)} onPause={()=>setPlaying(false)} onWaiting={()=>setPlaying(false)} onEnded={()=>setPlaying(false)} onError={()=>setPlaying(false)}/>
+  </>;
+}
 function Capsule() {
   const canvas=React.useRef<HTMLCanvasElement>(null);
   useEffect(()=>{
@@ -500,9 +521,9 @@ function App() {
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-          <video className="portal-art" src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp" autoPlay muted playsInline aria-hidden="true"/>}
+          <PortalVideo src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp"/>}
         {id==="reality" && <>
-          {!matchMedia("(prefers-reduced-motion: reduce)").matches && <video className="portal-art" src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp" autoPlay muted loop playsInline aria-hidden="true"/>}
+          {!matchMedia("(prefers-reduced-motion: reduce)").matches && <PortalVideo src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp"/>}
         </>}
         {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>

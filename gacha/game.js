@@ -531,6 +531,67 @@ function portalPool(id, profile) {
   const pool = missing.length ? missing : available.length ? available : roster;
   return id === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
 }
+function PortalVideo({
+  src,
+  poster
+}) {
+  const ref = React.useRef(null);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    let visible = true,
+      disposed = false;
+    const resume = () => {
+      if (disposed) return;
+      if (document.hidden || !visible) {
+        video.pause();
+        setPlaying(false);
+        return;
+      }
+      if (video.ended) video.currentTime = 0;
+      video.play().catch(() => {
+        if (!disposed) setPlaying(false);
+      });
+    };
+    const observer = new IntersectionObserver(entries => {
+      visible = entries[0].isIntersecting;
+      resume();
+    });
+    observer.observe(video);
+    document.addEventListener("visibilitychange", resume);
+    resume();
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", resume);
+      video.pause();
+    };
+  }, [src]);
+  return React.createElement(React.Fragment, null, React.createElement("img", {
+    className: "portal-art",
+    src: poster,
+    alt: "",
+    "aria-hidden": "true"
+  }), React.createElement("video", {
+    ref: ref,
+    className: "portal-art",
+    src: src,
+    poster: poster,
+    autoPlay: true,
+    muted: true,
+    loop: true,
+    playsInline: true,
+    "aria-hidden": "true",
+    style: {
+      opacity: playing ? 1 : 0
+    },
+    onPlaying: () => setPlaying(true),
+    onPause: () => setPlaying(false),
+    onWaiting: () => setPlaying(false),
+    onEnded: () => setPlaying(false),
+    onError: () => setPlaying(false)
+  }));
+}
 function Capsule() {
   const canvas = React.useRef(null);
   useEffect(() => {
@@ -963,23 +1024,12 @@ function App() {
     "aria-label": title
   }, React.createElement("div", {
     className: "portal-scene scene-" + id
-  }, id === "shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
-    className: "portal-art",
+  }, id === "shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement(PortalVideo, {
     src: "./assets/bingo/first-week-clean.mp4",
-    poster: "./assets/bingo/first-week-clean.webp",
-    autoPlay: true,
-    muted: true,
-    playsInline: true,
-    "aria-hidden": "true"
-  }), id === "reality" && React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
-    className: "portal-art",
+    poster: "./assets/bingo/first-week-clean.webp"
+  }), id === "reality" && React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement(PortalVideo, {
     src: "./assets/bingo/from-another-reality.mp4",
-    poster: "./assets/bingo/from-another-reality.webp",
-    autoPlay: true,
-    muted: true,
-    loop: true,
-    playsInline: true,
-    "aria-hidden": "true"
+    poster: "./assets/bingo/from-another-reality.webp"
   })), id === "partners" && React.createElement("div", {
     className: "portal-duo"
   }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
