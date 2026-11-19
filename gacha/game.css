@@ -1210,3 +1210,14 @@ button, input { font: inherit; }
     height: 42px;
   }
 }
+
+.party-lobby { display: grid; place-items: center; padding: 24px 12px; }
+.party-lobby section { width: min(100%, 680px); padding: clamp(16px,4vw,36px); background: #171e20; border-top: 4px solid #ff602a; }
+.party-lobby h1, .party-lobby h2 { font-family: "Barlow Condensed", sans-serif; }
+.party-lobby h2 { margin: 20px 0 8px; }
+.party-lobby p { margin: 8px 0; }
+.party-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(115px,1fr)); gap: 8px; margin: 14px 0; }
+.party-list button { background: #242d30; color: white; border: 2px solid #485255; display: grid; justify-items: center; padding: 8px; gap: 4px; }
+.party-list button[aria-pressed=true] { border-color: #ff602a; }
+.party-list button:disabled .hero-sprite { filter: grayscale(1); }
+.party-lobby .pull-button:disabled { opacity: .48; }

@@ -61,7 +61,6 @@ const characterRoster = [{
   frameWidth: 80,
   frameHeight: 116
 }];
-const initialTeam = characterRoster.filter(fighter => fighter.name === "NEKU" || fighter.name === "SHIKI");
 const Icon = ({
   name
 }) => {
@@ -226,14 +225,110 @@ function Sprite({
     "aria-label": fighter.name
   });
 }
+const profileKey = "chibi.reapers-run.party.v1";
+function loadProfile() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
+    const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
+    const equipped = [...new Set(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return {
+      owned,
+      equipped,
+      coins: saved.coins
+    };
+  } catch {}
+  return {
+    owned: [],
+    equipped: [],
+    coins: 180
+  };
+}
 function App() {
+  const [profile, setProfile] = useState(loadProfile);
+  const [party, setParty] = useState(null);
+  const [result, setResult] = useState("");
+  const [saveError, setSaveError] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem(profileKey, JSON.stringify(profile));
+      setSaveError(false);
+    } catch {
+      setSaveError(true);
+    }
+  }, [profile]);
+  const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
+  const price = profile.owned.length < 2 ? 0 : 100;
+  const recruit = () => {
+    if (!missing.length || profile.coins < price) return;
+    const recruit = missing[Math.floor(Math.random() * missing.length)];
+    setProfile({
+      ...profile,
+      coins: profile.coins - price,
+      owned: [...profile.owned, recruit.name]
+    });
+    setResult(recruit.name + " rejoint ta collection.");
+  };
+  const equip = name => {
+    const selected = profile.equipped.includes(name);
+    if (!profile.owned.includes(name) || !selected && profile.equipped.length >= 2) return;
+    setProfile({
+      ...profile,
+      equipped: selected ? profile.equipped.filter(n => n !== name) : [...profile.equipped, name]
+    });
+  };
+  if (party) return React.createElement(Battle, {
+    initialTeam: party,
+    coins: profile.coins,
+    setCoins: update => setProfile(p => ({
+      ...p,
+      coins: update(p.coins)
+    })),
+    leave: () => {
+      setParty(null);
+      setResult("");
+    }
+  });
+  return React.createElement("main", {
+    className: "game-shell party-lobby"
+  }, React.createElement("section", null, React.createElement("h1", null, "Reaper's Run"), React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), missing.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, "Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits."), React.createElement("button", {
+    className: "pull-button",
+    disabled: profile.coins < price,
+    onClick: recruit
+  }, price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces")), React.createElement("p", {
+    "aria-live": "polite"
+  }, result), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {
+    className: "party-list"
+  }, characterRoster.map(f => {
+    const owned = profile.owned.includes(f.name),
+      selected = profile.equipped.includes(f.name);
+    return React.createElement("button", {
+      key: f.name,
+      "aria-pressed": selected,
+      onClick: () => equip(f.name),
+      disabled: !owned || !selected && profile.equipped.length === 2
+    }, React.createElement(Sprite, {
+      fighter: f
+    }), React.createElement("strong", null, f.name), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
+  })), React.createElement("button", {
+    className: "pull-button",
+    disabled: profile.equipped.length !== 2,
+    onClick: () => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)))
+  }, "Lancer le roguelike"), saveError && React.createElement("p", {
+    role: "alert"
+  }, "La sauvegarde locale est indisponible dans ce navigateur.")));
+}
+function Battle({
+  initialTeam,
+  coins,
+  setCoins,
+  leave
+}) {
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
   const [selected, setSelected] = useState(10);
   const [energy, setEnergy] = useState(3);
   const [groove, setGroove] = useState(28);
-  const [coins, setCoins] = useState(180);
   const [turn, setTurn] = useState(1);
   const [message, setMessage] = useState("Noise detected. Choose your move.");
   const [busy, setBusy] = useState(false);
@@ -416,6 +511,12 @@ function App() {
   }, React.createElement(Icon, {
     name: "coin"
   }), " ", coins, " ", React.createElement("small", null, "SUMMON")), React.createElement("button", {
+    className: "currency",
+    disabled: busy,
+    onClick: () => {
+      if (window.confirm("Quitter cette partie et revenir au duo ?")) leave();
+    }
+  }, "Mon duo"), React.createElement("button", {
     className: "sound-button",
     "aria-label": "Sound settings"
   }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null)))), React.createElement("section", {
@@ -424,7 +525,7 @@ function App() {
     className: "squad-panel"
   }, React.createElement("div", {
     className: "section-label"
-  }, React.createElement("span", null, "PLAYER SQUAD"), React.createElement("b", null, String(team.length).padStart(2, "0"), " / 04")), team.map((fighter, index) => React.createElement("article", {
+  }, React.createElement("span", null, "PLAYER SQUAD"), React.createElement("b", null, String(team.length).padStart(2, "0"), " / 02")), team.map((fighter, index) => React.createElement("article", {
     className: `fighter-card ${fighter.hp <= 0 ? "down" : ""}`,
     key: fighter.name
   }, React.createElement("div", {
@@ -604,6 +705,8 @@ function App() {
     className: "modal game-over"
   }, React.createElement("small", null, "RUN TERMINATED"), React.createElement("h2", null, "ERASED"), React.createElement("p", null, "You reached wave ", wave, ". The streets will remember your score."), React.createElement("button", {
     onClick: retry
-  }, "RESTART RUN"))));
+  }, "RESTART RUN"), React.createElement("button", {
+    onClick: leave
+  }, "Changer de duo"))));
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));

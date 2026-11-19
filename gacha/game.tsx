@@ -43,7 +43,7 @@ const characterRoster: Fighter[] = [
   { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 80, frameHeight: 116, attackSprite: shikiAttackSprite, attackFrames: 7 },
   { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 10, frameWidth: 80, frameHeight: 116 },
 ];
-const initialTeam: Fighter[] = characterRoster.filter((fighter) => fighter.name === "NEKU" || fighter.name === "SHIKI");
+
 
 const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" | "star" }) => {
   const paths = {
@@ -170,14 +170,78 @@ function Sprite({
   );
 }
 
+type Profile = { owned: string[]; equipped: string[]; coins: number };
+const profileKey = "chibi.reapers-run.party.v1";
+
+function loadProfile(): Profile {
+  try {
+    const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
+    const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
+    const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped, coins: saved.coins };
+  } catch {}
+  return { owned: [], equipped: [], coins: 180 };
+}
+
 function App() {
+  const [profile, setProfile] = useState(loadProfile);
+  const [party, setParty] = useState<Fighter[] | null>(null);
+  const [result, setResult] = useState("");
+  const [saveError, setSaveError] = useState(false);
+  useEffect(() => {
+    try {
+      localStorage.setItem(profileKey, JSON.stringify(profile));
+      setSaveError(false);
+    } catch { setSaveError(true); }
+  }, [profile]);
+
+  const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
+  const price = profile.owned.length < 2 ? 0 : 100;
+  const recruit = () => {
+    if (!missing.length || profile.coins < price) return;
+    const recruit = missing[Math.floor(Math.random() * missing.length)];
+    setProfile({ ...profile, coins: profile.coins - price, owned: [...profile.owned, recruit.name] });
+    setResult(recruit.name + " rejoint ta collection.");
+  };
+  const equip = (name: string) => {
+    const selected = profile.equipped.includes(name);
+    if (!profile.owned.includes(name) || (!selected && profile.equipped.length >= 2)) return;
+    setProfile({ ...profile, equipped: selected ? profile.equipped.filter(n => n !== name) : [...profile.equipped, name] });
+  };
+  if (party) return <Battle initialTeam={party} coins={profile.coins}
+    setCoins={(update) => setProfile(p => ({ ...p, coins: update(p.coins) }))}
+    leave={() => { setParty(null); setResult(""); }} />;
+  return <main className="game-shell party-lobby"><section>
+    <h1>Reaper's Run</h1>
+    <h2>Gacha personnages</h2>
+    <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
+    {missing.length > 0 && <><p>Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits.</p>
+      <button className="pull-button" disabled={profile.coins < price} onClick={recruit}>
+        {price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces"}</button></>}
+    <p aria-live="polite">{result}</p>
+    <h2>Ton duo · {profile.equipped.length} / 2</h2>
+    <div className="party-list">{characterRoster.map(f => {
+      const owned = profile.owned.includes(f.name), selected = profile.equipped.includes(f.name);
+      return <button key={f.name} aria-pressed={selected} onClick={() => equip(f.name)}
+        disabled={!owned || (!selected && profile.equipped.length === 2)}>
+        <Sprite fighter={f}/><strong>{f.name}</strong>
+        <span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
+      </button>;
+    })}</div>
+    <button className="pull-button" disabled={profile.equipped.length !== 2}
+      onClick={() => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)!))}>Lancer le roguelike</button>
+    {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
+  </section></main>;
+}
+
+function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[]; coins: number; setCoins: (update: (n: number) => number) => void; leave: () => void }) {
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
   const [selected, setSelected] = useState(10);
   const [energy, setEnergy] = useState(3);
   const [groove, setGroove] = useState(28);
-  const [coins, setCoins] = useState(180);
+
   const [turn, setTurn] = useState(1);
   const [message, setMessage] = useState("Noise detected. Choose your move.");
   const [busy, setBusy] = useState(false);
@@ -368,6 +432,7 @@ function App() {
           >
             <Icon name="coin" /> {coins} <small>SUMMON</small>
           </button>
+          <button className="currency" disabled={busy} onClick={() => { if (window.confirm("Quitter cette partie et revenir au duo ?")) leave(); }}>Mon duo</button>
           <button className="sound-button" aria-label="Sound settings">
             <i />
             <i />
@@ -380,7 +445,7 @@ function App() {
         <aside className="squad-panel">
           <div className="section-label">
             <span>PLAYER SQUAD</span>
-            <b>{String(team.length).padStart(2, "0")} / 04</b>
+            <b>{String(team.length).padStart(2, "0")} / 02</b>
           </div>
           {team.map((fighter, index) => (
             <article className={`fighter-card ${fighter.hp <= 0 ? "down" : ""}`} key={fighter.name}>
@@ -622,7 +687,7 @@ function App() {
             <small>RUN TERMINATED</small>
             <h2>ERASED</h2>
             <p>You reached wave {wave}. The streets will remember your score.</p>
-            <button onClick={retry}>RESTART RUN</button>
+            <button onClick={retry}>RESTART RUN</button><button onClick={leave}>Changer de duo</button>
           </div>
         </div>
       )}
