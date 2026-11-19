@@ -1,13 +1,11 @@
-# Vœux quotidiens et difficulté
+# Vœux gratuits
 
-- 3 vœux gratuits sont crédités par journée civile en Europe/Paris, à partir du 18 novembre 2026 (intégration mobile, commits `cb2f59f` / `654eca9`). Les journées manquées sont rattrapées et les crédits se cumulent sans expiration.
-- Le compteur `freeWishes` et la dernière date créditée `lastFreeWishDay` font partie de la sauvegarde de compte. Recharger la page ne crédite pas une seconde fois le même jour. Un retour en arrière de l’horloge ne crée aucun crédit.
-- Les crédits gratuits sont utilisés avant les pièces. Un lot de 10 avec 6 crédits coûte donc 400 pièces, et la confirmation détaille crédits utilisés/restants et pièces restantes. Les vœux de démarrage existants restent gratuits tant que le duo initial n’est pas constitué.
-- Un vœu ordinaire a 10 % de chance de donner un personnage. La garantie au 10e vœu est conservée, y compris pour les vœux gratuits.
-- Les poids des personnages sont fixes et indépendants des personnages obtenus, des doublons ou des éveils. First Week : Neku 5 %, Shiki 5 %. From another reality : Cloud 5 %, Aerith 5 %. Partenaires : Neku/Shiki 1,667 % chacun, Beat/Joshua 3,333 % chacun. Lors d’une garantie, ces proportions sont appliquées à un personnage garanti.
+Le compteur est commun aux vœux de départ et quotidiens. Le cadeau initial de 10 est crédité une seule fois (`starterWishesGranted`) et les 3 vœux quotidiens remontent au 18 novembre 2026. Au 19 novembre, un nouveau joueur dispose donc de **16 vœux gratuits** (10 + 6), sans condition sur les personnages qu’il possède. Chaque invocation les consomme réellement ; il n’y a plus d’exception gratuite liée à un duo incomplet.
 
-## Difficulté
+Le cumul est autorisé jusqu’au **mardi 24 novembre 2026 inclus**. À partir du **mercredi 25 novembre**, le compteur devient **3 vœux gratuits par journée civile en Europe/Paris**, sans report : au changement de jour il est renouvelé à 3, même s’il restait un stock promotionnel. Les nouveaux comptes ouverts après cette date commencent également avec le quota quotidien de 3. Un rechargement en cours de journée ne recharge ni le quota utilisé ni le cadeau initial.
 
-`difficultyAt` définit 10 paliers de 10 étages, avec une augmentation graduelle à l’intérieur de chaque palier et une hausse au passage au suivant. Les PV, l’ATK, la SPE et l’XP ont des courbes séparées. Les boss d’étage 10/20/… sont plus forts que les boss intermédiaires d’étage 5/15/… .
+Les crédits sont utilisés avant les pièces, y compris pour les lots de 10. Le compteur et la date de crédit font partie de la sauvegarde de compte, protégée contre les écritures concurrentes par la révision de sauvegarde.
 
-Les groupes ordinaires passent de 2 ennemis aux étages 1–4 à 3 aux étages 5–19, puis 4 à partir du 20. Les boss ont 2 ennemis jusqu’au 39 et 3 ensuite. La croissance des dégâts est volontairement plus faible que celle des PV, pour limiter les morts immédiates en fin d’ascension. L’équilibrage reste à affiner à partir de parties réelles ; les tests automatisés vérifient surtout la progression, les bornes et les récompenses.
+Les taux ordinaires restent fixes : 10 % de personnages au total. First Week et From another reality attribuent 5 % à chacun de leurs 2 personnages. Partenaires attribue 1,667 % chacun à Neku/Shiki et 3,333 % chacun à Beat/Joshua. La garantie au 10e vœu reste active, gratuitement ou contre pièces. Posséder un personnage ou le maxer ne modifie pas ces poids.
+
+La difficulté reste définie par `difficultyAt` : 10 paliers de 10 étages, progression graduelle des PV/ATK/SPE/XP et boss plus forts tous les 10 étages.

@@ -304,7 +304,7 @@ function RankBadge({ level }: { level: number }) {
 type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
 function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
 const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
-type Profile = { freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
+type Profile = { pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function equippedBy(profile:Profile,name:string,id:string):string|undefined {
@@ -313,7 +313,12 @@ function equippedBy(profile:Profile,name:string,id:string):string|undefined {
 function availablePsychs(profile:Profile,name:string):string[] {
   return [...new Set([basePsych[name],...profile.pins])].filter(id=>Boolean(psychs[id]));
 }
+function grantStarterNeku(p:Profile):Profile {
+  if(p.owned.includes("NEKU"))return p.starterNekuGranted?p:{...p,starterNekuGranted:true};
+  return {...p,starterNekuGranted:true,owned:[...p.owned,"NEKU"],copies:{...p.copies,NEKU:0},levels:{...p.levels,NEKU:0},xp:{...p.xp,NEKU:0}};
+}
 function assignBasePsychs(profile:Profile):Profile {
+  profile=grantStarterNeku(profile);
   const pins=[...profile.pins];
   if(profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
   const loadout:Record<string,string[]>={};
@@ -342,14 +347,14 @@ function loadProfile(): Profile {
     });
     const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]?.row>=0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
   } catch {}
-  return {freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
+  return assignBasePsychs({pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 });
 }
 
 // First mobile game integration: 2026-11-18 (repository history).
@@ -359,18 +364,21 @@ function parisDay(now:Date=new Date()):string {
  return ["year","month","day"].map(key=>parts.find(p=>p.type===key)!.value).join("-");
 }
 function dayIndex(day:string):number {return /^\d{4}-\d{2}-\d{2}$/.test(day)?Date.parse(day+"T00:00:00Z")/86400000:NaN;}
+const freeWishNoStackDay="2026-11-25";
 function accrueDailyWishes(p:Profile,now:Date=new Date()):Profile {
  const today=parisDay(now),end=dayIndex(today),start=dayIndex(freeWishStartDay);
  if(end<start)return p;
  const previous=dayIndex(p.lastFreeWishDay);
+ if(Number.isFinite(previous)&&previous>end)return p;
+ if(today>=freeWishNoStackDay){
+  if(p.lastFreeWishDay!==today)return {...p,freeWishes:3,lastFreeWishDay:today,starterWishesGranted:true};
+  return p.starterWishesGranted?p:{...p,freeWishes:Math.min(3,p.freeWishes),starterWishesGranted:true};
+ }
  const days=Number.isFinite(previous)?Math.max(0,end-Math.max(previous,start-1)):end-start+1;
- return days>0?{...p,freeWishes:p.freeWishes+days*3,lastFreeWishDay:today}:p;
-}
-function starterProfile(p:Profile):boolean {
- return p.owned.length<2 || !(p.pins.some(offensive)||p.owned.some(name=>offensive(basePsych[name])));
+ const starter=p.starterWishesGranted?0:10;
+ return days>0||starter>0?{...p,freeWishes:p.freeWishes+days*3+starter,lastFreeWishDay:today,starterWishesGranted:true}:p;
 }
 function wishQuote(p:Profile,count:number) {
- if(count===1&&starterProfile(p))return {free:0,paid:0,cost:0,starter:true};
  const free=Math.min(count,p.freeWishes),paid=count-free;
  return {free,paid,cost:paid*100,starter:false};
 }
@@ -538,11 +546,24 @@ function questsFor(p:Profile):Quest[] {
   {id:"awaken-1",title:"Éveiller 1 personnage",progress:p.awakened.length,goal:1,reward:150}
  ];
 }
+function applyPcMissionCoins(p:Profile,scores:Record<string,number>):Profile {
+ const paid={...p.pcMissionCoins};let coins=0;
+ for(const [day,score] of Object.entries(scores)){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||!Number.isFinite(score)||score<0||score>1000000)continue;
+  const total=Math.floor(score/10),previous=paid[day]||0;
+  if(total>previous){coins+=total-previous;paid[day]=total;}
+ }
+ return coins?{...p,coins:p.coins+coins,pcMissionCoins:paid}:p;
+}
+
 function claimQuests(p:Profile,ids:string[]):Profile {
  const ready=questsFor(p).filter(q=>ids.includes(q.id)&&q.progress>=q.goal&&!p.claimedQuests.includes(q.id));
  return {...p,coins:p.coins+ready.reduce((sum,q)=>sum+q.reward,0),claimedQuests:[...p.claimedQuests,...ready.map(q=>q.id)]};
 }
 function QuestMenu({profile,save}:{profile:Profile;save:(fn:(p:Profile)=>Profile)=>void}) {
+  const [missionStatus,setMissionStatus]=useState(()=>window.ChibiGameSync?.missionState||"idle");
+  useEffect(()=>{const update=()=>setMissionStatus(window.ChibiGameSync?.missionState||"idle");window.addEventListener("chibi:mission-scores",update);return()=>window.removeEventListener("chibi:mission-scores",update);},[]);
+
  const [open,setOpen]=useState(false);
  const quests=questsFor(profile),ready=quests.filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id));
  const [category,setCategory]=useState("floor");
@@ -551,19 +572,27 @@ function QuestMenu({profile,save}:{profile:Profile;save:(fn:(p:Profile)=>Profile
   {open&&<WishDialog className="quest-menu" title="Quêtes" close={()=>setOpen(false)}>
    <p>Récompenses uniques · Progression rétroactive</p>
    {profile.floorRecoveryAvailable&&<button className="floor-recovery" onClick={()=>save(p=>({...p,bestFloor:Math.max(p.bestFloor,10),floorRecoveryAvailable:false}))}>Rattraper mon ancien étage 10</button>}
-   <div className="quest-tabs">{[["floor","Étages"],["badges","Collection"],["other","Personnages"]].map(([id,name])=><button key={id} aria-pressed={category===id} onClick={()=>setCategory(id)}>{name}</button>)}</div>
-   <div className="quest-list">{quests.filter(q=>category==="other"?!/^(floor|badges)-/.test(q.id):q.id.startsWith(category+"-")).map(q=>{
+   <div className="quest-tabs">{[["floor","Étages"],["badges","Collection"],["other","Personnages"],["pc","Missions PC"]].map(([id,name])=><button key={id} aria-pressed={category===id} onClick={()=>setCategory(id)}>{name}</button>)}</div>
+   {category==="pc"?<div className="quest-list pc-mission-coins">
+    <p>Score PC ÷ 10 = pièces · Crédit automatique</p>
+    {missionStatus==="error"&&<p role="alert">Missions PC indisponibles. Les crédits précédents sont conservés ; vérifie la connexion et les règles Firebase.</p>}
+    <p>Total reçu : {Object.values(profile.pcMissionCoins).reduce((a,b)=>a+b,0)} pièces</p>
+    {Object.keys(profile.pcMissionCoins).length?Object.entries(profile.pcMissionCoins).sort(([a],[b])=>b.localeCompare(a)).map(([day,coins])=><article key={day}><b>{day.split("-").reverse().join("/")}</b><span>{coins} pièces créditées</span></article>):<p>Ouvre le jeu connecté au même compte que sur PC pour récupérer tes missions passées.</p>}
+   </div>:<div className="quest-list">{quests.filter(q=>category==="other"?!/^(floor|badges)-/.test(q.id):q.id.startsWith(category+"-")).map(q=>{
     const claimed=profile.claimedQuests.includes(q.id),done=q.progress>=q.goal;
     return <article key={q.id}><div><b>{q.title}</b><small>{Math.min(q.goal,q.progress)} / {q.goal} · {q.reward} pièces</small><progress max={q.goal} value={Math.min(q.goal,q.progress)} aria-label={q.title}/></div>
      <button disabled={claimed||!done} onClick={()=>save(p=>claimQuests(p,[q.id]))}>{claimed?"Récupéré":"Récupérer"}</button></article>;
-   })}</div>
+   })}</div>}
    <div className="dialog-actions"><button disabled={!ready.length} onClick={()=>save(p=>claimQuests(p,questsFor(p).map(q=>q.id)))}>Tout récupérer · {ready.reduce((sum,q)=>sum+q.reward,0)} pièces</button><button onClick={()=>setOpen(false)}>Fermer</button></div>
   </WishDialog>}
  </>;
 }
 
+function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels]);}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
+  const profileRef=React.useRef(profile);profileRef.current=profile;
+  const runSignature=React.useRef<string|null>(null);
   const [editingSlot,setEditingSlot]=useState<number|null>(null);
   const [battleLoadout,setBattleLoadout]=useState<Record<string,string[]>>({});
   const [party, setParty] = useState<Fighter[] | null>(null);
@@ -583,7 +612,13 @@ function App() {
     const sync = (event: StorageEvent) => {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
-    const cloudLoaded=()=>{displayProfile(loadProfile());setParty(null);setResult([]);setPhase("ready");turning.current=false;};
+    const cloudLoaded=()=>{
+      const incoming=loadProfile(),changed=combatFingerprint(incoming)!==combatFingerprint(profileRef.current);
+      if((runSignature.current!==null&&combatFingerprint(incoming)!==runSignature.current)||changed){
+        setParty(null);setResult([]);setPhase("ready");turning.current=false;runSignature.current=null;
+      }
+      displayProfile(incoming);
+    };
     window.addEventListener("chibi:save-loaded",cloudLoaded);
     window.addEventListener("storage", sync);
     return () => {window.removeEventListener("storage", sync);window.removeEventListener("chibi:save-loaded",cloudLoaded);};
@@ -593,9 +628,10 @@ function App() {
     let current = profile;
     try { if (localStorage.getItem(profileKey)) current = loadProfile(); } catch {}
     const next = assignBasePsychs(update(accrueDailyWishes(current)));
-    if(JSON.stringify(next)===JSON.stringify(current))return;
+    if(JSON.stringify(next)===JSON.stringify(current) && localStorage.getItem(profileKey)===JSON.stringify(next))return;
     try { localStorage.setItem(profileKey, JSON.stringify(next)); setSaveError(false); }
     catch { setSaveError(true); }
+    if(runSignature.current!==null&&runSignature.current===combatFingerprint(current))runSignature.current=combatFingerprint(next);
     displayProfile(next);
     window.ChibiGameSync?.save(next);
   };
@@ -606,6 +642,11 @@ function App() {
     const timer=window.setInterval(credit,60000);
     window.addEventListener("focus",credit);document.addEventListener("visibilitychange",credit);
     return ()=>{clearInterval(timer);window.removeEventListener("focus",credit);document.removeEventListener("visibilitychange",credit);};
+  },[]);
+  useEffect(()=>{
+    const credit=()=>{const scores=window.ChibiGameSync?.missionScores;if(scores)setProfile(p=>applyPcMissionCoins(p,scores));};
+    window.addEventListener("chibi:mission-scores",credit);credit();
+    return ()=>window.removeEventListener("chibi:mission-scores",credit);
   },[]);
   const wishCost = (p:Profile,n=quantity) => wishQuote(p,n).cost;
   const price = wishCost(profile);
@@ -623,7 +664,7 @@ function App() {
     setProfile(p => {
       if (p.coins!==profile.coins || wishCost(p,count)!==price || p.coins<price) return p;
       const quote=wishQuote(p,count);
-      const next={...p,freeWishes:p.freeWishes-quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
+      const next={...p,wishesMade:p.wishesMade+count,freeWishes:p.freeWishes-quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<count;i++){
         next.wishStep=(next.wishStep+1)%10;
         if(next.wishStep!==0 && Math.random()>=characterChance){
@@ -658,14 +699,14 @@ function App() {
   if (party) return <Battle initialTeam={party} loadout={battleLoadout} coins={profile.coins}
     onDrops={(ids) => setProfile(p => ({...p,pins:[...new Set([...p.pins,...ids])]}))}
     onExperience={(amount)=>setProfile(p=>({...p,xp:{...p.xp,...Object.fromEntries(party.map(f=>[f.name,experience((p.xp[f.name]||0)+amount).xp]))}}))}
-    onReach={(floor)=>setProfile(p=>({...p,bestFloor:Math.max(p.bestFloor,Math.min(100,floor))}))}
-    onVictory={(floor)=>setProfile(p=>({...p,coins:p.coins+5,bestFloor:Math.max(p.bestFloor,Math.min(100,floor)),floorRecoveryAvailable:p.floorRecoveryAvailable&&floor<10}))}
-    leave={() => { setParty(null); setResult([]); }} />;
+    onReach={(floor)=>setProfile(p=>({...p,hasPlayed:true,bestFloor:Math.max(p.bestFloor,Math.min(100,floor))}))}
+    onVictory={(floor)=>setProfile(p=>({...p,coins:p.coins+5,hasPlayed:true,bestFloor:Math.max(p.bestFloor,Math.min(100,floor)),floorRecoveryAvailable:p.floorRecoveryAvailable&&floor<10}))}
+    leave={() => { runSignature.current=null;setParty(null); setResult([]); }} />;
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Bingo Kai</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
     <div className="lobby-tools"><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
-    <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>+3 par jour · Cumulés depuis le 18/11/2026</small></p>
+    <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
@@ -735,7 +776,7 @@ function App() {
     {fighters.map(name=><PsychEquipment key={name} name={name} profile={profile} save={ids=>setProfile(p=>assignBasePsychs({...p,loadout:{...p.loadout,[name]:ids}}))}/>)}
     {fighters.length===2 && !fighters.some(name=>profile.loadout[name]?.some(offensive)) && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={fighters.length!==2 || !fighters.every(name=>profile.loadout[name]?.length) || !fighters.some(name=>profile.loadout[name]?.some(offensive))}
-      onClick={() => {setBattleLoadout(Object.fromEntries(fighters.map(name=>[name,[...profile.loadout[name]]])));setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }));}}>Lancer le roguelike</button>
+      onClick={() => {setProfile(p=>({...p,hasPlayed:true,bestFloor:Math.max(1,p.bestFloor)}));runSignature.current=combatFingerprint(profile);setBattleLoadout(Object.fromEntries(fighters.map(name=>[name,[...profile.loadout[name]]])));setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }));}}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }

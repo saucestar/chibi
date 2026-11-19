@@ -348,6 +348,31 @@
           ".validate": false
         }
       }
+    },
+    "mobileLeaderboard": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "bestFloor"
+      ],
+      "$uid": {
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['name','participated','bestFloor','updatedAt']) && newData.child('participated').val() === true && (!data.exists() || newData.child('bestFloor').val() >= data.child('bestFloor').val())",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64"
+        },
+        "participated": {
+          ".validate": "newData.val() === true"
+        },
+        "bestFloor": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100 && newData.val() % 1 === 0"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }

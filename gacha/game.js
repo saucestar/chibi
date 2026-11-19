@@ -582,7 +582,31 @@ function equippedBy(profile, name, id) {
 function availablePsychs(profile, name) {
   return [...new Set([basePsych[name], ...profile.pins])].filter(id => Boolean(psychs[id]));
 }
+function grantStarterNeku(p) {
+  if (p.owned.includes("NEKU")) return p.starterNekuGranted ? p : {
+    ...p,
+    starterNekuGranted: true
+  };
+  return {
+    ...p,
+    starterNekuGranted: true,
+    owned: [...p.owned, "NEKU"],
+    copies: {
+      ...p.copies,
+      NEKU: 0
+    },
+    levels: {
+      ...p.levels,
+      NEKU: 0
+    },
+    xp: {
+      ...p.xp,
+      NEKU: 0
+    }
+  };
+}
 function assignBasePsychs(profile) {
+  profile = grantStarterNeku(profile);
   const pins = [...profile.pins];
   if (profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
   const loadout = {};
@@ -625,6 +649,11 @@ function loadProfile() {
     const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
+      pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
+      starterNekuGranted: saved.starterNekuGranted === true,
+      starterWishesGranted: saved.starterWishesGranted === true,
+      hasPlayed: saved.hasPlayed === true || Number(saved.bestFloor) > 0 || Object.values(saved.xp || saved.wins || {}).some(x => Number(x) > 0),
+      wishesMade: Number.isSafeInteger(saved.wishesMade) && saved.wishesMade >= 0 ? saved.wishesMade : Math.max(owned.filter(n => !saved.starterNekuGranted || n !== "NEKU").length, Number(saved.wishStep) || 0, (saved.pins || []).some(id => !saved.starterNekuGranted || id !== basePsych.NEKU) ? 1 : 0),
       freeWishes: Number.isSafeInteger(saved.freeWishes) && saved.freeWishes >= 0 ? saved.freeWishes : 0,
       lastFreeWishDay: typeof saved.lastFreeWishDay === "string" ? saved.lastFreeWishDay : "",
       bestFloor: Math.min(100, Math.max(0, Math.floor(Number(saved.bestFloor ?? saved.highestFloor ?? 0) || 0))),
@@ -642,7 +671,12 @@ function loadProfile() {
       coins: saved.coins
     });
   } catch {}
-  return {
+  return assignBasePsychs({
+    pcMissionCoins: {},
+    starterNekuGranted: false,
+    starterWishesGranted: false,
+    hasPlayed: false,
+    wishesMade: 0,
     freeWishes: 0,
     lastFreeWishDay: "",
     bestFloor: 0,
@@ -658,7 +692,7 @@ function loadProfile() {
     equipped: ["", ""],
     loadout: {},
     coins: 180
-  };
+  });
 }
 const freeWishStartDay = "2026-11-18";
 function parisDay(now = new Date()) {
@@ -673,29 +707,37 @@ function parisDay(now = new Date()) {
 function dayIndex(day) {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) ? Date.parse(day + "T00:00:00Z") / 86400000 : NaN;
 }
+const freeWishNoStackDay = "2026-11-25";
 function accrueDailyWishes(p, now = new Date()) {
   const today = parisDay(now),
     end = dayIndex(today),
     start = dayIndex(freeWishStartDay);
   if (end < start) return p;
   const previous = dayIndex(p.lastFreeWishDay);
+  if (Number.isFinite(previous) && previous > end) return p;
+  if (today >= freeWishNoStackDay) {
+    if (p.lastFreeWishDay !== today) return {
+      ...p,
+      freeWishes: 3,
+      lastFreeWishDay: today,
+      starterWishesGranted: true
+    };
+    return p.starterWishesGranted ? p : {
+      ...p,
+      freeWishes: Math.min(3, p.freeWishes),
+      starterWishesGranted: true
+    };
+  }
   const days = Number.isFinite(previous) ? Math.max(0, end - Math.max(previous, start - 1)) : end - start + 1;
-  return days > 0 ? {
+  const starter = p.starterWishesGranted ? 0 : 10;
+  return days > 0 || starter > 0 ? {
     ...p,
-    freeWishes: p.freeWishes + days * 3,
-    lastFreeWishDay: today
+    freeWishes: p.freeWishes + days * 3 + starter,
+    lastFreeWishDay: today,
+    starterWishesGranted: true
   } : p;
 }
-function starterProfile(p) {
-  return p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name => offensive(basePsych[name])));
-}
 function wishQuote(p, count) {
-  if (count === 1 && starterProfile(p)) return {
-    free: 0,
-    paid: 0,
-    cost: 0,
-    starter: true
-  };
   const free = Math.min(count, p.freeWishes),
     paid = count - free;
   return {
@@ -1094,6 +1136,26 @@ function questsFor(p) {
     reward: 150
   }];
 }
+function applyPcMissionCoins(p, scores) {
+  const paid = {
+    ...p.pcMissionCoins
+  };
+  let coins = 0;
+  for (const [day, score] of Object.entries(scores)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !Number.isFinite(score) || score < 0 || score > 1000000) continue;
+    const total = Math.floor(score / 10),
+      previous = paid[day] || 0;
+    if (total > previous) {
+      coins += total - previous;
+      paid[day] = total;
+    }
+  }
+  return coins ? {
+    ...p,
+    coins: p.coins + coins,
+    pcMissionCoins: paid
+  } : p;
+}
 function claimQuests(p, ids) {
   const ready = questsFor(p).filter(q => ids.includes(q.id) && q.progress >= q.goal && !p.claimedQuests.includes(q.id));
   return {
@@ -1106,6 +1168,12 @@ function QuestMenu({
   profile,
   save
 }) {
+  const [missionStatus, setMissionStatus] = useState(() => window.ChibiGameSync?.missionState || "idle");
+  useEffect(() => {
+    const update = () => setMissionStatus(window.ChibiGameSync?.missionState || "idle");
+    window.addEventListener("chibi:mission-scores", update);
+    return () => window.removeEventListener("chibi:mission-scores", update);
+  }, []);
   const [open, setOpen] = useState(false);
   const quests = questsFor(profile),
     ready = quests.filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id));
@@ -1125,11 +1193,17 @@ function QuestMenu({
     }))
   }, "Rattraper mon ancien \xE9tage 10"), React.createElement("div", {
     className: "quest-tabs"
-  }, [["floor", "Étages"], ["badges", "Collection"], ["other", "Personnages"]].map(([id, name]) => React.createElement("button", {
+  }, [["floor", "Étages"], ["badges", "Collection"], ["other", "Personnages"], ["pc", "Missions PC"]].map(([id, name]) => React.createElement("button", {
     key: id,
     "aria-pressed": category === id,
     onClick: () => setCategory(id)
-  }, name))), React.createElement("div", {
+  }, name))), category === "pc" ? React.createElement("div", {
+    className: "quest-list pc-mission-coins"
+  }, React.createElement("p", null, "Score PC \xF7 10 = pi\xE8ces \xB7 Cr\xE9dit automatique"), missionStatus === "error" && React.createElement("p", {
+    role: "alert"
+  }, "Missions PC indisponibles. Les cr\xE9dits pr\xE9c\xE9dents sont conserv\xE9s ; v\xE9rifie la connexion et les r\xE8gles Firebase."), React.createElement("p", null, "Total re\xE7u : ", Object.values(profile.pcMissionCoins).reduce((a, b) => a + b, 0), " pi\xE8ces"), Object.keys(profile.pcMissionCoins).length ? Object.entries(profile.pcMissionCoins).sort(([a], [b]) => b.localeCompare(a)).map(([day, coins]) => React.createElement("article", {
+    key: day
+  }, React.createElement("b", null, day.split("-").reverse().join("/")), React.createElement("span", null, coins, " pi\xE8ces cr\xE9dit\xE9es"))) : React.createElement("p", null, "Ouvre le jeu connect\xE9 au m\xEAme compte que sur PC pour r\xE9cup\xE9rer tes missions pass\xE9es.")) : React.createElement("div", {
     className: "quest-list"
   }, quests.filter(q => category === "other" ? !/^(floor|badges)-/.test(q.id) : q.id.startsWith(category + "-")).map(q => {
     const claimed = profile.claimedQuests.includes(q.id),
@@ -1153,8 +1227,14 @@ function QuestMenu({
     onClick: () => setOpen(false)
   }, "Fermer"))));
 }
+function combatFingerprint(p) {
+  return JSON.stringify([p.owned, p.equipped, p.loadout, p.xp, p.awakened, p.levels]);
+}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
+  const profileRef = React.useRef(profile);
+  profileRef.current = profile;
+  const runSignature = React.useRef(null);
   const [editingSlot, setEditingSlot] = useState(null);
   const [battleLoadout, setBattleLoadout] = useState({});
   const [party, setParty] = useState(null);
@@ -1177,11 +1257,16 @@ function App() {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
     const cloudLoaded = () => {
-      displayProfile(loadProfile());
-      setParty(null);
-      setResult([]);
-      setPhase("ready");
-      turning.current = false;
+      const incoming = loadProfile(),
+        changed = combatFingerprint(incoming) !== combatFingerprint(profileRef.current);
+      if (runSignature.current !== null && combatFingerprint(incoming) !== runSignature.current || changed) {
+        setParty(null);
+        setResult([]);
+        setPhase("ready");
+        turning.current = false;
+        runSignature.current = null;
+      }
+      displayProfile(incoming);
     };
     window.addEventListener("chibi:save-loaded", cloudLoaded);
     window.addEventListener("storage", sync);
@@ -1197,13 +1282,14 @@ function App() {
       if (localStorage.getItem(profileKey)) current = loadProfile();
     } catch {}
     const next = assignBasePsychs(update(accrueDailyWishes(current)));
-    if (JSON.stringify(next) === JSON.stringify(current)) return;
+    if (JSON.stringify(next) === JSON.stringify(current) && localStorage.getItem(profileKey) === JSON.stringify(next)) return;
     try {
       localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
     } catch {
       setSaveError(true);
     }
+    if (runSignature.current !== null && runSignature.current === combatFingerprint(current)) runSignature.current = combatFingerprint(next);
     displayProfile(next);
     window.ChibiGameSync?.save(next);
   };
@@ -1218,6 +1304,15 @@ function App() {
       window.removeEventListener("focus", credit);
       document.removeEventListener("visibilitychange", credit);
     };
+  }, []);
+  useEffect(() => {
+    const credit = () => {
+      const scores = window.ChibiGameSync?.missionScores;
+      if (scores) setProfile(p => applyPcMissionCoins(p, scores));
+    };
+    window.addEventListener("chibi:mission-scores", credit);
+    credit();
+    return () => window.removeEventListener("chibi:mission-scores", credit);
   }, []);
   const wishCost = (p, n = quantity) => wishQuote(p, n).cost;
   const price = wishCost(profile);
@@ -1242,6 +1337,7 @@ function App() {
       const quote = wishQuote(p, count);
       const next = {
         ...p,
+        wishesMade: p.wishesMade + count,
         freeWishes: p.freeWishes - quote.free,
         pins: [...p.pins],
         coins: p.coins - quote.cost,
@@ -1322,15 +1418,18 @@ function App() {
     })),
     onReach: floor => setProfile(p => ({
       ...p,
+      hasPlayed: true,
       bestFloor: Math.max(p.bestFloor, Math.min(100, floor))
     })),
     onVictory: floor => setProfile(p => ({
       ...p,
       coins: p.coins + 5,
+      hasPlayed: true,
       bestFloor: Math.max(p.bestFloor, Math.min(100, floor)),
       floorRecoveryAvailable: p.floorRecoveryAvailable && floor < 10
     })),
     leave: () => {
+      runSignature.current = null;
       setParty(null);
       setResult([]);
     }
@@ -1346,7 +1445,7 @@ function App() {
     save: setProfile
   })), React.createElement("p", {
     className: "daily-wishes"
-  }, "V\u0153ux gratuits \xB7 ", React.createElement("b", null, profile.freeWishes), React.createElement("small", null, "+3 par jour \xB7 Cumul\xE9s depuis le 18/11/2026")), React.createElement("div", {
+  }, "V\u0153ux gratuits \xB7 ", React.createElement("b", null, profile.freeWishes), React.createElement("small", null, parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -1527,6 +1626,12 @@ function App() {
     className: "pull-button",
     disabled: fighters.length !== 2 || !fighters.every(name => profile.loadout[name]?.length) || !fighters.some(name => profile.loadout[name]?.some(offensive)),
     onClick: () => {
+      setProfile(p => ({
+        ...p,
+        hasPlayed: true,
+        bestFloor: Math.max(1, p.bestFloor)
+      }));
+      runSignature.current = combatFingerprint(profile);
       setBattleLoadout(Object.fromEntries(fighters.map(name => [name, [...profile.loadout[name]]])));
       setParty(fighters.map(name => {
         const f = characterRoster.find(f => f.name === name);

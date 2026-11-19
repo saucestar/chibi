@@ -7,7 +7,7 @@
   const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
     (/Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   const client = 'device-' + (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
-  let activeUid = null;
+  let activeUid = null, activeName = "Joueur";
   let ref = null, revision = 0, generation = 0, writing = false, queue = [], listener = null;
   let state = { ready: false, message: 'Connexion à la sauvegarde…', kind: 'loading' };
   function announce(next) {
@@ -40,6 +40,69 @@
     return { version: 1, rev, initialSource, profileJson: JSON.stringify(profile), client,
       updatedAt: firebase.database.ServerValue.TIMESTAMP };
   }
+  let missionScores={}, missionRefs=[], missionTimer=null, missionNotify=null, missionUser=null;
+  let missionState='idle';
+  function notifyMissions(){
+    window.dispatchEvent(new CustomEvent('chibi:mission-scores',{detail:{scores:{...missionScores},state:missionState}}));
+  }
+  function stopMissions(){
+    missionRefs.forEach(({ref,listener})=>ref.off('value',listener));missionRefs=[];
+    clearInterval(missionTimer);clearTimeout(missionNotify);missionTimer=null;missionScores={};missionUser=null;missionState='idle';
+  }
+  function missionDay(date=new Date()){
+    const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);
+    return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');
+  }
+  async function watchMissions(user,uid,token){
+    missionUser=user;missionState='loading';
+    const subscribe=day=>{
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||missionRefs.some(x=>x.day===day))return;
+      const ref=firebase.database().ref('missions/'+day+'/'+uid);
+      const listener=snapshot=>{
+        if(token!==generation)return;
+        const score=Number(snapshot.val()?.score);
+        if(Number.isFinite(score)&&score>=0&&score<=1000000)missionScores[day]=Math.floor(score);
+        missionState='ready';clearTimeout(missionNotify);missionNotify=setTimeout(notifyMissions,150);
+      };
+      missionRefs.push({day,ref,listener});
+      ref.on('value',listener,()=>{missionState='error';notifyMissions();});
+    };
+    const scan=async()=>{
+      if(token!==generation)return;
+      subscribe(missionDay());subscribe(missionDay(new Date(Date.now()-86400000)));
+      try{
+        // Read only day keys, then subscribe only to this account's own score.
+        const auth=await user.getIdToken();
+        const url=firebase.database().ref('missions').toString()+'.json?shallow=true&auth='+encodeURIComponent(auth);
+        const response=await fetch(url,{cache:'no-store'});
+        if(!response.ok)throw Error('Missions indisponibles');
+        const days=await response.json();if(token!==generation)return;
+        Object.keys(days||{}).forEach(subscribe);
+        missionState='ready';notifyMissions();
+      }catch(_){if(token===generation){missionState='error';notifyMissions();}}
+    };
+    await scan();
+    if(token!==generation)return;
+    missionTimer=setInterval(()=>{
+      subscribe(missionDay());subscribe(missionDay(new Date(Date.now()-86400000)));
+    },60000);
+  }
+  async function publishLeaderboard(profile) {
+    const tracked=typeof profile.hasPlayed==='boolean' && Number.isSafeInteger(profile.wishesMade);
+    const participated=tracked ? profile.hasPlayed || profile.wishesMade>0 :
+      Number(profile.bestFloor)>0 || (profile.owned||[]).some(name=>!profile.starterNekuGranted||name!=='NEKU') ||
+      (profile.pins||[]).some(id=>!profile.starterNekuGranted||id!=='pin266') || Object.values(profile.xp||profile.wins||{}).some(x=>Number(x)>0);
+    if(!activeUid || !participated)return;
+    const uid=activeUid,name=activeName;
+    const floor=Math.min(100,Math.max(0,Math.floor(Number(profile.bestFloor)||0)));
+    await firebase.database().ref('mobileLeaderboard/'+uid).transaction(current=>({
+      name,participated:true,bestFloor:Math.max(floor,Math.min(100,Number(current?.bestFloor)||0)),
+      updatedAt:firebase.database.ServerValue.TIMESTAMP
+    }),undefined,false);
+  }
+  function project(profile) {
+    publishLeaderboard(profile).catch(()=>window.dispatchEvent(new CustomEvent('chibi:leaderboard-state',{detail:{kind:'error',message:'Classement indisponible : vérifie les règles Firebase.'}})));
+  }
   async function flush(uid, token) {
     if (writing || !ref || !queue.length) return;
     writing = true;
@@ -64,6 +127,7 @@
           break;
         }
         revision = result.snapshot.val().rev;
+        project(profile);
         localStorage.setItem(ownerKey, uid);
         if(queue.length) localStorage.setItem(pendingKey, JSON.stringify({uid,baseRev:revision,client,profile:queue[queue.length-1]}));
         else localStorage.removeItem(pendingKey);
@@ -79,6 +143,8 @@
   }
   window.ChibiGameSync = {
     get state() { return state; },
+    get missionScores(){return {...missionScores};},
+    get missionState(){return missionState;},
     save(profile) {
       if (!ref || !state.ready || !valid(profile)) return;
       queue = [profile];
@@ -88,6 +154,7 @@
   };
   async function connect(user) {
     const token = ++generation;
+    stopMissions();
     if (ref && listener) ref.off('value', listener);
     ref = null; queue = []; revision = 0;
     if (!user) {
@@ -101,6 +168,7 @@
       const uid = claims.discordId;
       if (!uid || !/^[0-9]{1,25}$/.test(String(uid))) throw Error('Compte non identifié');
       activeUid = String(uid);
+      activeName=String(claims.discordName || user.displayName || "Joueur").slice(0,64) || "Joueur";
       const target = firebase.database().ref('gameSaves/' + uid);
       let remote = (await target.get()).val();
       if (token !== generation) return;
@@ -118,6 +186,7 @@
       if (remote) {
         const pending = read(pendingKey);
         install(remote, String(uid));
+        project(JSON.parse(remote.profileJson));
         announce({ ready: true, kind: 'synced', message: 'Progression synchronisée' });
         if (pending && pending.uid === String(uid) && (pending.baseRev === revision || (pending.client === remote.client && pending.baseRev + 1 === revision)) && valid(pending.profile)) {
           localStorage.setItem(key, JSON.stringify(pending.profile));
@@ -142,6 +211,7 @@
         } catch (_) { announce({ ready: false, kind: 'error', message: 'Sauvegarde distante illisible. Progression locale conservée.' }); }
       };
       target.on('value', listener, () => announce({ ready: false, kind: 'error', message: 'Accès à la sauvegarde refusé. Les règles Firebase doivent être publiées.' }));
+      watchMissions(user,String(uid),token).catch(()=>{if(token===generation){missionState='error';notifyMissions();}});
     } catch (_) {
       announce({ ready: false, kind: 'error', message: 'Synchronisation indisponible. Progression locale conservée : vérifie la connexion et les règles Firebase.' });
     }

@@ -279,6 +279,23 @@ img { -webkit-user-drag:none; }
 
 /* Montserrat Black throughout the mobile launcher. */
 body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:900 !important; }
+
+.board-choice { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:18px 0 8px; }
+.board-choice button { display:flex; flex-direction:column; justify-content:center; gap:8px; min-height:112px; padding:18px 12px; border:1px solid #b6aaca; border-radius:20px; background:linear-gradient(160deg,#fff,#e6dff0); color:#2a1d44; box-shadow:inset 0 2px #fff,0 4px 0 #7e6d9b,0 6px 14px #21133533; cursor:pointer; }
+.board-choice button strong { font-size:24px; }
+.board-choice button span { font-size:11px; line-height:1.5; }
+.board-choice button:active { transform:translateY(2px);box-shadow:inset 0 2px 5px #26104240,0 1px #7e6d9b; }
+.mobile-rank-list { border:1px solid #b3a7c7; border-radius:14px; overflow:hidden; background:#fffaf4; margin-top:12px; }
+.mobile-rank-row { display:grid; grid-template-columns:40px minmax(0,1fr) 55px 55px; gap:7px; align-items:center; padding:14px 10px; border-bottom:1px solid #ddd3e5; font-size:12px; }
+.mobile-rank-row:last-child { border-bottom:0; }
+.mobile-rank-heading { background:linear-gradient(155deg,#5e50a9,#302461);color:white;font-size:10px; }
+.mobile-rank-row>:nth-child(n+3) { text-align:right; }
+.mobile-rank-name { overflow-wrap:anywhere; }
+.mobile-rank-name small { display:inline-block;padding:2px 5px;border-radius:99px;color:#fff;background:#664398;font-size:8px; }
+.mobile-rank-row.is-me { background:#e9dcf4; box-shadow:inset 4px 0 #9638ff; }
+.mobile-rank-number { color:#684195; }
+@media(prefers-reduced-motion:no-preference) { .board-choice button { transition:transform .18s ease,box-shadow .18s ease; } }
+
 </style>
 </head>
 <body>
@@ -369,8 +386,27 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
 
   <!-- CLASSEMENT -->
   <section class="page" data-page="board">
+    <div class="pn wide"><div class="chip"><i>07</i>CLASSEMENTS</div>
+      <p class="txt">Choisis ton classement.</p>
+      <div class="board-choice">
+        <button type="button" id="mobileBoardChoice"><strong>Mobile</strong><span>Roguelike · Étage le plus loin</span></button>
+        <button type="button" id="pcBoardChoice"><strong>PC</strong><span>Co-op · Missions et niveaux</span></button>
+      </div>
+    </div>
+  </section>
+  <section class="page" data-page="board-mobile">
+    <div class="pn wide"><div class="chip"><i>✦</i>CLASSEMENT MOBILE</div>
+      <div class="ctl"><button type="button" class="btn sm" id="mobileBoardBack">Retour</button><button type="button" class="btn sm" id="mobileBoardRefresh">Actualiser</button></div>
+      <p class="txt">Le plus haut étage atteint · 100 étages maximum</p>
+      <p class="note">Seuls les joueurs ayant lancé le roguelike ou effectué une invocation apparaissent. Les joueurs à égalité d’étage partagent le même rang.</p>
+      <p id="mobileBoardCount" class="txt"></p>
+      <div id="mobileBoardList" class="mobile-rank-list" aria-live="polite"></div>
+    </div>
+  </section>
+  <section class="page" data-page="board-pc">
+    <div class="wide"><button type="button" class="btn sm" id="pcBoardBack">Retour aux classements</button></div>
     <div class="pn">
-      <div class="chip"><i>07</i>CLASSEMENT</div><div class="win"><b></b><b></b></div><div class="tape"></div>
+      <div class="chip"><i>07</i>CLASSEMENT PC</div><div class="win"><b></b><b></b></div><div class="tape"></div>
       <div class="ctl" style="justify-content:space-between">
         <button type="button" class="btn sm" id="dPrev">◀</button>
         <b id="dLabel" style="font:800 italic 15px Montserrat,sans-serif">Aujourd'hui</b>
@@ -380,6 +416,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     </div>
     <div class="pn">
       <div class="chip"><i>08</i>MISSION DU JOUR</div><div class="win"><b></b><b></b></div>
+      <p class="note">Ton score de mission rapporte des pièces au jeu mobile : 10 points = 1 pièce, avec rattrapage des anciennes missions à l’ouverture du jeu ou du gacha.</p>
       <div id="mission"><div class="txt">chargement…</div></div>
       <button type="button" class="btn" id="rulesBtn" style="margin-top:12px">voir les règles</button>
     </div>
@@ -520,7 +557,7 @@ let savedAc = null; try{ savedAc = localStorage.getItem('appAccent'); }catch(e){
 setAccent(SWATCHES.includes(savedAc) ? savedAc : SWATCHES[0]);
 
 // ---------------- tabs
-const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
+const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', 'board-mobile':'CLASSEMENT MOBILE', 'board-pc':'CLASSEMENT PC', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
 const loaded = {};
 const walletKey = 'chibi.reapers-run.party.v1';
 function refreshWallet(){
@@ -537,7 +574,8 @@ refreshWallet();
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 function show(p){
   if(!PAGE_NAMES[p]) p = 'home';
-  document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  if(p!=='board-mobile')stopMobileBoard();
+  document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p || (b.dataset.p==='board' && p.startsWith('board-'))));
   $('pinBtn').classList.toggle('on', p === 'game' || p === 'gacha');
   $('moreBtn').classList.toggle('on', p === 'profile' || p === 'friends');
   document.querySelectorAll('#moreSheet [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === p));
@@ -545,6 +583,7 @@ function show(p){
   refreshWallet();
   try{ history.replaceState(null, '', location.pathname + (p === 'home' ? '' : '#' + p)); }catch(e){}
   window.scrollTo(0, 0);
+  if(p==='board-mobile'){loadMobileBoard();return;}
   if(me && !loaded[p]){ loaded[p] = true; LOADERS[p](); }
 }
 document.querySelectorAll('#tabs button[data-p]').forEach(b => b.onclick = () => show(b.dataset.p));
@@ -656,6 +695,43 @@ function renderInstall(){
 }
 
 // ---------------- CLASSEMENT
+// Minimal public projection: the full gameSaves node remains private.
+let mobileBoardRef=null, mobileBoardListener=null;
+function stopMobileBoard(){
+  if(mobileBoardRef&&mobileBoardListener)mobileBoardRef.off('value',mobileBoardListener);
+  mobileBoardRef=null;mobileBoardListener=null;
+}
+function mobileRows(value){
+  return Object.entries(value||{}).filter(([,p])=>p&&p.participated===true&&Number.isInteger(p.bestFloor)&&p.bestFloor>=0&&p.bestFloor<=100)
+    .map(([id,p])=>({id,name:String(p.name||'Joueur').slice(0,64),floor:p.bestFloor}))
+    .sort((a,b)=>b.floor-a.floor||a.name.localeCompare(b.name,'fr')||a.id.localeCompare(b.id));
+}
+function renderMobileBoard(value){
+  const rows=mobileRows(value);
+  $('mobileBoardCount').textContent=rows.length+' joueur'+(rows.length>1?'s':'');
+  if(!rows.length){$('mobileBoardList').innerHTML='<p class="txt">Aucun participant pour le moment. Lance le roguelike ou effectue une invocation pour rejoindre le classement.</p>';return;}
+  let last=-1,rank=0;
+  $('mobileBoardList').innerHTML='<div class="mobile-rank-row mobile-rank-heading"><span>Rang</span><span>Joueur</span><span>Palier</span><span>Étage</span></div>'+rows.map((p,i)=>{
+    if(p.floor!==last){rank=i+1;last=p.floor;}
+    return '<div class="mobile-rank-row '+(p.id===me?.id?'is-me':'')+'"><span class="mobile-rank-number">'+rank+'</span><span class="mobile-rank-name">'+esc(p.name)+(p.id===me?.id?' <small>Toi</small>':'')+'</span><span>'+(p.floor?Math.ceil(p.floor/10):'—')+'</span><b>'+p.floor+'</b></div>';
+  }).join('');
+}
+function loadMobileBoard(){
+  stopMobileBoard();
+  $('mobileBoardList').innerHTML='<p class="txt" role="status">Chargement du classement…</p>';
+  if(!db||!me){$('mobileBoardList').innerHTML='<p class="txt">Connecte-toi pour voir le classement mobile.</p>';return;}
+  mobileBoardRef=db.ref('mobileLeaderboard');
+  mobileBoardListener=snapshot=>renderMobileBoard(snapshot.val());
+  mobileBoardRef.on('value',mobileBoardListener,error=>{
+    $('mobileBoardList').innerHTML='<p class="txt" role="alert">Classement mobile indisponible : '+esc(why(error))+'.</p>';
+  });
+}
+
+$('mobileBoardChoice').onclick=()=>show('board-mobile');
+$('pcBoardChoice').onclick=()=>show('board-pc');
+$('mobileBoardBack').onclick=()=>show('board');
+$('pcBoardBack').onclick=()=>show('board');
+$('mobileBoardRefresh').onclick=loadMobileBoard;
 let day = 0;
 async function loadBoard(){
   await base();
@@ -880,7 +956,7 @@ async function importSpotify(ref){
 }
 
 // ---------------- start
-const LOADERS = { home: loadHome, music: loadMusic, board: loadBoard, friends: loadFriends, profile: loadProfile, game: () => {}, gacha: () => {} };
+const LOADERS = { home: loadHome, music: loadMusic, board:()=>{}, 'board-pc':loadBoard, 'board-mobile':loadMobileBoard, friends: loadFriends, profile: loadProfile, game: () => {}, gacha: () => {} };
 $('loginBtn').onclick = () => ChibiAuth.login();
 async function init(){
   await ChibiAuth.handleRedirect();
