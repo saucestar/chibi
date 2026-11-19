@@ -210,6 +210,7 @@
   window.ChibiGameSync = {
     historyPage,
     get accountId(){return activeUid;},
+    get identity(){return activeUid?{id:activeUid,name:activeName}:undefined;},
     get archivedWishIds(){return [...archived];},
     get state() { return state; },
     get missionScores(){return {...missionScores};},

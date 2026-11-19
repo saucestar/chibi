@@ -421,7 +421,7 @@ function applyRunCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profil
  return {...p,run:snapshot,xp,pins:[...new Set([...p.pins,...(gains.pins||[])])],coins:p.coins+(gains.victory?5:0),hasPlayed:true,bestFloor:Math.max(p.bestFloor,snapshot.wave),floorRecoveryAvailable:p.floorRecoveryAvailable&&snapshot.wave<10};
 }
 
-type Profile = { run:RunSave|null; wishEvents:WishEvent[]; wishHistoryStartedAt:number; wishHistoryBaseline:number; freeWishVersion:number; freeWishSpent:number; freeWishDaySpent:number; pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
+type Profile = { specialRunRecoveries:string[]; run:RunSave|null; wishEvents:WishEvent[]; wishHistoryStartedAt:number; wishHistoryBaseline:number; freeWishVersion:number; freeWishSpent:number; freeWishDaySpent:number; pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function equippedBy(profile:Profile,name:string,id:string):string|undefined {
@@ -473,14 +473,14 @@ function loadProfile(): Profile {
       return [name,count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({run:validRun(saved.run,owned),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:Array.isArray(saved.specialRunRecoveries)?[...new Set<string>(saved.specialRunRecoveries.filter(id=>typeof id==="string"&&id.length<100))]:[],run:validRun(saved.run,owned),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies,
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: {...copies},
       awakened: owned.filter(name => copies[name]===5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins }));
   } catch {}
-  return accrueDailyWishes(assignBasePsychs({run:null,wishEvents:[],wishHistoryStartedAt:0,wishHistoryBaseline:0,freeWishVersion:0,freeWishSpent:0,freeWishDaySpent:0,pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 }));
+  return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:[],run:null,wishEvents:[],wishHistoryStartedAt:0,wishHistoryBaseline:0,freeWishVersion:0,freeWishSpent:0,freeWishDaySpent:0,pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 }));
 }
 
 // First mobile game integration: 2026-11-18 (repository history).
@@ -720,6 +720,14 @@ function QuestMenu({profile,save,embedded=false}:{profile:Profile;save:(fn:(p:Pr
  </>;
 }
 
+// Explicit one-time recovery requested for Cetruc: floor 5, not difficulty tier 5.
+function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profile {
+ if(!identity||!/^\d{1,25}$/.test(identity.id)||identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR")!=="cetruc")return p;
+ const flag=`cetruc-floor-5-v1-${identity.id}`;
+ if(p.specialRunRecoveries.includes(flag)||!p.hasPlayed||p.equipped.filter(Boolean).length!==2||!p.equipped.every(name=>p.loadout[name]?.length))return p;
+ const run={...newRun(p),wave:5,enemies:makeWave(5)};
+ return {...p,run,bestFloor:Math.max(p.bestFloor,5),specialRunRecoveries:[...p.specialRunRecoveries,flag]};
+}
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null]);}
 type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
@@ -825,7 +833,7 @@ function App() {
     if(window.ChibiGameSync && !window.ChibiGameSync.state.ready)return;
     let current = profile;
     try { if (localStorage.getItem(profileKey)) current = loadProfile(); } catch {}
-    const next = assignBasePsychs(update(accrueDailyWishes(current)));
+    const next = assignBasePsychs(update(accrueDailyWishes(applyCetrucRecovery(current,window.ChibiGameSync?.identity))));
     if(JSON.stringify(next)===JSON.stringify(current) && localStorage.getItem(profileKey)===JSON.stringify(next))return;
     try { localStorage.setItem(profileKey, JSON.stringify(next)); setSaveError(false); }
     catch { setSaveError(true); }

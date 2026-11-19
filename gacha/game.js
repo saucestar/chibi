@@ -1003,6 +1003,7 @@ function loadProfile() {
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({
+      specialRunRecoveries: Array.isArray(saved.specialRunRecoveries) ? [...new Set(saved.specialRunRecoveries.filter(id => typeof id === "string" && id.length < 100))] : [],
       run: validRun(saved.run, owned),
       wishEvents: Array.isArray(saved.wishEvents) ? saved.wishEvents.filter(validWishEvent) : [],
       wishHistoryStartedAt: Number(saved.wishHistoryStartedAt) || 0,
@@ -1035,6 +1036,7 @@ function loadProfile() {
     }));
   } catch {}
   return accrueDailyWishes(assignBasePsychs({
+    specialRunRecoveries: [],
     run: null,
     wishEvents: [],
     wishHistoryStartedAt: 0,
@@ -1607,6 +1609,22 @@ function QuestMenu({
     onClick: () => setOpen(false)
   }, "Fermer"))));
 }
+function applyCetrucRecovery(p, identity) {
+  if (!identity || !/^\d{1,25}$/.test(identity.id) || identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR") !== "cetruc") return p;
+  const flag = `cetruc-floor-5-v1-${identity.id}`;
+  if (p.specialRunRecoveries.includes(flag) || !p.hasPlayed || p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
+  const run = {
+    ...newRun(p),
+    wave: 5,
+    enemies: makeWave(5)
+  };
+  return {
+    ...p,
+    run,
+    bestFloor: Math.max(p.bestFloor, 5),
+    specialRunRecoveries: [...p.specialRunRecoveries, flag]
+  };
+}
 function combatFingerprint(p) {
   return JSON.stringify([p.owned, p.equipped, p.loadout, p.xp, p.awakened, p.levels, p.run ? [p.run.id, p.run.seq, p.run.status] : null]);
 }
@@ -1887,7 +1905,7 @@ function App() {
     try {
       if (localStorage.getItem(profileKey)) current = loadProfile();
     } catch {}
-    const next = assignBasePsychs(update(accrueDailyWishes(current)));
+    const next = assignBasePsychs(update(accrueDailyWishes(applyCetrucRecovery(current, window.ChibiGameSync?.identity))));
     if (JSON.stringify(next) === JSON.stringify(current) && localStorage.getItem(profileKey) === JSON.stringify(next)) return;
     try {
       localStorage.setItem(profileKey, JSON.stringify(next));
