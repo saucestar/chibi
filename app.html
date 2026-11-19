@@ -283,12 +283,12 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
 .mobile-rank-number { color:#684195; }
 @media(prefers-reduced-motion:no-preference) { .board-choice button { transition:transform .18s ease,box-shadow .18s ease; } }
 
-/* Lock both dimensions: flex sizing must never turn the Player Pin into an oval. */
-.tabs button.pin {--player-pin-size:64px;display:block;position:relative;flex:0 0 var(--player-pin-size)!important;width:var(--player-pin-size)!important;min-width:var(--player-pin-size)!important;max-width:var(--player-pin-size)!important;height:var(--player-pin-size)!important;min-height:var(--player-pin-size)!important;max-height:var(--player-pin-size)!important;aspect-ratio:1;padding:0!important;margin:0 6px;align-self:center;transform:none!important;border:0;}
-.tabs button.pin img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-@media(min-width:900px){.tabs button.pin{--player-pin-size:46px;}}
-body:has(.game-page.on[data-page="game"]) .tabs button.pin {--player-pin-size:44px;}
-@media(orientation:landscape) and (max-height:500px){.tabs button.pin,body:has(.game-page.on[data-page="game"]) .tabs button.pin{--player-pin-size:36px;}}
+/* Keep the complete Player Pin visible at its original prominent size. */
+.tabs button.pin {--player-pin-size:74px;display:block;position:relative;flex:0 0 var(--player-pin-size)!important;width:var(--player-pin-size)!important;min-width:var(--player-pin-size)!important;max-width:var(--player-pin-size)!important;height:var(--player-pin-size)!important;min-height:var(--player-pin-size)!important;max-height:var(--player-pin-size)!important;aspect-ratio:1;padding:0!important;margin:-24px 6px 0!important;align-self:center;transform:none!important;border:0;background:transparent;overflow:visible;}
+.tabs button.pin img {position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:none;border-radius:50%;}
+.tabs {overflow:visible;}
+@media(min-width:900px){.tabs button.pin{--player-pin-size:56px;margin:0 6px!important;}}
+@media(orientation:landscape) and (max-height:500px){.tabs button.pin{--player-pin-size:64px;margin:-22px 6px 0!important;}}
 </style>
 </head>
 <body>
