@@ -20,6 +20,7 @@ type Enemy = {
   hp: number;
   maxHp: number;
   attack: number;
+  speed: number;
   level: number;
   xp: number;
   boss: boolean;
@@ -136,6 +137,7 @@ const makeWave = (wave: number): Enemy[] => {
       hp: maxHp,
       maxHp,
       level: wave,
+      speed: ({frog:9,wolf:23,shinigami:19,"jey-pengi":13,"electro-pengi":17,"psyche-fox":21}[kind])+Math.floor((wave-1)/3),
       xp: Math.round((10+template.hp*.15)*growth*(boss?3:1)),
       attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
       boss,
@@ -230,14 +232,22 @@ function RankBadge({ level }: { level: number }) {
 type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
 function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
 const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
-type Profile = { pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
+type Profile = { pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
+function availablePsychs(profile:Profile,name:string):string[] {
+  return [...new Set([basePsych[name],...profile.pins])].filter(id=>Boolean(psychs[id]));
+}
 function assignBasePsychs(profile:Profile):Profile {
-  const pins=[...profile.pins], loadout={...profile.loadout};
+  const pins=[...profile.pins];
   if(profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
+  const loadout:Record<string,string[]>={};
   for(const name of profile.owned){
-    if(!pins.includes(loadout[name]) && loadout[name]!==basePsych[name]) loadout[name]=basePsych[name];
+    const saved=profile.loadout[name] as string[]|string|undefined;
+    const ids=Array.isArray(saved)?saved:typeof saved==="string"?[saved]:[];
+    const allowed=availablePsychs({...profile,pins},name);
+    const equipped=[...new Set(ids)].filter(id=>allowed.includes(id)).slice(0,3);
+    loadout[name]=equipped.length?equipped:[basePsych[name]];
   }
   return {...profile,pins,loadout};
 }
@@ -249,14 +259,14 @@ function loadProfile(): Profile {
       const name=saved.equipped?.[i];
       return owned.includes(name) && (i===0 || name!==saved.equipped[0]) ? name : "";
     });
-    const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id=>psychs[id]?.row>=0);
+    const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]?.row>=0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({ owned, equipped, pins, wishStep,
       copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
-      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name,id])=>owned.includes(name) && (pins.includes(String(id)) || basePsych[name]===id))), coins: saved.coins });
+      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
   } catch {}
   return { pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
 }
@@ -321,6 +331,45 @@ function RewardReveal({draws,close}:{draws:Wish[];close:()=>void}) {
     </div>
   </div>;
 }
+function BadgeArt({pin}:{pin:Pin}) {
+  if(pin.row<0) return <span className="partner-pin-art"><PinIcon pin={pin}/></span>;
+  return <span aria-hidden="true" className="badge-art" style={{backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*84}cqw 0`}}/>;
+}
+function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(ids:string[])=>void}) {
+  const [open,setOpen]=useState(false);
+  const [draft,setDraft]=useState<string[]>([]);
+  const [page,setPage]=useState(0);
+  const [inspected,setInspected]=useState<string|null>(null);
+  const available=availablePsychs(profile,name);
+  const pages=Math.max(1,Math.ceil(available.length/16));
+  const equipped=profile.loadout[name]||[];
+  const inspect=inspected?psychs[inspected]:null;
+  const toggle=(id:string)=>{
+    setInspected(id);
+    setDraft(old=>old.includes(id)?old.filter(value=>value!==id):old.length<3?[...old,id]:old);
+  };
+  const start=()=>{setDraft([...equipped]);setPage(0);setInspected(null);setOpen(true);};
+  return <div className="psych-loadout"><h2>Psychs · {name}</h2>
+    <div className="psych-equipment-slots">{[0,1,2].map(index=><button key={index} onClick={start} aria-label={`Équiper les psychs de ${name}, emplacement ${index+1}`}>
+      {equipped[index]?<><PinIcon pin={psychs[equipped[index]]}/><small>{psychs[equipped[index]].name.replace(" (Pin)","")}</small></>:<span aria-hidden="true">+</span>}
+    </button>)}</div>
+    {open && <WishDialog className="badge-book" title={`Psychs · ${name}`} close={()=>setOpen(false)}>
+      <p className="equipment-count">{draft.length} / 3 équipés</p>
+      <div className="psych-equipment-slots">{[0,1,2].map(i=><button key={i} disabled={!draft[i]} aria-label={draft[i]?`Retirer ${psychs[draft[i]].name}`:`Emplacement ${i+1} vide`} onClick={()=>toggle(draft[i])}>
+        {draft[i]?<PinIcon pin={psychs[draft[i]]}/>:<span>+</span>}
+      </button>)}</div>
+      <div className="badge-slots">{Array.from({length:16},(_,i)=>{
+        const id=available[page*16+i],pin=psychs[id];
+        return pin?<button key={id} className="badge-slot" aria-label={pin.name} aria-pressed={draft.includes(id)} onClick={()=>toggle(id)}><BadgeArt pin={pin}/></button>:<span key={i} className="badge-slot" aria-hidden="true"/>;
+      })}</div>
+      {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {inspect.cost} EN</p>}
+      {draft.length===3 && <p className="equipment-help">Retire un psych équipé pour le remplacer.</p>}
+      {!draft.length && <p className="equipment-help">Équipe au moins 1 psych.</p>}
+      <nav aria-label="Pages des psychs"><button disabled={!page} onClick={()=>setPage(page-1)} aria-label="Page précédente">‹</button><span>{page+1} / {pages}</span><button disabled={page+1>=pages} onClick={()=>setPage(page+1)} aria-label="Page suivante">›</button></nav>
+      <div className="dialog-actions"><button onClick={()=>setOpen(false)}>Annuler</button><button disabled={!draft.length} onClick={()=>{save(draft);setOpen(false);}}>Enregistrer</button></div>
+    </WishDialog>}
+  </div>;
+}
 function BadgeCatalogue({owned}:{owned:string[]}) {
   const [open,setOpen]=useState(false);
   const [page,setPage]=useState(0);
@@ -337,7 +386,7 @@ function BadgeCatalogue({owned}:{owned:string[]}) {
           const index=page*16+i, pin=collected[index];
           if(!pin) return <span key={index} className="badge-slot" aria-hidden="true"/>;
           return <button key={pin.id} className="badge-slot" aria-label={pin.name} aria-pressed={selected?.id===pin.id} onClick={()=>setSelected(pin)}>
-            <span aria-hidden="true" className="badge-art" style={{backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*84}cqw 0`}}/>
+            <BadgeArt pin={pin}/>
           </button>;
         })}
       </div>
@@ -351,6 +400,7 @@ function BadgeCatalogue({owned}:{owned:string[]}) {
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [editingSlot,setEditingSlot]=useState<number|null>(null);
+  const [battleLoadout,setBattleLoadout]=useState<Record<string,string[]>>({});
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
@@ -361,7 +411,7 @@ function App() {
   useEffect(()=>{
     try {
       const saved=JSON.parse(localStorage.getItem(profileKey)||"null");
-      if(saved && !saved.xp) localStorage.setItem(profileKey,JSON.stringify(loadProfile()));
+      if(saved && (!saved.xp || Object.values(saved.loadout||{}).some(value=>!Array.isArray(value)))) localStorage.setItem(profileKey,JSON.stringify(loadProfile()));
     } catch { setSaveError(true); }
   },[]);
   useEffect(() => {
@@ -428,7 +478,7 @@ function App() {
     });
     setEditingSlot(null);
   }
-  if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
+  if (party) return <Battle initialTeam={party} loadout={battleLoadout} coins={profile.coins}
     onDrops={(ids) => setProfile(p => ({...p,pins:[...new Set([...p.pins,...ids])]}))}
     onExperience={(amount)=>setProfile(p=>({...p,xp:{...p.xp,...Object.fromEntries(party.map(f=>[f.name,experience((p.xp[f.name]||0)+amount).xp]))}}))}
     onVictory={()=>setProfile(p=>({...p,coins:p.coins+5}))}
@@ -497,22 +547,27 @@ function App() {
       <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
     </WishDialog>}
     <BadgeCatalogue owned={profile.pins}/>
-    {fighters.map(name => <label className="psych-choice" key={name}>Psych de {name}
-      <select value={profile.loadout[name] || ""} onChange={e => {
-        const psych = e.target.value as Psych;
-        setProfile(p => (p.pins.includes(psych) || basePsych[name]===psych) ? { ...p, loadout: { ...p.loadout, [name]: psych } } : p);
-      }}><option value="" disabled>Choisir un psych</option>
-        <option value={basePsych[name]}>{psychs[basePsych[name]].name.replace(" (Pin)","")} · Psych de base · {psychs[basePsych[name]].cost} EN</option>
-        {profile.pins.filter(id=>id!==basePsych[name]).map(id=>[id,psychs[id]] as const).map(([id, item]) => <option key={id} value={id}>#{item.number} {item.name} · {types[item.kind]} · {item.cost} EN</option>)}
-      </select></label>)}
-    {fighters.length === 2 && fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
-    <button className="pull-button" disabled={fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
-      onClick={() => setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
+    {fighters.map(name=><PsychEquipment key={name} name={name} profile={profile} save={ids=>setProfile(p=>assignBasePsychs({...p,loadout:{...p.loadout,[name]:ids}}))}/>)}
+    {fighters.length===2 && !fighters.some(name=>profile.loadout[name]?.some(offensive)) && <p>Équipe au moins un psych offensif.</p>}
+    <button className="pull-button" disabled={fighters.length!==2 || !fighters.every(name=>profile.loadout[name]?.length) || !fighters.some(name=>profile.loadout[name]?.some(offensive))}
+      onClick={() => {setBattleLoadout(Object.fromEntries(fighters.map(name=>[name,[...profile.loadout[name]]])));setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }));}}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }
 
-function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onDrops:(ids:string[])=>void; onExperience:(amount:number)=>void; onVictory: () => void; leave: () => void }) {
+type PlannedAction = {kind:"psych"|"guard"|"burst";pin?:string;target?:number};
+type TurnEntry = {key:string;side:"ally"|"enemy";name:string;speed:number;id?:number;target?:string};
+function turnOrder(team:Fighter[],enemies:Enemy[],turn:number):TurnEntry[] {
+  const living=team.filter(f=>f.hp>0);
+  return [
+    ...living.map(f=>({key:f.name,side:"ally" as const,name:f.name,speed:f.speed||0})),
+    ...enemies.filter(e=>e.hp>0).map((e,i)=>({key:`enemy-${e.id}`,side:"enemy" as const,name:e.name,id:e.id,speed:e.speed,target:living[(turn-1+i)%living.length]?.name}))
+  ].sort((a,b)=>b.speed-a.speed || (a.side===b.side?0:a.side==="ally"?-1:1));
+}
+const planCost=(plan?:PlannedAction)=>plan?.kind==="psych"?psychs[plan.pin!]?.cost||0:0;
+const planName=(plan?:PlannedAction)=>!plan?"Choisir une action":plan.kind==="guard"?"Défense":plan.kind==="burst"?"Sync Burst":psychs[plan.pin!].name;
+
+function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych[]>; coins: number; onDrops:(ids:string[])=>void; onExperience:(amount:number)=>void; onVictory: () => void; leave: () => void }) {
   const [inspectedId,setInspectedId]=useState<number|null>(null);
   const lastTap=React.useRef({id:-1,time:0});
   const awarded=React.useRef(new Set<number>());
@@ -526,14 +581,14 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
   const [groove, setGroove] = useState(28);
 
   const [turn, setTurn] = useState(1);
-  const [message, setMessage] = useState("Noise detected. Choose your move.");
+  const [message, setMessage] = useState("Choisis 1 action par personnage, puis lance le tour.");
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState<number | null>(null);
   const [loot,setLoot]=useState<string[]>([]);
   const [dropReveal,setDropReveal]=useState<Wish[]>([]);
   const [reward, setReward] = useState(false);
   const [actor, setActor] = useState("");
-  const [guarded, setGuarded] = useState(false);
+
   const [activeAction, setActiveAction] = useState<Action>(null);
 
   const inspected=enemies.find(enemy=>enemy.id===inspectedId);
@@ -560,116 +615,113 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
     }
   }, [enemies, livingEnemies, selected]);
 
-  const enemyTurn = (updatedEnemies: Enemy[], wasGuarded = guarded) => {
-    const defeated=updatedEnemies.filter((enemy,i)=>enemy.hp===0 && enemies[i].hp>0 && !awarded.current.has(enemy.id));
-    defeated.forEach(enemy=>awarded.current.add(enemy.id));
-    const earned=defeated.reduce((sum,enemy)=>sum+enemy.xp,0);
-    if(earned){
-      onExperience(earned);
-      setTeam(current=>current.map(f=>gainExperience(f,earned)));
-      setEarnedXp(total=>total+earned);
-    }
-    const drops=defeated.filter(()=>Math.random()<0.25).map(()=>pick(pinList));
-    if(drops.length){
-      setDropReveal(drops.map(pin=>({pin})));
-      onDrops(drops.map(pin=>pin.id));
-      setLoot(old=>[...old,...drops.map(pin=>pin.name)]);
-    }
-    const attackers = updatedEnemies.filter((enemy) => enemy.hp > 0);
-    if (!attackers.length) {
-      if(clearedWave.current) return;
-      clearedWave.current=true;
-      setTimeout(() => {
-        onVictory();
-        setReward(true);
-        setBusy(false);
-        setActiveAction(null);
-        setMessage("Wave cleared. Your drop is ready.");
-      }, 500);
-      return;
-    }
-    setTimeout(() => {
-      const attacker = attackers[Math.floor(Math.random() * attackers.length)];
-      const livingFighters = team.map((fighter, index) => ({ fighter, index })).filter(({ fighter }) => fighter.hp > 0);
-      if (!livingFighters.length) {
-        setBusy(false);
-        return;
+  const [plans,setPlans]=useState<Record<string,PlannedAction>>({});
+  const [chooser,setChooser]=useState<string|null>(null);
+  const [targetPin,setTargetPin]=useState<string|null>(null);
+  const [queue,setQueue]=useState<TurnEntry[]>([]);
+  const [queueIndex,setQueueIndex]=useState(-1);
+  const running=React.useRef(false);
+  const generation=React.useRef(0);
+  useEffect(()=>()=>{generation.current++;},[]);
+  const livingTeam=team.filter(f=>f.hp>0);
+  const order=busy?queue:turnOrder(team,enemies,turn);
+  const reserved=livingTeam.reduce((sum,f)=>sum+planCost(plans[f.name]),0);
+  const ready=livingTeam.length>0 && livingTeam.every(f=>plans[f.name]) && reserved<=energy;
+  const choosing=team.find(f=>f.name===chooser);
+  const otherCost=livingTeam.filter(f=>f.name!==chooser).reduce((sum,f)=>sum+planCost(plans[f.name]),0);
+  const burstReserved=Object.entries(plans).some(([name,p])=>name!==chooser&&p.kind==="burst");
+  const openChooser=(name:string)=>{if(busy||reward)return;setTargetPin(null);setChooser(name);};
+  const choose=(plan:PlannedAction)=>{
+    if(!chooser||busy||planCost(plan)+otherCost>energy)return;
+    setPlans(old=>({...old,[chooser]:plan}));setChooser(null);setTargetPin(null);
+  };
+  const resetPlanning=()=>{setPlans({});setQueue([]);setQueueIndex(-1);setChooser(null);setTargetPin(null);setActor("");setActiveAction(null);setImpact(null);};
+  const resolveRound=async()=>{
+    if(running.current||busy||reward||!ready)return;
+    running.current=true;
+    const token=generation.current;
+    const steps=turnOrder(team,enemies,turn);
+    const choices={...plans};
+    let fighters=team.map(f=>({...f})),monsters=enemies.map(e=>({...e})),en=energy-reserved,sync=groove;
+    const shields=new Set<string>();
+    const performed=new Set<string>();
+    const drops:Pin[]=[];
+    let xp=0;
+    const pause=()=>new Promise(resolve=>setTimeout(resolve,700));
+    const publish=()=>{setTeam([...fighters]);setEnemies([...monsters]);setEnergy(en);setGroove(sync);};
+    const healParty=(amount:number)=>{fighters=fighters.map(f=>f.hp>0?{...f,hp:Math.min(f.maxHp,f.hp+amount)}:f);};
+    const hasPassive=(pattern:RegExp)=>fighters.some(f=>f.hp>0&&(loadout[f.name]||[]).some(id=>pattern.test(psychs[id].psych)));
+    setBusy(true);setQueue(steps);setEnergy(en);
+    for(let index=0;index<steps.length;index++){
+      if(token!==generation.current)return;
+      if(!monsters.some(e=>e.hp>0)||!fighters.some(f=>f.hp>0))break;
+      const step=steps[index];
+      setQueueIndex(index);setImpact(null);setActiveAction(null);setActor("");
+      if(step.side==="enemy"){
+        const attacker=monsters.find(e=>e.id===step.id)!;
+        if(attacker.hp<=0)continue;
+        const target=fighters.find(f=>f.name===step.target&&f.hp>0)||fighters.find(f=>f.hp>0)!;
+        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:Math.max(3,Math.round(attacker.attack*(shields.has(target.name)?.45:1)));
+        fighters=fighters.map(f=>f.name===target.name?{...f,hp:Math.max(0,f.hp-damage)}:f);
+        sync=Math.min(100,sync+12);
+        setMessage(damage?`${attacker.name} attaque ${target.name} · −${damage} PV`:`${target.name} esquive ${attacker.name}.`);
+      }else{
+        const fighter=fighters.find(f=>f.name===step.name)!;
+        const plan=choices[step.name];
+        if(fighter.hp<=0)continue;
+        performed.add(fighter.name);
+        setActor(fighter.name);
+        if(plan.kind==="guard"){
+          shields.add(fighter.name);en=Math.min(3,en+1);setActiveAction("guard");
+          setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
+        }else if(plan.kind==="burst"){
+          sync=0;monsters=monsters.map(e=>({...e,hp:Math.max(0,e.hp-58)}));setActiveAction("burst");
+          setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
+        }else{
+          const pin=psychs[plan.pin!];
+          if(pin.kind==="heal"){
+            const amount=Math.max(1,Math.round((fighter.mag||1)*pin.power/50*(hasPassive(/^Cure Boost/)?1.3:1)));
+            healParty(amount);setActiveAction("heal");setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
+          }else if(pin.kind==="guard"||pin.kind==="support"){
+            fighters.filter(f=>f.hp>0).forEach(f=>shields.add(f.name));
+            if(pin.kind==="support"){
+              if(/Turbo|Supply/.test(pin.psych))en=Math.min(3,en+2);
+              else if(/Cure Boost|Subconscious|Life/.test(pin.psych))healParty(Math.ceil((fighter.mag||1)/2));
+              else sync=Math.min(100,sync+18);
+            }
+            setActiveAction("guard");setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
+          }else{
+            const target=monsters.find(e=>e.id===plan.target&&e.hp>0)||monsters.find(e=>e.hp>0)!;
+            const physical=pin.kind==="physical";
+            const amount=Math.round((physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100));
+            const damage=Math.max(1,Math.round(amount*(hasPassive(/^Resonance/)?1.15:1))+Math.floor(Math.random()*7)-3);
+            monsters=monsters.map(e=>e.id===target.id?{...e,hp:Math.max(0,e.hp-damage)}:e);
+            if(pin.drain)healParty(Math.ceil(damage/4));
+            sync=Math.min(100,sync+18);setSelected(target.id);setImpact(target.id);setActiveAction(physical?"shockwave":"pyro");
+            setMessage(`${fighter.name} · ${pin.name} → ${target.name} · ${damage} dégâts`);
+          }
+        }
+        const defeated=monsters.filter(e=>e.hp<=0&&!awarded.current.has(e.id));
+        defeated.forEach(e=>awarded.current.add(e.id));
+        const earned=defeated.reduce((sum,e)=>sum+e.xp,0);
+        if(earned){xp+=earned;onExperience(earned);fighters=fighters.map(f=>gainExperience(f,earned));}
+        const found=defeated.filter(()=>Math.random()<.25).map(()=>pick(pinList));
+        if(found.length){drops.push(...found);onDrops(found.map(pin=>pin.id));}
       }
-      const target = livingFighters[Math.floor(Math.random() * livingFighters.length)];
-      const damage = Math.random()<Math.min(.30,target.fighter.speed/200) ? 0 : Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
-      setTeam((current) =>
-        current.map((fighter, index) =>
-          index === target.index ? { ...fighter, hp: Math.max(0, fighter.hp - damage) } : fighter,
-        ),
-      );
-      setMessage(`${attacker.name} strikes ${target.fighter.name} for ${damage}.`);
-      setEnergy((value) => Math.min(3, value + 1));
-      setGroove((value) => Math.min(100, value + 12));
-      setTurn((value) => value + 1);
-      setGuarded(false);
-      setActiveAction(null);
-      setBusy(false);
-    }, 650);
-  };
-
-  const dealDamage = (
-    amount: number,
-    label: string,
-    cost: number,
-    grooveGain: number,
-    action: Action, drain = false,
-  ) => {
-    if (busy || reward || energy < cost) return;
-    const target = livingEnemies.find((enemy) => enemy.id === selected);
-    if (!target) return;
-    setBusy(true);
-    setActiveAction(action);
-    setEnergy((value) => value - cost);
-    const variance = Math.floor(Math.random() * 7) - 3;
-    const boost=team.some(f=>f.hp>0 && psychs[loadout[f.name]].psych.startsWith("Resonance")) ? 1.15 : 1;
-    const damage = Math.max(1,Math.round(amount*boost)+variance);
-    const updated = enemies.map((enemy) =>
-      enemy.id === selected ? { ...enemy, hp: Math.max(0, enemy.hp - damage) } : enemy,
-    );
-    setEnemies(updated);
-    if(drain) setTeam(current=>current.map(f=>({...f,hp:Math.min(f.maxHp,f.hp+Math.ceil(damage/4))})));
-    setImpact(selected);
-    setGroove((value) => Math.min(100, value + grooveGain));
-    setMessage(`${label} hits ${target.name} for ${damage}!`);
-    setTimeout(() => setImpact(null), 380);
-    enemyTurn(updated);
-  };
-
-  const heal = (amount:number,cost:number) => {
-    if (busy || energy < cost) return;
-    setBusy(true);
-    setActiveAction("heal");
-    setEnergy((value) => value - cost);
-    setTeam((current) =>
-      current.map((fighter) => ({ ...fighter, hp: Math.min(fighter.maxHp, fighter.hp + amount) })),
-    );
-    setMessage(`Soin du duo · +${amount} PV`);
-    enemyTurn(enemies);
-  };
-
-  const guard = () => {
-    if (busy) return;
-    setBusy(true);
-    setActiveAction("guard");
-    setGuarded(true);
-    setMessage("Team braces. Incoming damage reduced.");
-    enemyTurn(enemies, true);
-  };
-
-  const unleash = () => {
-    if (busy || groove < 100) return;
-    setBusy(true);
-    setActiveAction("burst");
-    setGroove(0);
-    const updated = enemies.map((enemy) => ({ ...enemy, hp: Math.max(0, enemy.hp - 58) }));
-    setEnemies(updated);
-    setMessage("SYNC BURST! Every Noise takes 58 damage.");
-    enemyTurn(updated);
+      publish();await pause();
+    }
+    if(token!==generation.current)return;
+    const unused=Object.entries(choices).reduce((sum,[name,plan])=>sum+(performed.has(name)?0:planCost(plan)),0);
+    en=Math.min(3,en+unused+2);publish();resetPlanning();
+    if(xp)setEarnedXp(old=>old+xp);
+    if(drops.length){setLoot(old=>[...old,...drops.map(pin=>pin.name)]);setDropReveal(drops.map(pin=>({pin})));}
+    if(!monsters.some(e=>e.hp>0)){
+      if(!clearedWave.current){clearedWave.current=true;onVictory();setReward(true);}
+      setMessage("Vague terminée !");
+    }else if(fighters.some(f=>f.hp>0)){
+      setTurn(old=>old+1);setMessage("Choisis 1 action par personnage, puis lance le tour.");
+    }
+    setBusy(false);running.current=false;
   };
 
   const nextWave = (boost: "power" | "vitality" | "energy") => {
@@ -689,6 +741,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
       setTeam((current) => current.map((fighter) => ({ ...fighter, hp: fighter.maxHp })));
     }
     const next = wave + 1;
+    resetPlanning();
     setLoot([]);
     setEarnedXp(0);
     setInspectedId(null);
@@ -708,6 +761,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
   const sector = Math.floor((wave - 1) / 5) + 1;
 
   const retry = () => {
+    resetPlanning();
     setLoot([]);
     setEarnedXp(0);
     setInspectedId(null);
@@ -722,7 +776,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
     setSelected(10);
     setEnergy(3);
     setGroove(28);
-    setMessage("Noise detected. Choose your move.");
+    setMessage("Choisis 1 action par personnage, puis lance le tour.");
   };
 
   return (
@@ -787,7 +841,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
             <div className="groove-bar">
               <i style={{ width: `${groove}%` }} />
             </div>
-            <button disabled={groove < 100 || busy} onClick={unleash}>
+            <button disabled={groove < 100 || busy || reward || teamDefeated} onClick={()=>openChooser(livingTeam[0].name)}>
               <Icon name="bolt" /> SYNC BURST
             </button>
           </div>
@@ -805,6 +859,13 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
             </div>
           </div>
 
+          <section className="turn-order" aria-label="Ordre du tour">
+            <div className="turn-order-title"><b>Ordre du tour {turn}</b><span>SPE ↓ · 1 action par personnage</span></div>
+            <ol>{order.map((entry,index)=><li key={entry.key} className={`${entry.side} ${busy&&index===queueIndex?"playing":""} ${busy&&index<queueIndex?"played":""}`} aria-current={busy&&index===queueIndex?"step":undefined}>
+              <span className="turn-number">{index+1}</span><div><b>{entry.name}</b><small>{entry.side==="enemy"?`Attaque → ${entry.target}`:planName(plans[entry.name])}</small><small>SPE {entry.speed}</small></div>
+            </li>)}</ol>
+            <p>Les ennemis attaquent à leur position dans cet ordre. À SPE égale, ton duo joue en premier.</p>
+          </section>
           <div
             className="arena"
             style={{
@@ -840,52 +901,23 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
               ))}
             </div>
             <div className="message-strip">
-              <span>{busy ? "RESOLVING" : "YOUR MOVE"}</span>
-              <p>{message}</p>
+              <span>{busy ? "EN COURS" : "À TOI"}</span>
+              <p role="status">{message}</p>
             </div>
           </div>
 
-          <div className="action-dock">
-            <div className="energy-readout">
-              <span>ENERGY</span>
-              <div>
-                {[0, 1, 2].map((pip) => (
-                  <i key={pip} className={pip < energy ? "full" : ""} />
-                ))}
-              </div>
-            </div>
-            <div className="actions">
-              {team.map(f => {
-                const id = loadout[f.name], pin = psychs[id];
-                return <button key={f.name} disabled={busy || f.hp <= 0 || energy < pin.cost} onClick={() => {
-                  setActor(f.name);
-                  if (pin.kind==="heal") heal(Math.max(1,Math.round(f.mag*pin.power/50*(team.some(ally=>psychs[loadout[ally.name]].psych.startsWith("Cure Boost"))?1.3:1))),pin.cost);
-                  else if (pin.kind==="guard" || pin.kind==="support") {
-                    setEnergy(v=>v-pin.cost);
-                    if(pin.kind==="support"){
-                      if (/Turbo|Supply/.test(pin.psych)) setEnergy(v=>Math.min(3,v+2));
-                      else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) setTeam(old=>old.map(ally=>({...ally,hp:Math.min(ally.maxHp,ally.hp+Math.ceil(f.mag/2))})));
-                      else setGroove(v=>Math.min(100,v+18));
-                    }
-                    guard();
-                  } else {
-                    const slash=pin.kind==="physical";
-                    dealDamage(Math.round((slash?f.atk:f.mag)*(0.7+pin.power/100)),pin.name,pin.cost,18,slash?"shockwave":"pyro",pin.drain);
-                  }
-                }}>
-                  <span className="action-icon pin-badge"><PinIcon pin={pin}/></span>
-                  <b>{pin.name}</b><small>{f.name} · {pin.cost} EN</small>
-                </button>;
-              })}
-              <button disabled={busy} onClick={guard}>
-                <span className="action-icon gray">
-                  <Icon name="guard" />
-                </span>
-                <b>DEFEND</b>
-                <small>BLOCK + CHARGE</small>
-              </button>
-            </div>
-          </div>
+          <section className="round-planner" aria-label="Préparer les actions">
+            <div className="planning-budget"><b>{energy} EN</b><span>{busy?"Tour en cours":`${reserved} EN réservée${reserved>1?"s":""} · +2 EN en fin de tour`}</span></div>
+            <div className="planned-actions">{team.map(f=>{
+              const plan=plans[f.name],target=enemies.find(e=>e.id===plan?.target);
+              return <button key={f.name} disabled={busy||reward||f.hp<=0} onClick={()=>openChooser(f.name)}>
+                <b>{f.name}</b><span>{f.hp<=0?"K.O.":planName(plan)}</span>
+                <small>{plan?(target?`→ ${target.name}`:plan.kind==="guard"?"Protection personnelle":"Duo / tous les ennemis"):"Choisir"}</small>
+                {plan&&<small>{planCost(plan)} EN · Modifier</small>}
+              </button>;
+            })}</div>
+            <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={resolveRound}>{busy?"Tour en cours…":"Lancer le tour"}</button>
+          </section>
         </section>
 
         <aside className="route-panel">
@@ -903,7 +935,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
           </div>
           <div className="tip-card">
             <small>REAPER TIP</small>
-            <p>Build Groove by landing attacks. At 100%, unleash a Sync Burst.</p>
+            <p>Prépare les actions du duo et leurs cibles. La SPE détermine l’ordre. À 100% de Groove, choisis Sync Burst dans les actions.</p>
             <a href="https://twewy.fandom.com/wiki/TWEWY/Pin_List" target="_blank" rel="noreferrer">
               PIN DATABASE ↗
             </a>
@@ -911,10 +943,31 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
         </aside>
       </section>
 
+      {choosing && <WishDialog className="action-menu" title={`Action · ${choosing.name}`} close={()=>{setChooser(null);setTargetPin(null);}}>
+        {targetPin?<>
+          <p><b>{psychs[targetPin].name}</b> · Choisir la cible</p>
+          <div className="target-menu">{livingEnemies.map((enemy,i)=><button key={enemy.id} onClick={()=>choose({kind:"psych",pin:targetPin,target:enemy.id})}>
+            <EnemySprite kind={enemy.kind} boss={enemy.boss}/><b>{enemy.name}</b><span>Cible {i+1} · {enemy.hp} / {enemy.maxHp} PV</span>
+          </button>)}</div>
+          <p>Si la cible est vaincue avant l’action, le prochain ennemi vivant sera visé.</p>
+          <button onClick={()=>setTargetPin(null)}>Retour aux actions</button>
+        </>:<>
+          <p>{energy-otherCost} EN disponibles · 1 action pour ce tour</p>
+          <div className="psych-action-menu">{(loadout[choosing.name]||[]).map(id=>{
+            const pin=psychs[id];return <button key={id} disabled={pin.cost+otherCost>energy} onClick={()=>offensive(id)?setTargetPin(id):choose({kind:"psych",pin:id})}>
+              <PinIcon pin={pin}/><b>{pin.name}</b><span>{types[pin.kind]} · {pin.cost} EN</span>
+            </button>;
+          })}
+          <button onClick={()=>choose({kind:"guard"})}><Icon name="guard"/><b>Défense</b><span>0 EN · Réduit les dégâts reçus après l’action · +1 EN</span></button>
+          {groove>=100&&<button disabled={burstReserved} onClick={()=>choose({kind:"burst"})}><Icon name="bolt"/><b>Sync Burst</b><span>100% Groove · Tous les ennemis</span></button>}
+          </div>
+          <button onClick={()=>setChooser(null)}>Annuler</button>
+        </>}
+      </WishDialog>}
       {inspected && <WishDialog title={inspected.name} close={()=>setInspectedId(null)}>
         <div className="enemy-inspection"><EnemySprite kind={inspected.kind} boss={inspected.boss}/></div>
         <dl><dt>Niveau</dt><dd>{inspected.level}</dd><dt>PV</dt><dd>{inspected.hp} / {inspected.maxHp}</dd>
-          <dt>ATK</dt><dd>{inspected.attack}</dd><dt>XP par personnage</dt><dd>{inspected.xp}</dd><dt>Type</dt><dd>{inspected.boss?"Boss":"Noise"}</dd></dl>
+          <dt>ATK</dt><dd>{inspected.attack}</dd><dt>SPE</dt><dd>{inspected.speed}</dd><dt>XP par personnage</dt><dd>{inspected.xp}</dd><dt>Type</dt><dd>{inspected.boss?"Boss":"Noise"}</dd></dl>
         <button className="pull-button" onClick={()=>setInspectedId(null)}>Fermer</button>
       </WishDialog>}
       {dropReveal.length>0 && <WishDialog title="Butin de combat" close={()=>setDropReveal([])}>
@@ -949,7 +1002,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
         </div>
       )}
 
-      {teamDefeated && (
+      {teamDefeated && !busy && (
         <div className="overlay">
           <div className="modal game-over">
             <small>RUN TERMINATED</small>

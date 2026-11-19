@@ -217,6 +217,14 @@ const makeWave = wave => {
       hp: maxHp,
       maxHp,
       level: wave,
+      speed: {
+        frog: 9,
+        wolf: 23,
+        shinigami: 19,
+        "jey-pengi": 13,
+        "electro-pengi": 17,
+        "psyche-fox": 21
+      }[kind] + Math.floor((wave - 1) / 3),
       xp: Math.round((10 + template.hp * .15) * growth * (boss ? 3 : 1)),
       attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
       boss
@@ -411,14 +419,22 @@ function pick(items) {
 }
 const offensive = id => ["physical", "special"].includes(psychs[id]?.kind);
 const profileKey = "chibi.reapers-run.party.v1";
+function availablePsychs(profile, name) {
+  return [...new Set([basePsych[name], ...profile.pins])].filter(id => Boolean(psychs[id]));
+}
 function assignBasePsychs(profile) {
-  const pins = [...profile.pins],
-    loadout = {
-      ...profile.loadout
-    };
+  const pins = [...profile.pins];
   if (profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
+  const loadout = {};
   for (const name of profile.owned) {
-    if (!pins.includes(loadout[name]) && loadout[name] !== basePsych[name]) loadout[name] = basePsych[name];
+    const saved = profile.loadout[name];
+    const ids = Array.isArray(saved) ? saved : typeof saved === "string" ? [saved] : [];
+    const allowed = availablePsychs({
+      ...profile,
+      pins
+    }, name);
+    const equipped = [...new Set(ids)].filter(id => allowed.includes(id)).slice(0, 3);
+    loadout[name] = equipped.length ? equipped : [basePsych[name]];
   }
   return {
     ...profile,
@@ -434,7 +450,7 @@ function loadProfile() {
       const name = saved.equipped?.[i];
       return owned.includes(name) && (i === 0 || name !== saved.equipped[0]) ? name : "";
     });
-    const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id => psychs[id]?.row >= 0);
+    const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
       owned,
@@ -445,7 +461,7 @@ function loadProfile() {
       xp: Object.fromEntries(owned.map(n => [n, Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n] >= 0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
-      loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name, id]) => owned.includes(name) && (pins.includes(String(id)) || basePsych[name] === id))),
+      loadout: saved.loadout || {},
       coins: saved.coins
     });
   } catch {}
@@ -562,6 +578,121 @@ function RewardReveal({
     onClick: () => index + 1 < draws.length ? setIndex(index + 1) : close()
   }, index + 1 < draws.length ? "Suivant" : "Fermer")));
 }
+function BadgeArt({
+  pin
+}) {
+  if (pin.row < 0) return React.createElement("span", {
+    className: "partner-pin-art"
+  }, React.createElement(PinIcon, {
+    pin: pin
+  }));
+  return React.createElement("span", {
+    "aria-hidden": "true",
+    className: "badge-art",
+    style: {
+      backgroundImage: `url(./assets/pins/row-${pin.row}.webp)`,
+      backgroundPosition: `-${pin.col * 84}cqw 0`
+    }
+  });
+}
+function PsychEquipment({
+  name,
+  profile,
+  save
+}) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState([]);
+  const [page, setPage] = useState(0);
+  const [inspected, setInspected] = useState(null);
+  const available = availablePsychs(profile, name);
+  const pages = Math.max(1, Math.ceil(available.length / 16));
+  const equipped = profile.loadout[name] || [];
+  const inspect = inspected ? psychs[inspected] : null;
+  const toggle = id => {
+    setInspected(id);
+    setDraft(old => old.includes(id) ? old.filter(value => value !== id) : old.length < 3 ? [...old, id] : old);
+  };
+  const start = () => {
+    setDraft([...equipped]);
+    setPage(0);
+    setInspected(null);
+    setOpen(true);
+  };
+  return React.createElement("div", {
+    className: "psych-loadout"
+  }, React.createElement("h2", null, "Psychs \xB7 ", name), React.createElement("div", {
+    className: "psych-equipment-slots"
+  }, [0, 1, 2].map(index => React.createElement("button", {
+    key: index,
+    onClick: start,
+    "aria-label": `Équiper les psychs de ${name}, emplacement ${index + 1}`
+  }, equipped[index] ? React.createElement(React.Fragment, null, React.createElement(PinIcon, {
+    pin: psychs[equipped[index]]
+  }), React.createElement("small", null, psychs[equipped[index]].name.replace(" (Pin)", ""))) : React.createElement("span", {
+    "aria-hidden": "true"
+  }, "+")))), open && React.createElement(WishDialog, {
+    className: "badge-book",
+    title: `Psychs · ${name}`,
+    close: () => setOpen(false)
+  }, React.createElement("p", {
+    className: "equipment-count"
+  }, draft.length, " / 3 \xE9quip\xE9s"), React.createElement("div", {
+    className: "psych-equipment-slots"
+  }, [0, 1, 2].map(i => React.createElement("button", {
+    key: i,
+    disabled: !draft[i],
+    "aria-label": draft[i] ? `Retirer ${psychs[draft[i]].name}` : `Emplacement ${i + 1} vide`,
+    onClick: () => toggle(draft[i])
+  }, draft[i] ? React.createElement(PinIcon, {
+    pin: psychs[draft[i]]
+  }) : React.createElement("span", null, "+")))), React.createElement("div", {
+    className: "badge-slots"
+  }, Array.from({
+    length: 16
+  }, (_, i) => {
+    const id = available[page * 16 + i],
+      pin = psychs[id];
+    return pin ? React.createElement("button", {
+      key: id,
+      className: "badge-slot",
+      "aria-label": pin.name,
+      "aria-pressed": draft.includes(id),
+      onClick: () => toggle(id)
+    }, React.createElement(BadgeArt, {
+      pin: pin
+    })) : React.createElement("span", {
+      key: i,
+      className: "badge-slot",
+      "aria-hidden": "true"
+    });
+  })), inspect && React.createElement("p", {
+    className: "badge-info"
+  }, React.createElement("b", null, inspect.name.replace(" (Pin)", "")), " \xB7 ", types[inspect.kind], " \xB7 ", inspect.cost, " EN"), draft.length === 3 && React.createElement("p", {
+    className: "equipment-help"
+  }, "Retire un psych \xE9quip\xE9 pour le remplacer."), !draft.length && React.createElement("p", {
+    className: "equipment-help"
+  }, "\xC9quipe au moins 1 psych."), React.createElement("nav", {
+    "aria-label": "Pages des psychs"
+  }, React.createElement("button", {
+    disabled: !page,
+    onClick: () => setPage(page - 1),
+    "aria-label": "Page pr\xE9c\xE9dente"
+  }, "\u2039"), React.createElement("span", null, page + 1, " / ", pages), React.createElement("button", {
+    disabled: page + 1 >= pages,
+    onClick: () => setPage(page + 1),
+    "aria-label": "Page suivante"
+  }, "\u203A")), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    onClick: () => setOpen(false)
+  }, "Annuler"), React.createElement("button", {
+    disabled: !draft.length,
+    onClick: () => {
+      save(draft);
+      setOpen(false);
+    }
+  }, "Enregistrer"))));
+}
 function BadgeCatalogue({
   owned
 }) {
@@ -604,13 +735,8 @@ function BadgeCatalogue({
       "aria-label": pin.name,
       "aria-pressed": selected?.id === pin.id,
       onClick: () => setSelected(pin)
-    }, React.createElement("span", {
-      "aria-hidden": "true",
-      className: "badge-art",
-      style: {
-        backgroundImage: `url(./assets/pins/row-${pin.row}.webp)`,
-        backgroundPosition: `-${pin.col * 84}cqw 0`
-      }
+    }, React.createElement(BadgeArt, {
+      pin: pin
     }));
   })), selected && React.createElement("p", {
     className: "badge-info",
@@ -634,6 +760,7 @@ function BadgeCatalogue({
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [editingSlot, setEditingSlot] = useState(null);
+  const [battleLoadout, setBattleLoadout] = useState({});
   const [party, setParty] = useState(null);
   const [result, setResult] = useState([]);
   const [quantity, setQuantity] = useState(1);
@@ -644,7 +771,7 @@ function App() {
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
-      if (saved && !saved.xp) localStorage.setItem(profileKey, JSON.stringify(loadProfile()));
+      if (saved && (!saved.xp || Object.values(saved.loadout || {}).some(value => !Array.isArray(value)))) localStorage.setItem(profileKey, JSON.stringify(loadProfile()));
     } catch {
       setSaveError(true);
     }
@@ -757,7 +884,7 @@ function App() {
   }
   if (party) return React.createElement(Battle, {
     initialTeam: party,
-    loadout: profile.loadout,
+    loadout: battleLoadout,
     coins: profile.coins,
     onDrops: ids => setProfile(p => ({
       ...p,
@@ -933,40 +1060,49 @@ function App() {
     onClick: () => setEditingSlot(null)
   }, "Fermer"))), React.createElement(BadgeCatalogue, {
     owned: profile.pins
-  }), fighters.map(name => React.createElement("label", {
-    className: "psych-choice",
-    key: name
-  }, "Psych de ", name, React.createElement("select", {
-    value: profile.loadout[name] || "",
-    onChange: e => {
-      const psych = e.target.value;
-      setProfile(p => p.pins.includes(psych) || basePsych[name] === psych ? {
-        ...p,
-        loadout: {
-          ...p.loadout,
-          [name]: psych
-        }
-      } : p);
-    }
-  }, React.createElement("option", {
-    value: "",
-    disabled: true
-  }, "Choisir un psych"), React.createElement("option", {
-    value: basePsych[name]
-  }, psychs[basePsych[name]].name.replace(" (Pin)", ""), " \xB7 Psych de base \xB7 ", psychs[basePsych[name]].cost, " EN"), profile.pins.filter(id => id !== basePsych[name]).map(id => [id, psychs[id]]).map(([id, item]) => React.createElement("option", {
-    key: id,
-    value: id
-  }, "#", item.number, " ", item.name, " \xB7 ", types[item.kind], " \xB7 ", item.cost, " EN"))))), fighters.length === 2 && fighters.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
-    className: "pull-button",
-    disabled: fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)),
-    onClick: () => setParty(fighters.map(name => {
-      const f = characterRoster.find(f => f.name === name);
-      return trained(f, profile.xp[name] || 0, profile.awakened.includes(name));
+  }), fighters.map(name => React.createElement(PsychEquipment, {
+    key: name,
+    name: name,
+    profile: profile,
+    save: ids => setProfile(p => assignBasePsychs({
+      ...p,
+      loadout: {
+        ...p.loadout,
+        [name]: ids
+      }
     }))
+  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
+    className: "pull-button",
+    disabled: fighters.length !== 2 || !fighters.every(name => profile.loadout[name]?.length) || !fighters.some(name => profile.loadout[name]?.some(offensive)),
+    onClick: () => {
+      setBattleLoadout(Object.fromEntries(fighters.map(name => [name, [...profile.loadout[name]]])));
+      setParty(fighters.map(name => {
+        const f = characterRoster.find(f => f.name === name);
+        return trained(f, profile.xp[name] || 0, profile.awakened.includes(name));
+      }));
+    }
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
   }, "La sauvegarde locale est indisponible dans ce navigateur.")));
 }
+function turnOrder(team, enemies, turn) {
+  const living = team.filter(f => f.hp > 0);
+  return [...living.map(f => ({
+    key: f.name,
+    side: "ally",
+    name: f.name,
+    speed: f.speed || 0
+  })), ...enemies.filter(e => e.hp > 0).map((e, i) => ({
+    key: `enemy-${e.id}`,
+    side: "enemy",
+    name: e.name,
+    id: e.id,
+    speed: e.speed,
+    target: living[(turn - 1 + i) % living.length]?.name
+  }))].sort((a, b) => b.speed - a.speed || (a.side === b.side ? 0 : a.side === "ally" ? -1 : 1));
+}
+const planCost = plan => plan?.kind === "psych" ? psychs[plan.pin]?.cost || 0 : 0;
+const planName = plan => !plan ? "Choisir une action" : plan.kind === "guard" ? "Défense" : plan.kind === "burst" ? "Sync Burst" : psychs[plan.pin].name;
 function Battle({
   initialTeam,
   loadout,
@@ -991,14 +1127,13 @@ function Battle({
   const [energy, setEnergy] = useState(3);
   const [groove, setGroove] = useState(28);
   const [turn, setTurn] = useState(1);
-  const [message, setMessage] = useState("Noise detected. Choose your move.");
+  const [message, setMessage] = useState("Choisis 1 action par personnage, puis lance le tour.");
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState(null);
   const [loot, setLoot] = useState([]);
   const [dropReveal, setDropReveal] = useState([]);
   const [reward, setReward] = useState(false);
   const [actor, setActor] = useState("");
-  const [guarded, setGuarded] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
   const inspected = enemies.find(enemy => enemy.id === inspectedId);
   function selectEnemy(enemy) {
@@ -1028,120 +1163,195 @@ function Battle({
       setSelected(livingEnemies[0].id);
     }
   }, [enemies, livingEnemies, selected]);
-  const enemyTurn = (updatedEnemies, wasGuarded = guarded) => {
-    const defeated = updatedEnemies.filter((enemy, i) => enemy.hp === 0 && enemies[i].hp > 0 && !awarded.current.has(enemy.id));
-    defeated.forEach(enemy => awarded.current.add(enemy.id));
-    const earned = defeated.reduce((sum, enemy) => sum + enemy.xp, 0);
-    if (earned) {
-      onExperience(earned);
-      setTeam(current => current.map(f => gainExperience(f, earned)));
-      setEarnedXp(total => total + earned);
+  const [plans, setPlans] = useState({});
+  const [chooser, setChooser] = useState(null);
+  const [targetPin, setTargetPin] = useState(null);
+  const [queue, setQueue] = useState([]);
+  const [queueIndex, setQueueIndex] = useState(-1);
+  const running = React.useRef(false);
+  const generation = React.useRef(0);
+  useEffect(() => () => {
+    generation.current++;
+  }, []);
+  const livingTeam = team.filter(f => f.hp > 0);
+  const order = busy ? queue : turnOrder(team, enemies, turn);
+  const reserved = livingTeam.reduce((sum, f) => sum + planCost(plans[f.name]), 0);
+  const ready = livingTeam.length > 0 && livingTeam.every(f => plans[f.name]) && reserved <= energy;
+  const choosing = team.find(f => f.name === chooser);
+  const otherCost = livingTeam.filter(f => f.name !== chooser).reduce((sum, f) => sum + planCost(plans[f.name]), 0);
+  const burstReserved = Object.entries(plans).some(([name, p]) => name !== chooser && p.kind === "burst");
+  const openChooser = name => {
+    if (busy || reward) return;
+    setTargetPin(null);
+    setChooser(name);
+  };
+  const choose = plan => {
+    if (!chooser || busy || planCost(plan) + otherCost > energy) return;
+    setPlans(old => ({
+      ...old,
+      [chooser]: plan
+    }));
+    setChooser(null);
+    setTargetPin(null);
+  };
+  const resetPlanning = () => {
+    setPlans({});
+    setQueue([]);
+    setQueueIndex(-1);
+    setChooser(null);
+    setTargetPin(null);
+    setActor("");
+    setActiveAction(null);
+    setImpact(null);
+  };
+  const resolveRound = async () => {
+    if (running.current || busy || reward || !ready) return;
+    running.current = true;
+    const token = generation.current;
+    const steps = turnOrder(team, enemies, turn);
+    const choices = {
+      ...plans
+    };
+    let fighters = team.map(f => ({
+        ...f
+      })),
+      monsters = enemies.map(e => ({
+        ...e
+      })),
+      en = energy - reserved,
+      sync = groove;
+    const shields = new Set();
+    const performed = new Set();
+    const drops = [];
+    let xp = 0;
+    const pause = () => new Promise(resolve => setTimeout(resolve, 700));
+    const publish = () => {
+      setTeam([...fighters]);
+      setEnemies([...monsters]);
+      setEnergy(en);
+      setGroove(sync);
+    };
+    const healParty = amount => {
+      fighters = fighters.map(f => f.hp > 0 ? {
+        ...f,
+        hp: Math.min(f.maxHp, f.hp + amount)
+      } : f);
+    };
+    const hasPassive = pattern => fighters.some(f => f.hp > 0 && (loadout[f.name] || []).some(id => pattern.test(psychs[id].psych)));
+    setBusy(true);
+    setQueue(steps);
+    setEnergy(en);
+    for (let index = 0; index < steps.length; index++) {
+      if (token !== generation.current) return;
+      if (!monsters.some(e => e.hp > 0) || !fighters.some(f => f.hp > 0)) break;
+      const step = steps[index];
+      setQueueIndex(index);
+      setImpact(null);
+      setActiveAction(null);
+      setActor("");
+      if (step.side === "enemy") {
+        const attacker = monsters.find(e => e.id === step.id);
+        if (attacker.hp <= 0) continue;
+        const target = fighters.find(f => f.name === step.target && f.hp > 0) || fighters.find(f => f.hp > 0);
+        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : Math.max(3, Math.round(attacker.attack * (shields.has(target.name) ? .45 : 1)));
+        fighters = fighters.map(f => f.name === target.name ? {
+          ...f,
+          hp: Math.max(0, f.hp - damage)
+        } : f);
+        sync = Math.min(100, sync + 12);
+        setMessage(damage ? `${attacker.name} attaque ${target.name} · −${damage} PV` : `${target.name} esquive ${attacker.name}.`);
+      } else {
+        const fighter = fighters.find(f => f.name === step.name);
+        const plan = choices[step.name];
+        if (fighter.hp <= 0) continue;
+        performed.add(fighter.name);
+        setActor(fighter.name);
+        if (plan.kind === "guard") {
+          shields.add(fighter.name);
+          en = Math.min(3, en + 1);
+          setActiveAction("guard");
+          setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
+        } else if (plan.kind === "burst") {
+          sync = 0;
+          monsters = monsters.map(e => ({
+            ...e,
+            hp: Math.max(0, e.hp - 58)
+          }));
+          setActiveAction("burst");
+          setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
+        } else {
+          const pin = psychs[plan.pin];
+          if (pin.kind === "heal") {
+            const amount = Math.max(1, Math.round((fighter.mag || 1) * pin.power / 50 * (hasPassive(/^Cure Boost/) ? 1.3 : 1)));
+            healParty(amount);
+            setActiveAction("heal");
+            setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
+          } else if (pin.kind === "guard" || pin.kind === "support") {
+            fighters.filter(f => f.hp > 0).forEach(f => shields.add(f.name));
+            if (pin.kind === "support") {
+              if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + 2);else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(Math.ceil((fighter.mag || 1) / 2));else sync = Math.min(100, sync + 18);
+            }
+            setActiveAction("guard");
+            setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
+          } else {
+            const target = monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0);
+            const physical = pin.kind === "physical";
+            const amount = Math.round((physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
+            const damage = Math.max(1, Math.round(amount * (hasPassive(/^Resonance/) ? 1.15 : 1)) + Math.floor(Math.random() * 7) - 3);
+            monsters = monsters.map(e => e.id === target.id ? {
+              ...e,
+              hp: Math.max(0, e.hp - damage)
+            } : e);
+            if (pin.drain) healParty(Math.ceil(damage / 4));
+            sync = Math.min(100, sync + 18);
+            setSelected(target.id);
+            setImpact(target.id);
+            setActiveAction(physical ? "shockwave" : "pyro");
+            setMessage(`${fighter.name} · ${pin.name} → ${target.name} · ${damage} dégâts`);
+          }
+        }
+        const defeated = monsters.filter(e => e.hp <= 0 && !awarded.current.has(e.id));
+        defeated.forEach(e => awarded.current.add(e.id));
+        const earned = defeated.reduce((sum, e) => sum + e.xp, 0);
+        if (earned) {
+          xp += earned;
+          onExperience(earned);
+          fighters = fighters.map(f => gainExperience(f, earned));
+        }
+        const found = defeated.filter(() => Math.random() < .25).map(() => pick(pinList));
+        if (found.length) {
+          drops.push(...found);
+          onDrops(found.map(pin => pin.id));
+        }
+      }
+      publish();
+      await pause();
     }
-    const drops = defeated.filter(() => Math.random() < 0.25).map(() => pick(pinList));
+    if (token !== generation.current) return;
+    const unused = Object.entries(choices).reduce((sum, [name, plan]) => sum + (performed.has(name) ? 0 : planCost(plan)), 0);
+    en = Math.min(3, en + unused + 2);
+    publish();
+    resetPlanning();
+    if (xp) setEarnedXp(old => old + xp);
     if (drops.length) {
+      setLoot(old => [...old, ...drops.map(pin => pin.name)]);
       setDropReveal(drops.map(pin => ({
         pin
       })));
-      onDrops(drops.map(pin => pin.id));
-      setLoot(old => [...old, ...drops.map(pin => pin.name)]);
     }
-    const attackers = updatedEnemies.filter(enemy => enemy.hp > 0);
-    if (!attackers.length) {
-      if (clearedWave.current) return;
-      clearedWave.current = true;
-      setTimeout(() => {
+    if (!monsters.some(e => e.hp > 0)) {
+      if (!clearedWave.current) {
+        clearedWave.current = true;
         onVictory();
         setReward(true);
-        setBusy(false);
-        setActiveAction(null);
-        setMessage("Wave cleared. Your drop is ready.");
-      }, 500);
-      return;
-    }
-    setTimeout(() => {
-      const attacker = attackers[Math.floor(Math.random() * attackers.length)];
-      const livingFighters = team.map((fighter, index) => ({
-        fighter,
-        index
-      })).filter(({
-        fighter
-      }) => fighter.hp > 0);
-      if (!livingFighters.length) {
-        setBusy(false);
-        return;
       }
-      const target = livingFighters[Math.floor(Math.random() * livingFighters.length)];
-      const damage = Math.random() < Math.min(.30, target.fighter.speed / 200) ? 0 : Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
-      setTeam(current => current.map((fighter, index) => index === target.index ? {
-        ...fighter,
-        hp: Math.max(0, fighter.hp - damage)
-      } : fighter));
-      setMessage(`${attacker.name} strikes ${target.fighter.name} for ${damage}.`);
-      setEnergy(value => Math.min(3, value + 1));
-      setGroove(value => Math.min(100, value + 12));
-      setTurn(value => value + 1);
-      setGuarded(false);
-      setActiveAction(null);
-      setBusy(false);
-    }, 650);
-  };
-  const dealDamage = (amount, label, cost, grooveGain, action, drain = false) => {
-    if (busy || reward || energy < cost) return;
-    const target = livingEnemies.find(enemy => enemy.id === selected);
-    if (!target) return;
-    setBusy(true);
-    setActiveAction(action);
-    setEnergy(value => value - cost);
-    const variance = Math.floor(Math.random() * 7) - 3;
-    const boost = team.some(f => f.hp > 0 && psychs[loadout[f.name]].psych.startsWith("Resonance")) ? 1.15 : 1;
-    const damage = Math.max(1, Math.round(amount * boost) + variance);
-    const updated = enemies.map(enemy => enemy.id === selected ? {
-      ...enemy,
-      hp: Math.max(0, enemy.hp - damage)
-    } : enemy);
-    setEnemies(updated);
-    if (drain) setTeam(current => current.map(f => ({
-      ...f,
-      hp: Math.min(f.maxHp, f.hp + Math.ceil(damage / 4))
-    })));
-    setImpact(selected);
-    setGroove(value => Math.min(100, value + grooveGain));
-    setMessage(`${label} hits ${target.name} for ${damage}!`);
-    setTimeout(() => setImpact(null), 380);
-    enemyTurn(updated);
-  };
-  const heal = (amount, cost) => {
-    if (busy || energy < cost) return;
-    setBusy(true);
-    setActiveAction("heal");
-    setEnergy(value => value - cost);
-    setTeam(current => current.map(fighter => ({
-      ...fighter,
-      hp: Math.min(fighter.maxHp, fighter.hp + amount)
-    })));
-    setMessage(`Soin du duo · +${amount} PV`);
-    enemyTurn(enemies);
-  };
-  const guard = () => {
-    if (busy) return;
-    setBusy(true);
-    setActiveAction("guard");
-    setGuarded(true);
-    setMessage("Team braces. Incoming damage reduced.");
-    enemyTurn(enemies, true);
-  };
-  const unleash = () => {
-    if (busy || groove < 100) return;
-    setBusy(true);
-    setActiveAction("burst");
-    setGroove(0);
-    const updated = enemies.map(enemy => ({
-      ...enemy,
-      hp: Math.max(0, enemy.hp - 58)
-    }));
-    setEnemies(updated);
-    setMessage("SYNC BURST! Every Noise takes 58 damage.");
-    enemyTurn(updated);
+      setMessage("Vague terminée !");
+    } else if (fighters.some(f => f.hp > 0)) {
+      setTurn(old => old + 1);
+      setMessage("Choisis 1 action par personnage, puis lance le tour.");
+    }
+    setBusy(false);
+    running.current = false;
   };
   const nextWave = boost => {
     if (boost === "vitality") {
@@ -1164,6 +1374,7 @@ function Battle({
       })));
     }
     const next = wave + 1;
+    resetPlanning();
     setLoot([]);
     setEarnedXp(0);
     setInspectedId(null);
@@ -1184,6 +1395,7 @@ function Battle({
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
   const retry = () => {
+    resetPlanning();
     setLoot([]);
     setEarnedXp(0);
     setInspectedId(null);
@@ -1201,7 +1413,7 @@ function Battle({
     setSelected(10);
     setEnergy(3);
     setGroove(28);
-    setMessage("Noise detected. Choose your move.");
+    setMessage("Choisis 1 action par personnage, puis lance le tour.");
   };
   return React.createElement("main", {
     className: "game-shell"
@@ -1265,8 +1477,8 @@ function Battle({
       width: `${groove}%`
     }
   })), React.createElement("button", {
-    disabled: groove < 100 || busy,
-    onClick: unleash
+    disabled: groove < 100 || busy || reward || teamDefeated,
+    onClick: () => openChooser(livingTeam[0].name)
   }, React.createElement(Icon, {
     name: "bolt"
   }), " SYNC BURST"))), React.createElement("section", {
@@ -1275,7 +1487,18 @@ function Battle({
     className: "battle-heading"
   }, React.createElement("div", null, React.createElement("small", null, "ENCOUNTER"), React.createElement("h1", null, "WAVE ", String(wave).padStart(2, "0"))), React.createElement("div", {
     className: `threat threat-${threat.toLowerCase()}`
-  }, React.createElement("span", null, "THREAT"), React.createElement("b", null, threat))), React.createElement("div", {
+  }, React.createElement("span", null, "THREAT"), React.createElement("b", null, threat))), React.createElement("section", {
+    className: "turn-order",
+    "aria-label": "Ordre du tour"
+  }, React.createElement("div", {
+    className: "turn-order-title"
+  }, React.createElement("b", null, "Ordre du tour ", turn), React.createElement("span", null, "SPE \u2193 \xB7 1 action par personnage")), React.createElement("ol", null, order.map((entry, index) => React.createElement("li", {
+    key: entry.key,
+    className: `${entry.side} ${busy && index === queueIndex ? "playing" : ""} ${busy && index < queueIndex ? "played" : ""}`,
+    "aria-current": busy && index === queueIndex ? "step" : undefined
+  }, React.createElement("span", {
+    className: "turn-number"
+  }, index + 1), React.createElement("div", null, React.createElement("b", null, entry.name), React.createElement("small", null, entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])), React.createElement("small", null, "SPE ", entry.speed))))), React.createElement("p", null, "Les ennemis attaquent \xE0 leur position dans cet ordre. \xC0 SPE \xE9gale, ton duo joue en premier.")), React.createElement("div", {
     className: "arena",
     style: {
       backgroundImage: `linear-gradient(180deg, rgba(15,20,21,.04), rgba(9,12,13,.42)), url(${battleBackground})`
@@ -1312,50 +1535,28 @@ function Battle({
     combat: true
   }), React.createElement("span", null, fighter.name)))), React.createElement("div", {
     className: "message-strip"
-  }, React.createElement("span", null, busy ? "RESOLVING" : "YOUR MOVE"), React.createElement("p", null, message))), React.createElement("div", {
-    className: "action-dock"
+  }, React.createElement("span", null, busy ? "EN COURS" : "À TOI"), React.createElement("p", {
+    role: "status"
+  }, message))), React.createElement("section", {
+    className: "round-planner",
+    "aria-label": "Pr\xE9parer les actions"
   }, React.createElement("div", {
-    className: "energy-readout"
-  }, React.createElement("span", null, "ENERGY"), React.createElement("div", null, [0, 1, 2].map(pip => React.createElement("i", {
-    key: pip,
-    className: pip < energy ? "full" : ""
-  })))), React.createElement("div", {
-    className: "actions"
+    className: "planning-budget"
+  }, React.createElement("b", null, energy, " EN"), React.createElement("span", null, busy ? "Tour en cours" : `${reserved} EN réservée${reserved > 1 ? "s" : ""} · +2 EN en fin de tour`)), React.createElement("div", {
+    className: "planned-actions"
   }, team.map(f => {
-    const id = loadout[f.name],
-      pin = psychs[id];
+    const plan = plans[f.name],
+      target = enemies.find(e => e.id === plan?.target);
     return React.createElement("button", {
       key: f.name,
-      disabled: busy || f.hp <= 0 || energy < pin.cost,
-      onClick: () => {
-        setActor(f.name);
-        if (pin.kind === "heal") heal(Math.max(1, Math.round(f.mag * pin.power / 50 * (team.some(ally => psychs[loadout[ally.name]].psych.startsWith("Cure Boost")) ? 1.3 : 1))), pin.cost);else if (pin.kind === "guard" || pin.kind === "support") {
-          setEnergy(v => v - pin.cost);
-          if (pin.kind === "support") {
-            if (/Turbo|Supply/.test(pin.psych)) setEnergy(v => Math.min(3, v + 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) setTeam(old => old.map(ally => ({
-              ...ally,
-              hp: Math.min(ally.maxHp, ally.hp + Math.ceil(f.mag / 2))
-            })));else setGroove(v => Math.min(100, v + 18));
-          }
-          guard();
-        } else {
-          const slash = pin.kind === "physical";
-          dealDamage(Math.round((slash ? f.atk : f.mag) * (0.7 + pin.power / 100)), pin.name, pin.cost, 18, slash ? "shockwave" : "pyro", pin.drain);
-        }
-      }
-    }, React.createElement("span", {
-      className: "action-icon pin-badge"
-    }, React.createElement(PinIcon, {
-      pin: pin
-    })), React.createElement("b", null, pin.name), React.createElement("small", null, f.name, " \xB7 ", pin.cost, " EN"));
-  }), React.createElement("button", {
-    disabled: busy,
-    onClick: guard
-  }, React.createElement("span", {
-    className: "action-icon gray"
-  }, React.createElement(Icon, {
-    name: "guard"
-  })), React.createElement("b", null, "DEFEND"), React.createElement("small", null, "BLOCK + CHARGE"))))), React.createElement("aside", {
+      disabled: busy || reward || f.hp <= 0,
+      onClick: () => openChooser(f.name)
+    }, React.createElement("b", null, f.name), React.createElement("span", null, f.hp <= 0 ? "K.O." : planName(plan)), React.createElement("small", null, plan ? target ? `→ ${target.name}` : plan.kind === "guard" ? "Protection personnelle" : "Duo / tous les ennemis" : "Choisir"), plan && React.createElement("small", null, planCost(plan), " EN \xB7 Modifier"));
+  })), React.createElement("button", {
+    className: "resolve-round",
+    disabled: busy || reward || !ready || teamDefeated,
+    onClick: resolveRound
+  }, busy ? "Tour en cours…" : "Lancer le tour"))), React.createElement("aside", {
     className: "route-panel"
   }, React.createElement("div", {
     className: "section-label"
@@ -1368,11 +1569,61 @@ function Battle({
     key: node
   }, React.createElement("span", null, node < wave ? "✓" : String(node).padStart(2, "0")), React.createElement("p", null, isBossWave(node) ? "BOSS SIGNAL" : node === wave ? "CURRENT WAVE" : "NOISE WAVE")))), React.createElement("div", {
     className: "tip-card"
-  }, React.createElement("small", null, "REAPER TIP"), React.createElement("p", null, "Build Groove by landing attacks. At 100%, unleash a Sync Burst."), React.createElement("a", {
+  }, React.createElement("small", null, "REAPER TIP"), React.createElement("p", null, "Pr\xE9pare les actions du duo et leurs cibles. La SPE d\xE9termine l\u2019ordre. \xC0 100% de Groove, choisis Sync Burst dans les actions."), React.createElement("a", {
     href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
     target: "_blank",
     rel: "noreferrer"
-  }, "PIN DATABASE \u2197")))), inspected && React.createElement(WishDialog, {
+  }, "PIN DATABASE \u2197")))), choosing && React.createElement(WishDialog, {
+    className: "action-menu",
+    title: `Action · ${choosing.name}`,
+    close: () => {
+      setChooser(null);
+      setTargetPin(null);
+    }
+  }, targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
+    className: "target-menu"
+  }, livingEnemies.map((enemy, i) => React.createElement("button", {
+    key: enemy.id,
+    onClick: () => choose({
+      kind: "psych",
+      pin: targetPin,
+      target: enemy.id
+    })
+  }, React.createElement(EnemySprite, {
+    kind: enemy.kind,
+    boss: enemy.boss
+  }), React.createElement("b", null, enemy.name), React.createElement("span", null, "Cible ", i + 1, " \xB7 ", enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("p", null, "Si la cible est vaincue avant l\u2019action, le prochain ennemi vivant sera vis\xE9."), React.createElement("button", {
+    onClick: () => setTargetPin(null)
+  }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("p", null, energy - otherCost, " EN disponibles \xB7 1 action pour ce tour"), React.createElement("div", {
+    className: "psych-action-menu"
+  }, (loadout[choosing.name] || []).map(id => {
+    const pin = psychs[id];
+    return React.createElement("button", {
+      key: id,
+      disabled: pin.cost + otherCost > energy,
+      onClick: () => offensive(id) ? setTargetPin(id) : choose({
+        kind: "psych",
+        pin: id
+      })
+    }, React.createElement(PinIcon, {
+      pin: pin
+    }), React.createElement("b", null, pin.name), React.createElement("span", null, types[pin.kind], " \xB7 ", pin.cost, " EN"));
+  }), React.createElement("button", {
+    onClick: () => choose({
+      kind: "guard"
+    })
+  }, React.createElement(Icon, {
+    name: "guard"
+  }), React.createElement("b", null, "D\xE9fense"), React.createElement("span", null, "0 EN \xB7 R\xE9duit les d\xE9g\xE2ts re\xE7us apr\xE8s l\u2019action \xB7 +1 EN")), groove >= 100 && React.createElement("button", {
+    disabled: burstReserved,
+    onClick: () => choose({
+      kind: "burst"
+    })
+  }, React.createElement(Icon, {
+    name: "bolt"
+  }), React.createElement("b", null, "Sync Burst"), React.createElement("span", null, "100% Groove \xB7 Tous les ennemis"))), React.createElement("button", {
+    onClick: () => setChooser(null)
+  }, "Annuler"))), inspected && React.createElement(WishDialog, {
     title: inspected.name,
     close: () => setInspectedId(null)
   }, React.createElement("div", {
@@ -1380,7 +1631,7 @@ function Battle({
   }, React.createElement(EnemySprite, {
     kind: inspected.kind,
     boss: inspected.boss
-  })), React.createElement("dl", null, React.createElement("dt", null, "Niveau"), React.createElement("dd", null, inspected.level), React.createElement("dt", null, "PV"), React.createElement("dd", null, inspected.hp, " / ", inspected.maxHp), React.createElement("dt", null, "ATK"), React.createElement("dd", null, inspected.attack), React.createElement("dt", null, "XP par personnage"), React.createElement("dd", null, inspected.xp), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
+  })), React.createElement("dl", null, React.createElement("dt", null, "Niveau"), React.createElement("dd", null, inspected.level), React.createElement("dt", null, "PV"), React.createElement("dd", null, inspected.hp, " / ", inspected.maxHp), React.createElement("dt", null, "ATK"), React.createElement("dd", null, inspected.attack), React.createElement("dt", null, "SPE"), React.createElement("dd", null, inspected.speed), React.createElement("dt", null, "XP par personnage"), React.createElement("dd", null, inspected.xp), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
     className: "pull-button",
     onClick: () => setInspectedId(null)
   }, "Fermer")), dropReveal.length > 0 && React.createElement(WishDialog, {
@@ -1409,7 +1660,7 @@ function Battle({
     onClick: () => nextWave("energy")
   }, React.createElement(Icon, {
     name: "star"
-  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))))), teamDefeated && React.createElement("div", {
+  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))))), teamDefeated && !busy && React.createElement("div", {
     className: "overlay"
   }, React.createElement("div", {
     className: "modal game-over"
