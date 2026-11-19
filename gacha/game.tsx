@@ -555,6 +555,26 @@ function App() {
   </section></main>;
 }
 
+function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
+  const ref=React.useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    const context=ref.current?.getContext("2d"),image=new Image();let disposed=false;
+    const spec=enemy?enemyCatalog[enemy.kind]:null;
+    const width=spec?.frameWidth||fighter?.frameWidth||80,height=spec?.frameHeight||fighter?.frameHeight||116;
+    image.onload=()=>{
+      if(disposed||!context)return;
+      const sample=document.createElement("canvas");sample.width=width;sample.height=height;
+      const scan=sample.getContext("2d")!;scan.drawImage(image,0,0,width,height,0,0,width,height);
+      let left=width,right=0,top=height,bottom=0;
+      try{const pixels=scan.getImageData(0,0,width,height).data;for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>64){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}}catch{left=0;right=width;top=0;bottom=height;}
+      const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(left+right-crop)/2));
+      context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,x,top,crop,crop,0,0,64,64);
+    };
+    image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;
+    return ()=>{disposed=true;};
+  },[fighter?.sprite,enemy?.kind]);
+  return <canvas ref={ref} width={64} height={64} aria-hidden="true"/>;
+}
 type PlannedAction = {kind:"psych"|"guard"|"burst";pin?:string;target?:number};
 type TurnEntry = {key:string;side:"ally"|"enemy";name:string;speed:number;id?:number;target?:string};
 function turnOrder(team:Fighter[],enemies:Enemy[],turn:number):TurnEntry[] {
@@ -580,6 +600,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
     if(document.fullscreenElement){await document.exitFullscreen();setFullscreen(false);}
     else {try{await document.documentElement.requestFullscreen();}catch{}setFullscreen(true);}
   };
+  const [orderDetail,setOrderDetail]=useState<string|null>(null);
   const [inspectedId,setInspectedId]=useState<number|null>(null);
   const lastTap=React.useRef({id:-1,time:0});
   const awarded=React.useRef(new Set<number>());
@@ -792,7 +813,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
   };
 
   return (
-    <main className="game-shell">
+    <main className="game-shell combat-hud">
       <header className="topbar">
         <div className="brand-lockup">
           <div className="brand-mark">R</div>
@@ -828,8 +849,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
                 className="portrait"
                 style={{ "--accent": fighter.accent } as React.CSSProperties}
               >
-                <Sprite fighter={fighter} />
-                <span>0{index + 1}</span>
+                <HudPortrait fighter={fighter} />
               </div>
               <div className="fighter-info">
                 <small>{fighter.role}</small>
@@ -872,13 +892,16 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
             </div>
           </div>
 
-          <section className="turn-order" aria-label="Ordre du tour">
-            <div className="turn-order-title"><b>Ordre du tour {turn}</b><span>SPE ↓ · 1 action par personnage</span></div>
-            <ol>{order.map((entry,index)=><li key={entry.key} className={`${entry.side} ${busy&&index===queueIndex?"playing":""} ${busy&&index<queueIndex?"played":""}`} aria-current={busy&&index===queueIndex?"step":undefined}>
-              <span className="turn-number">{index+1}</span><div><b>{entry.name}</b><small>{entry.side==="enemy"?`Attaque → ${entry.target}`:planName(plans[entry.name])}</small><small>SPE {entry.speed}</small></div>
-            </li>)}</ol>
-            <p>Les ennemis attaquent à leur position dans cet ordre. À SPE égale, ton duo joue en premier.</p>
-          </section>
+          <nav className="turn-order" aria-label={`Ordre du tour ${turn}, selon la SPE`}>
+            <span className="hud-turn">Tour {turn}</span>
+            <ol>{order.map((entry,index)=>{
+              const fighter=team.find(f=>f.name===entry.name),enemy=enemies.find(e=>e.id===entry.id);
+              const description=`${index+1}. ${entry.name} · SPE ${entry.speed} · ${entry.side==="enemy"?`Attaque → ${entry.target}`:planName(plans[entry.name])}`;
+              return <li key={entry.key} className={`${entry.side} ${busy&&index===queueIndex?"playing":""} ${busy&&index<queueIndex?"played":""}`} aria-current={busy&&index===queueIndex?"step":undefined}>
+                <button title={description} aria-label={description} onClick={()=>setOrderDetail(entry.key)}><HudPortrait fighter={fighter} enemy={enemy}/><span className="turn-number">{index+1}</span></button>
+              </li>;
+            })}</ol>
+          </nav>
           <div
             className="arena"
             style={{
@@ -976,6 +999,10 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
           </div>
           <button onClick={()=>setChooser(null)}>Annuler</button>
         </>}
+      </WishDialog>}
+      {orderDetail && <WishDialog title="Ordre du tour" close={()=>setOrderDetail(null)}>
+        {(()=>{const entry=order.find(e=>e.key===orderDetail);return entry?<p><b>{entry.name}</b> · SPE {entry.speed}<br/>{entry.side==="enemy"?`Attaque → ${entry.target}`:planName(plans[entry.name])}</p>:<p>Cette action est terminée.</p>;})()}
+        <button className="fullscreen-button" onClick={()=>setOrderDetail(null)}>Fermer</button>
       </WishDialog>}
       {inspected && <WishDialog title={inspected.name} close={()=>setInspectedId(null)}>
         <div className="enemy-inspection"><EnemySprite kind={inspected.kind} boss={inspected.boss}/></div>

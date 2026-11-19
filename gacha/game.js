@@ -1085,6 +1085,61 @@ function App() {
     role: "alert"
   }, "La sauvegarde locale est indisponible dans ce navigateur.")));
 }
+function HudPortrait({
+  fighter,
+  enemy
+}) {
+  const ref = React.useRef(null);
+  useEffect(() => {
+    const context = ref.current?.getContext("2d"),
+      image = new Image();
+    let disposed = false;
+    const spec = enemy ? enemyCatalog[enemy.kind] : null;
+    const width = spec?.frameWidth || fighter?.frameWidth || 80,
+      height = spec?.frameHeight || fighter?.frameHeight || 116;
+    image.onload = () => {
+      if (disposed || !context) return;
+      const sample = document.createElement("canvas");
+      sample.width = width;
+      sample.height = height;
+      const scan = sample.getContext("2d");
+      scan.drawImage(image, 0, 0, width, height, 0, 0, width, height);
+      let left = width,
+        right = 0,
+        top = height,
+        bottom = 0;
+      try {
+        const pixels = scan.getImageData(0, 0, width, height).data;
+        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) if (pixels[(y * width + x) * 4 + 3] > 64) {
+          left = Math.min(left, x);
+          right = Math.max(right, x);
+          top = Math.min(top, y);
+          bottom = Math.max(bottom, y);
+        }
+      } catch {
+        left = 0;
+        right = width;
+        top = 0;
+        bottom = height;
+      }
+      const crop = Math.max(1, Math.min(width, (bottom - top + 1) * .45)),
+        x = Math.max(0, Math.min(width - crop, (left + right - crop) / 2));
+      context.imageSmoothingEnabled = false;
+      context.clearRect(0, 0, 64, 64);
+      context.drawImage(image, x, top, crop, crop, 0, 0, 64, 64);
+    };
+    image.src = enemy ? `./assets/game/enemy-atlases/${enemy.kind}.png` : fighter.sprite;
+    return () => {
+      disposed = true;
+    };
+  }, [fighter?.sprite, enemy?.kind]);
+  return React.createElement("canvas", {
+    ref: ref,
+    width: 64,
+    height: 64,
+    "aria-hidden": "true"
+  });
+}
 function turnOrder(team, enemies, turn) {
   const living = team.filter(f => f.hp > 0);
   return [...living.map(f => ({
@@ -1147,6 +1202,7 @@ function Battle({
       setFullscreen(true);
     }
   };
+  const [orderDetail, setOrderDetail] = useState(null);
   const [inspectedId, setInspectedId] = useState(null);
   const lastTap = React.useRef({
     id: -1,
@@ -1451,7 +1507,7 @@ function Battle({
     setMessage("Choisis 1 action par personnage, puis lance le tour.");
   };
   return React.createElement("main", {
-    className: "game-shell"
+    className: "game-shell combat-hud"
   }, React.createElement("header", {
     className: "topbar"
   }, React.createElement("div", {
@@ -1493,9 +1549,9 @@ function Battle({
     style: {
       "--accent": fighter.accent
     }
-  }, React.createElement(Sprite, {
+  }, React.createElement(HudPortrait, {
     fighter: fighter
-  }), React.createElement("span", null, "0", index + 1)), React.createElement("div", {
+  })), React.createElement("div", {
     className: "fighter-info"
   }, React.createElement("small", null, fighter.role), React.createElement("h2", null, fighter.name), React.createElement(XpProgress, {
     xp: fighter.xp || 0
@@ -1526,18 +1582,30 @@ function Battle({
     className: "battle-heading"
   }, React.createElement("div", null, React.createElement("small", null, "ENCOUNTER"), React.createElement("h1", null, "WAVE ", String(wave).padStart(2, "0"))), React.createElement("div", {
     className: `threat threat-${threat.toLowerCase()}`
-  }, React.createElement("span", null, "THREAT"), React.createElement("b", null, threat))), React.createElement("section", {
+  }, React.createElement("span", null, "THREAT"), React.createElement("b", null, threat))), React.createElement("nav", {
     className: "turn-order",
-    "aria-label": "Ordre du tour"
-  }, React.createElement("div", {
-    className: "turn-order-title"
-  }, React.createElement("b", null, "Ordre du tour ", turn), React.createElement("span", null, "SPE \u2193 \xB7 1 action par personnage")), React.createElement("ol", null, order.map((entry, index) => React.createElement("li", {
-    key: entry.key,
-    className: `${entry.side} ${busy && index === queueIndex ? "playing" : ""} ${busy && index < queueIndex ? "played" : ""}`,
-    "aria-current": busy && index === queueIndex ? "step" : undefined
+    "aria-label": `Ordre du tour ${turn}, selon la SPE`
   }, React.createElement("span", {
-    className: "turn-number"
-  }, index + 1), React.createElement("div", null, React.createElement("b", null, entry.name), React.createElement("small", null, entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])), React.createElement("small", null, "SPE ", entry.speed))))), React.createElement("p", null, "Les ennemis attaquent \xE0 leur position dans cet ordre. \xC0 SPE \xE9gale, ton duo joue en premier.")), React.createElement("div", {
+    className: "hud-turn"
+  }, "Tour ", turn), React.createElement("ol", null, order.map((entry, index) => {
+    const fighter = team.find(f => f.name === entry.name),
+      enemy = enemies.find(e => e.id === entry.id);
+    const description = `${index + 1}. ${entry.name} · SPE ${entry.speed} · ${entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])}`;
+    return React.createElement("li", {
+      key: entry.key,
+      className: `${entry.side} ${busy && index === queueIndex ? "playing" : ""} ${busy && index < queueIndex ? "played" : ""}`,
+      "aria-current": busy && index === queueIndex ? "step" : undefined
+    }, React.createElement("button", {
+      title: description,
+      "aria-label": description,
+      onClick: () => setOrderDetail(entry.key)
+    }, React.createElement(HudPortrait, {
+      fighter: fighter,
+      enemy: enemy
+    }), React.createElement("span", {
+      className: "turn-number"
+    }, index + 1)));
+  }))), React.createElement("div", {
     className: "arena",
     style: {
       backgroundImage: `linear-gradient(180deg, rgba(15,20,21,.04), rgba(9,12,13,.42)), url(${battleBackground})`
@@ -1662,7 +1730,16 @@ function Battle({
     name: "bolt"
   }), React.createElement("b", null, "Sync Burst"), React.createElement("span", null, "100% Groove \xB7 Tous les ennemis"))), React.createElement("button", {
     onClick: () => setChooser(null)
-  }, "Annuler"))), inspected && React.createElement(WishDialog, {
+  }, "Annuler"))), orderDetail && React.createElement(WishDialog, {
+    title: "Ordre du tour",
+    close: () => setOrderDetail(null)
+  }, (() => {
+    const entry = order.find(e => e.key === orderDetail);
+    return entry ? React.createElement("p", null, React.createElement("b", null, entry.name), " \xB7 SPE ", entry.speed, React.createElement("br", null), entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])) : React.createElement("p", null, "Cette action est termin\xE9e.");
+  })(), React.createElement("button", {
+    className: "fullscreen-button",
+    onClick: () => setOrderDetail(null)
+  }, "Fermer")), inspected && React.createElement(WishDialog, {
     title: inspected.name,
     close: () => setInspectedId(null)
   }, React.createElement("div", {
