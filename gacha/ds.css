@@ -1,79 +1,79 @@
-﻿/* Shibuya handheld display */
+/* Shared menu materials for Reaper's Run and Bingo Kai. */
 .game-shell {
-  --ink: #131527;
-  --rim: #655a8b;
-  --paper: #f2ebd6;
-  --signal: #ffd857;
-  --lcd: #a7f4e4;
-  background-color: #191827;
-  background-image: repeating-linear-gradient(135deg, transparent 0 8px, #252235 8px 10px);
+  --ink:#25233f;
+  --muted:#555369;
+  --line:#a5a1b5;
+  --pearl:linear-gradient(176deg,#fff 0%,#f5f4fa 46%,#e5e3ef 100%);
+  --silver:linear-gradient(#fff,#f1f0f8 42%,#d4d1e3 52%,#e8e7f1 93%,#9e99b1);
+  --indigo:linear-gradient(110deg,#211653,#42349b 65%,#302579);
+  --edge:inset 0 1px #fff,inset 0 -1px #ada9bc,0 2px 4px #211b481a;
+  --title:Georgia,'Times New Roman',serif;
+  color:var(--ink);
+  font-family:'Segoe UI',Arial,sans-serif;
+  background:repeating-radial-gradient(ellipse at -24% 0%,transparent 0 49px,#817ca011 50px,transparent 52px 58px),linear-gradient(125deg,#dedde7,#fffcf5 43%,#eeeaf4 78%,#d5d2e3);
 }
-.party-lobby { padding: clamp(12px, 3vw, 32px); }
+.party-lobby { padding:clamp(12px,4vw,48px); }
 .party-lobby section {
-  position: relative;
-  isolation: isolate;
-  width: min(100%, 620px);
-  padding: 0 clamp(14px, 4vw, 28px) 24px;
-  border: 3px solid var(--ink);
-  outline: 2px solid var(--rim);
-  background: repeating-linear-gradient(0deg,#29273b 0 2px,#2d2a40 2px 4px);
-  box-shadow: inset 0 0 0 2px #474359, 5px 6px 0 #0d0e18;
-  color: var(--paper);
+  width:min(100%,860px); min-width:0; padding:clamp(16px,4vw,38px);
+  border:1px solid var(--line); border-top:3px double #9690aa;
+  background:linear-gradient(118deg,#fffffff2,#faf9f5eb 60%,#eceaf2ed);
+  box-shadow:inset 0 0 0 3px #fff9,0 12px 40px #39315220;
 }
-.party-lobby section > :is(h1,h2):first-child {
-  position: relative;
-  display: flex;
-  align-items: end;
-  min-height: clamp(100px,19vh,158px);
-  margin: 0 calc(-1 * clamp(14px, 4vw, 28px)) 18px;
-  padding: 16px clamp(14px, 4vw, 28px);
-  border-bottom: 5px double #8f84a6;
-  color: #fff5cd;
-  font: italic 900 clamp(30px,6vw,54px)/.95 "Barlow Condensed", Impact, sans-serif;
-  text-transform: uppercase;
-  text-shadow: 3px 3px 0 var(--ink), -1px -1px 0 var(--ink);
-  background: linear-gradient(0deg,#211b39 0%,#34234b55 70%),url("./assets/game/battle-bg.jpg") center 40% / cover;
+.party-lobby section > :is(h1,h2):first-child,.battle-heading h1,.modal h2 {
+  color:#292140; font:normal clamp(32px,5vw,54px)/1.1 var(--title);
+  letter-spacing:-.045em; text-transform:none; margin:0 0 14px;
 }
 .party-lobby section > :is(h1,h2):first-child::after {
-  content: ""; position: absolute; inset: auto 0 0; height: 5px;
-  background: repeating-linear-gradient(-45deg,var(--signal) 0 5px,var(--ink) 5px 10px);
+  content:""; display:block; width:min(320px,90%); height:7px; margin-top:10px;
+  background:linear-gradient(135deg,transparent 20%,#9e94b8 22% 75%,transparent 77%) left center/7px 7px no-repeat,linear-gradient(90deg,#9388aa,transparent) center/100% 1px no-repeat;
 }
-.party-lobby p, .party-lobby .psych-choice, .section-label, .turn-badge {
-  font-family: "Courier New", monospace; font-weight: bold;
+.party-lobby h2,.fighter-info h2,.brand-lockup strong,.recruit-reveal strong { font-family:var(--title); font-style:normal; }
+.party-lobby p { color:var(--muted); font-size:14px; line-height:1.5; }
+.party-lobby a,.party-lobby summary { color:#443884; }
+.party-lobby summary { cursor:pointer; padding:8px 0; }
+.party-lobby button:not(.bingo-crank),.party-lobby select,.actions button,.reward-grid button,.game-over button {
+  color:var(--ink); border:1px solid var(--line); background:var(--silver);
+  box-shadow:var(--edge); border-radius:2px; font-family:inherit;
 }
-.party-lobby p { font-size: 14px; line-height: 1.45; }
-.party-lobby h2 { text-transform: uppercase; color: var(--lcd); }
-.party-list { gap: 6px; }
-.party-list button {
-  border: 2px solid #100f1f;
-  color: var(--paper);
-  background: linear-gradient(135deg,#423d5d 0 72%,#363249 72%);
-  box-shadow: inset 1px 1px #726c87, 2px 2px #100f1f;
+.party-lobby button:not(.bingo-crank),.party-lobby select { padding:7px 12px; }
+.party-lobby button[aria-pressed],.party-lobby .pull-button { padding-inline:18px; }
+.party-lobby button[aria-pressed=true],.party-lobby .pull-button:enabled,.party-lobby button:not(.bingo-crank):enabled:hover,
+.actions button:enabled:hover,.reward-grid button:hover,.game-over button {
+  background:var(--indigo); color:white; border-color:#7567ab; box-shadow:inset 0 1px #bdb3ec,0 2px 4px #29224a38;
 }
-.party-list button strong { font: italic 900 19px/1 "Barlow Condensed",Impact,sans-serif; }
-.party-list button[aria-pressed=true] { border-color: var(--signal); color: var(--signal); }
-.party-lobby .pull-button, .game-over button {
-  color: #171522; background: var(--signal); border: 2px solid var(--ink);
-  box-shadow: inset 0 2px #fff1a7, 3px 3px var(--ink); font-weight: 900;
+.party-lobby [aria-pressed=true]::before { content:"◆"; color:#f4e5ac; font-size:9px; margin-right:5px; }
+.party-list [aria-pressed=true]::before { position:absolute; left:6px; top:6px; }
+.party-list button { position:relative; }
+.game-shell :focus-visible { outline:3px solid #6552bb; outline-offset:2px; }
+.party-lobby .psych-choice select { max-width:65%; }
+.pin-catalog { max-height:16rem; overflow:auto; background:#eeedf4; padding:6px; }
+.pin-catalog > div { display:flex; align-items:center; gap:8px; padding:4px; border-bottom:1px solid #d2cedf; }
+.bingo-stage {
+  display:grid; place-items:center; position:relative; isolation:isolate; overflow:hidden;
+  margin-block:14px 6px; padding:20px 0 40px; border:1px solid #b2acbf;
+  background:radial-gradient(ellipse at 50% 86%,#aea4c4 0,transparent 19%),repeating-radial-gradient(circle at 50% 52%,transparent 0 57px,#a79abd55 58px,transparent 60px 65px),linear-gradient(135deg,#e5e0ef,#fffdf7 55%,#d8d3e8);
 }
-.party-lobby .pull-button:disabled { opacity: .65; }
-.psych-choice select { background: #161729; color: var(--lcd); border: 2px solid var(--rim); }
-.party-lobby a { color: var(--signal); }
-.recruit-reveal { border: 3px double var(--lcd); background-color: #191b30; }
-.topbar, .action-dock, .fighter-card, .modal {
-  border: 2px solid var(--ink);
-  background: linear-gradient(155deg,#373248,#232235 75%);
-  box-shadow: inset 1px 1px #625972, 3px 3px var(--ink);
+.bingo-stage::before { content:""; position:absolute; z-index:-1; width:150px; aspect-ratio:1; transform:rotate(45deg); border:1px solid #a39ab9; outline:4px double #b2aac3; outline-offset:9px; }
+.bingo-member,.recruit-reveal,.modal,.topbar,.action-dock,.fighter-card,.message-strip {
+  color:var(--ink); background:var(--pearl); border:1px solid var(--line); box-shadow:var(--edge);
 }
-.arena { border: 3px solid var(--ink); outline: 1px solid var(--rim); }
-.battle-heading h1, .modal h2 { color: var(--paper); text-shadow: 2px 2px #423653; }
-.turn-badge, .section-label { color: var(--lcd); background: #202031; }
-.section-label { border-bottom: 2px solid var(--rim); padding-inline: 8px; }
-.actions button, .reward-grid button { border: 2px solid #665d80; background: #282638; box-shadow: inset 1px 1px #837994; }
-.game-shell :focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
-
-
-.bingo-stage { display:grid; place-items:center; padding:12px 0 34px; background:radial-gradient(ellipse at center,#50465d,#161523 72%); }
+.bingo-member { flex-wrap:wrap; padding:8px 12px; }
+.recruit-reveal::before { background:conic-gradient(transparent,#d6cce6,transparent,#d3c69d,transparent); }
+.arena { border:3px double #a09ab3; }
+.section-label,.turn-badge,.brand-mark,.message-strip span,.energy-readout,.groove-card,.tip-card { background:var(--indigo); color:white; }
+.section-label { padding-inline:8px; }
+.message-strip p,.brand-lockup span,.run-stats,.actions small,.modal > p,.reward-grid span,.fighter-info small,.health-readout span { color:var(--muted); }
+.run-stats b,.currency,.battle-heading small,.route .current p,.reward-grid b,.modal > small { color:#493a81; }
+.tip-card p,.tip-card small,.tip-card a,.energy-readout span,.groove-card > div b,.section-label b,.actions button:enabled:hover small,.reward-grid button:hover :is(b,span) { color:#f4edf9; }
+.battle-heading h1 { margin:0; font-size:clamp(25px,4vw,40px); }
+.actions button:disabled { opacity:.64; }
+.party-lobby select option { color:#242039; }
+@media(min-width:680px) {
+  .party-lobby section:has(.bingo-stage) { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,.95fr); column-gap:32px; }
+  .party-lobby section:has(.bingo-stage) > * { grid-column:1; }
+  .party-lobby section:has(.bingo-stage) > :first-child,.party-lobby section:has(.bingo-stage) > .bingo-stage ~ * { grid-column:1/-1; }
+  .party-lobby section > .bingo-stage { grid-column:2 !important; grid-row:2 / span 5; margin:0; }
+}
 .bingo-machine { position:relative; width:clamp(112px,24vw,160px); }
 .bingo-body { display:block; width:100%; }
 .bingo-crank { position:absolute; left:28.125%; top:60.55%; width:43.75%; aspect-ratio:1; padding:0; border:0; border-radius:50%; background:transparent url("./assets/bingo/crank.webp") center / contain no-repeat; cursor:pointer; }
@@ -87,8 +87,3 @@
 .bingo-member button { margin-left:auto; }
 @media (prefers-reduced-motion:reduce) { .bingo-crank.turning,.bingo-ball { animation-duration:.01s; } }
 
-.pin-catalog { max-height: 16rem; overflow:auto; background:#161522; padding:6px; }
-.pin-catalog > div { display:flex; align-items:center; gap:8px; padding:4px; }
-.party-lobby [aria-pressed="true"] { outline:2px solid var(--signal); }
-.party-lobby .psych-choice select { max-width:65%; }
-.bingo-member { flex-wrap:wrap; }
