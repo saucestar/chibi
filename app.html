@@ -263,6 +263,13 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
  body:has(.game-page.on[data-page="game"]) .tabs button.pin { height:26px; flex-basis:26px; }
 }
 
+
+body.game-fullscreen { overflow:hidden !important; padding:0 !important; }
+body.game-fullscreen>.hd,body.game-fullscreen>.tabs { display:none !important; }
+body.game-fullscreen>main { position:fixed !important; inset:0 !important; width:100% !important; height:100dvh !important; max-width:none !important; padding:0 !important; margin:0 !important; z-index:1000; }
+body.game-fullscreen .game-page.on[data-page="game"] { height:100% !important; margin:0 !important; min-height:0 !important; }
+body.game-fullscreen .game-page[data-page="game"] .game-frame { border:0; border-radius:0; }
+
 </style>
 </head>
 <body>
@@ -861,6 +868,24 @@ async function init(){
   show((location.hash || '#home').slice(1));
 }
 init();
+</script>
+<script>
+(()=>{
+ const frame=document.querySelector('.game-page[data-page="game"] iframe');
+ const notify=()=>frame?.contentWindow?.postMessage({type:'chibi:fullscreen-state',active:document.body.classList.contains('game-fullscreen')},'*');
+ const exit=()=>{document.body.classList.remove('game-fullscreen');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});notify();};
+ window.addEventListener('message',event=>{
+  if(event.source!==frame?.contentWindow||event.data?.type!=='chibi:fullscreen')return;
+  if(event.data.action==='exit'){exit();return;}
+  if(event.data.action!=='toggle')return;
+  if(document.body.classList.contains('game-fullscreen')){exit();return;}
+  document.body.classList.add('game-fullscreen');notify();
+  // The viewport layout also covers browsers without the Fullscreen API.
+  document.documentElement.requestFullscreen?.().catch(()=>{});
+ });
+ document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement){document.body.classList.remove('game-fullscreen');notify();}});
+ window.addEventListener('keydown',event=>{if(event.key==='Escape')exit();});
+})();
 </script>
 </body>
 </html>

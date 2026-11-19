@@ -1112,6 +1112,41 @@ function Battle({
   onVictory,
   leave
 }) {
+  const [fullscreen, setFullscreen] = useState(false);
+  useEffect(() => {
+    const receive = event => {
+      if (event.source === window.parent && event.data?.type === "chibi:fullscreen-state") setFullscreen(Boolean(event.data.active));
+    };
+    const sync = () => setFullscreen(Boolean(document.fullscreenElement));
+    window.addEventListener("message", receive);
+    document.addEventListener("fullscreenchange", sync);
+    return () => {
+      window.removeEventListener("message", receive);
+      document.removeEventListener("fullscreenchange", sync);
+      if (window.parent !== window) window.parent.postMessage({
+        type: "chibi:fullscreen",
+        action: "exit"
+      }, "*");
+    };
+  }, []);
+  const toggleFullscreen = async () => {
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: "chibi:fullscreen",
+        action: "toggle"
+      }, "*");
+      return;
+    }
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      setFullscreen(false);
+    } else {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch {}
+      setFullscreen(true);
+    }
+  };
   const [inspectedId, setInspectedId] = useState(null);
   const lastTap = React.useRef({
     id: -1,
@@ -1425,7 +1460,11 @@ function Battle({
     className: "brand-mark"
   }, "R"), React.createElement("div", null, React.createElement("strong", null, "REAPER'S RUN"), React.createElement("span", null, "SHIBUYA / DAY 01"))), React.createElement("div", {
     className: "run-stats"
-  }, React.createElement("span", null, React.createElement(Icon, {
+  }, React.createElement("button", {
+    className: "fullscreen-button",
+    onClick: toggleFullscreen,
+    "aria-pressed": fullscreen
+  }, fullscreen ? "Quitter plein écran" : "Plein écran"), React.createElement("span", null, React.createElement(Icon, {
     name: "star"
   }), " SCORE ", React.createElement("b", null, String((wave - 1) * 2350).padStart(6, "0"))), React.createElement("span", {
     className: "currency"

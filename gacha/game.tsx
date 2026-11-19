@@ -568,6 +568,18 @@ const planCost=(plan?:PlannedAction)=>plan?.kind==="psych"?psychs[plan.pin!]?.co
 const planName=(plan?:PlannedAction)=>!plan?"Choisir une action":plan.kind==="guard"?"Défense":plan.kind==="burst"?"Sync Burst":psychs[plan.pin!].name;
 
 function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych[]>; coins: number; onDrops:(ids:string[])=>void; onExperience:(amount:number)=>void; onVictory: () => void; leave: () => void }) {
+  const [fullscreen,setFullscreen]=useState(false);
+  useEffect(()=>{
+    const receive=(event:MessageEvent)=>{if(event.source===window.parent && event.data?.type==="chibi:fullscreen-state")setFullscreen(Boolean(event.data.active));};
+    const sync=()=>setFullscreen(Boolean(document.fullscreenElement));
+    window.addEventListener("message",receive);document.addEventListener("fullscreenchange",sync);
+    return ()=>{window.removeEventListener("message",receive);document.removeEventListener("fullscreenchange",sync);if(window.parent!==window)window.parent.postMessage({type:"chibi:fullscreen",action:"exit"},"*");};
+  },[]);
+  const toggleFullscreen=async()=>{
+    if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},"*");return;}
+    if(document.fullscreenElement){await document.exitFullscreen();setFullscreen(false);}
+    else {try{await document.documentElement.requestFullscreen();}catch{}setFullscreen(true);}
+  };
   const [inspectedId,setInspectedId]=useState<number|null>(null);
   const lastTap=React.useRef({id:-1,time:0});
   const awarded=React.useRef(new Set<number>());
@@ -790,6 +802,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
           </div>
         </div>
         <div className="run-stats">
+          <button className="fullscreen-button" onClick={toggleFullscreen} aria-pressed={fullscreen}>{fullscreen?"Quitter plein écran":"Plein écran"}</button>
           <span>
             <Icon name="star" /> SCORE <b>{String((wave - 1) * 2350).padStart(6, "0")}</b>
           </span>
