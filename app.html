@@ -225,13 +225,21 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
 .ov{ position:fixed; inset:0; z-index:100; background:rgba(10,8,14,.75); display:flex; align-items:center; justify-content:center; padding:16px; }
 .ov[hidden]{ display:none; }
 .ov .pn{ max-width:520px; width:100%; max-height:86vh; overflow-y:auto; transform:none; }
+.ov{ padding:28px 14px calc(14px + var(--safe-b)); }
 .rule{ display:flex; gap:10px; margin-bottom:12px; }
 .rule i{ width:24px; height:24px; flex-shrink:0; border-radius:50%; background:var(--ink); color:var(--ac); display:flex; align-items:center; justify-content:center; font:900 italic 11px 'Montserrat',sans-serif; }
 .rule b{ display:block; font:900 italic 13px 'Montserrat',sans-serif; text-transform:uppercase; margin-bottom:2px; }
 .rule span{ font:600 12.5px/1.45 'Montserrat',sans-serif; color:#3c3842; }
-.ranks{ display:flex; gap:6px; margin-top:6px; }
-.ranks div{ flex:1; background:var(--ink); color:#fff; text-align:center; padding:6px 0; font:900 italic 16px 'Montserrat',sans-serif; }
-.ranks small{ display:block; color:var(--acid); font:800 11px 'Montserrat',sans-serif; }
+.ranks{ display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:4px; margin:6px 0 4px 34px; }
+.ranks div{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+.ranks div{ justify-content:flex-end; }
+.ranks img{ height:clamp(40px, 13vw, 58px); width:auto; max-width:100%; object-fit:contain; display:block; filter:drop-shadow(1px 2px 0 rgba(0,0,0,.25)); }
+.ranks small{ font:900 italic 12px 'Montserrat',sans-serif; color:var(--ink); }
+/* rules popup: the sticker stays put, only the text scrolls */
+.rules-card{ position:relative; width:100%; max-width:520px; max-height:calc(100dvh - 60px); display:flex; flex-direction:column;
+  background:var(--paper); border:3px solid var(--ink); border-radius:14px; box-shadow:6px 6px 0 var(--ink); padding:32px 16px 16px; margin:0 auto; }
+.rules-card .chip{ max-width:calc(100% - 30px); }
+.rules-body{ flex:1; min-height:0; overflow-y:auto; margin:0 -4px 12px; padding:0 4px; }
 .toast{ position:fixed; left:50%; bottom:calc(96px + var(--safe-b)); transform:translateX(-50%); z-index:120; background:var(--ink); color:#fff; border:2px solid var(--ac); padding:8px 14px; font:800 12.5px 'Montserrat',sans-serif; max-width:90vw; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .2s; }
 .toast[hidden]{ display:block; opacity:0; pointer-events:none; }
 .err{ background:#ffe1e1; border:2.5px solid var(--ink); padding:8px 12px; margin-bottom:10px; font:700 12.5px/1.45 'Montserrat',sans-serif; color:#a1102e; }
@@ -407,13 +415,22 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
 </div>
 
 <div class="ov" id="rules" hidden>
-  <div class="pn">
-    <div class="chip"><i>!</i>RÈGLES // MISSION DU JOUR</div>
-    <div class="rule"><i>1</i><div><b>Le chrono</b><span>Charge ta sauvegarde en jeu : un chrono de 24 minutes démarre (une seule fois par jour, en temps réel, même si tu fermes le jeu).</span></div></div>
-    <div class="rule"><i>2</i><div><b>Quêtes du jour · 300 pts chacune</b><span>Lancer le jeu, remporter 5 combats, récupérer 15 badges (doublons compris). Une quête terminée avant la fin du chrono rapporte 300 points.</span></div></div>
-    <div class="rule"><i>3</i><div><b>Ennemis · 50 pts</b><span>Chaque Noise éliminé pendant la mission rapporte 50 points, y compris dans les combats enchaînés.</span></div></div>
-    <div class="rule"><i>4</i><div><b>Rang du combat</b><span>Chaque combat gagné ajoute des points selon son rang :</span>
-      <div class="ranks"><div>E<small>+10</small></div><div>D<small>+20</small></div><div>C<small>+35</small></div><div>B<small>+50</small></div><div>A<small>+100</small></div><div>★<small>+250</small></div></div></div></div>
+  <div class="rules-card">
+    <div class="chip"><i>!</i>RÈGLES // MISSION DU JOUR</div><div class="tape"></div>
+    <div class="rules-body">
+      <div class="rule"><i>1</i><div><b>Le chrono</b><span>Charge ta sauvegarde en jeu : un chrono de 24 minutes démarre (une seule fois par jour, en temps réel, même si tu fermes le jeu).</span></div></div>
+      <div class="rule"><i>2</i><div><b>Quêtes du jour · 300 pts chacune</b><span>Lancer le jeu, remporter 5 combats, récupérer 15 badges (doublons compris). Une quête terminée avant la fin du chrono rapporte 300 points.</span></div></div>
+      <div class="rule"><i>3</i><div><b>Ennemis · 50 pts</b><span>Chaque Noise éliminé pendant la mission rapporte 50 points, y compris dans les combats enchaînés.</span></div></div>
+      <div class="rule"><i>4</i><div><b>Rang du combat</b><span>Chaque combat gagné ajoute des points selon son rang :</span></div></div>
+      <div class="ranks">
+        <div><img src="icons/ranks/rank-e.png" alt="Rang E"><small>+10</small></div>
+        <div><img src="icons/ranks/rank-d.png" alt="Rang D"><small>+20</small></div>
+        <div><img src="icons/ranks/rank-c.png" alt="Rang C"><small>+35</small></div>
+        <div><img src="icons/ranks/rank-b.png" alt="Rang B"><small>+50</small></div>
+        <div><img src="icons/ranks/rank-a.png" alt="Rang A"><small>+100</small></div>
+        <div><img src="icons/ranks/rank-etoile.png" alt="Rang étoile"><small>+250</small></div>
+      </div>
+    </div>
     <button type="button" class="btn pri" id="rulesOk">compris !</button>
   </div>
 </div>
