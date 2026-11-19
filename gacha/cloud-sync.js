@@ -24,7 +24,17 @@
     if (value && !localStorage.getItem(key + '.before-cloud.' + (mobile ? 'mobile' : 'browser')))
       localStorage.setItem(key + '.before-cloud.' + (mobile ? 'mobile' : 'browser'), value);
   }
+  function rememberEndedRun(profile,uid){
+    const run=profile?.run;if(!uid||!run||run.status==='active'||!['lost','complete','abandoned'].includes(run.status))return;
+    const keyName=key+'.ended-runs.'+uid,ended=read(keyName)||{};
+    ended[run.id]=run.status;localStorage.setItem(keyName,JSON.stringify(ended));
+  }
+  function protectEndedRun(profile,uid){
+    const run=profile?.run,ended=read(key+'.ended-runs.'+uid)||{};
+    return run&&run.status==='active'&&ended[run.id]?{...profile,run:{...run,status:ended[run.id],pending:null}}:profile;
+  }
   function protectFreeWishes(profile,uid) {
+    profile=protectEndedRun(profile,uid);
     const receipt=read(key+'.free-receipt.'+uid);
     if(!receipt||receipt.version!==1)return profile;
     return {...profile,freeWishVersion:1,starterWishesGranted:true,
@@ -33,6 +43,7 @@
       freeWishDaySpent:receipt.day>String(profile.lastFreeWishDay||"")?receipt.daySpent:profile.lastFreeWishDay===receipt.day?Math.max(Number(profile.freeWishDaySpent)||0,receipt.daySpent||0):Number(profile.freeWishDaySpent)||0};
   }
   function rememberFreeWishes(profile,uid) {
+    rememberEndedRun(profile,uid);
     if(profile.freeWishVersion!==1)return;
     const old=read(key+'.free-receipt.'+uid);
     const newer=old&&old.day>profile.lastFreeWishDay;
@@ -205,6 +216,7 @@
     get missionState(){return missionState;},
     save(profile) {
       if (!ref || !state.ready || !valid(profile)) return;
+      rememberEndedRun(profile,activeUid);
       queue = [profile];
       localStorage.setItem(pendingKey,JSON.stringify({uid:activeUid,baseRev:revision,client,profile}));
       flush(activeUid, generation);

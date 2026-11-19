@@ -1012,3 +1012,4 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
  .game-hub .hub-home-heading,.game-hub .hub-play,.game-hub .hub-shortcuts {grid-column:1/3;}
  .game-hub .hub-home-stage {grid-column:3;}
 }
+.run-resume {display:grid;gap:12px;margin:18px 0;padding:16px;border:1px solid #a99abf;border-radius:20px;background:linear-gradient(135deg,#fff,#e9ddf6);}.run-resume p{margin:0;}.run-resume button{width:100%;min-width:0;}

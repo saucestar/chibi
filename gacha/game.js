@@ -380,17 +380,17 @@ function difficultyAt(floor) {
     step = (wave - 1) % 10;
   return {
     tier: tier + 1,
-    hp: 1 + tier * .44 + tier * tier * .028 + step * .035,
-    attack: 1 + tier * .16 + tier * tier * .008 + step * .012,
+    hp: 1.35 + tier * .85 + tier * tier * .08 + step * .07,
+    attack: 1.30 + tier * .32 + tier * tier * .025 + step * .025,
     xp: 1 + tier * .48 + tier * tier * .025 + step * .04,
-    speed: tier * 2 + Math.floor(step / 4),
-    bossHp: wave % 10 === 0 ? 2.25 : 1.7,
-    bossAttack: wave % 10 === 0 ? 1.25 : 1.12
+    speed: tier * 3 + Math.floor(step / 3),
+    bossHp: wave % 10 === 0 ? 2.8 : 2.1,
+    bossAttack: wave % 10 === 0 ? 1.7 : 1.45
   };
 }
 const makeWave = wave => {
   const bossWave = isBossWave(wave);
-  const count = bossWave ? wave >= 40 ? 3 : 2 : wave <= 4 ? 2 : wave <= 19 ? 3 : 4;
+  const count = bossWave ? wave >= 40 ? 3 : 2 : wave <= 2 ? 2 : wave <= 9 ? 3 : 4;
   const scale = difficultyAt(wave);
   return Array.from({
     length: count
@@ -833,6 +833,88 @@ function WishHistory({
     onClick: () => setOpen(false)
   }, "Fermer")));
 }
+function validRun(raw, owned) {
+  try {
+    const integer = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max;
+    if (!raw || raw.version !== 1 || typeof raw.id !== "string" || !/^[a-zA-Z0-9-]{1,100}$/.test(raw.id) || !integer(raw.seq, 0, 1000000) || !["active", "lost", "complete", "abandoned"].includes(raw.status) || !integer(raw.wave, 1, 100) || !integer(raw.turn, 1, 100000) || !integer(raw.energy, 0, 3) || !integer(raw.groove, 0, 100) || JSON.stringify(raw).length > 18000) return null;
+    if (!Array.isArray(raw.team) || raw.team.length !== 2 || new Set(raw.team.map(f => f.name)).size !== 2) return null;
+    const team = raw.team.map(f => {
+      const base = characterRoster.find(b => b.name === f.name);
+      if (!base || !owned.includes(f.name) || !["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].every(k => integer(f[k], k === "hp" || k === "xp" ? 0 : 1, 10000000)) || f.hp > f.maxHp) throw Error();
+      return {
+        ...base,
+        ...Object.fromEntries(["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].map(k => [k, f[k]]))
+      };
+    });
+    if (!Array.isArray(raw.enemies) || raw.enemies.length < 1 || raw.enemies.length > 4 || new Set(raw.enemies.map(e => e.id)).size !== raw.enemies.length) return null;
+    for (const e of raw.enemies) if (!enemyCatalog[e.kind] || !["id", "hp", "maxHp", "attack", "speed", "xp"].every(k => integer(e[k], 0, 10000000)) || e.hp > e.maxHp || Math.floor(e.id / 10) !== raw.wave) return null;
+    const names = team.map(f => f.name),
+      loadout = Object.fromEntries(names.map(name => [name, raw.loadout?.[name]]));
+    if (!Object.values(loadout).every(ids => Array.isArray(ids) && ids.length > 0 && ids.length <= 3 && ids.every(id => psychs[id])) || new Set(Object.values(loadout).flat()).size !== Object.values(loadout).flat().length) return null;
+    const pending = raw.pending || null;
+    if (pending) {
+      if (!Array.isArray(pending.steps) || pending.steps.length > 6 || !integer(pending.index, 0, pending.steps.length) || !Array.isArray(pending.shields) || pending.shields.some(([name, n]) => !names.includes(name) || !Number.isFinite(n) || n < 0 || n > .75) || !Array.isArray(pending.performed) || pending.performed.some(n => !names.includes(n))) return null;
+      for (const step of pending.steps) if (step.side === "ally" ? !names.includes(step.name) || !pending.choices?.[step.name] : step.side !== "enemy" || !raw.enemies.some(e => e.id === step.id)) return null;
+      for (const name of names) {
+        const plan = pending.choices?.[name];
+        if (plan && (!["guard", "burst", "psych"].includes(plan.kind) || plan.kind === "psych" && !loadout[name].includes(plan.pin))) return null;
+      }
+    }
+    const status = raw.status === "active" && team.every(f => f.hp <= 0) ? "lost" : raw.status;
+    return {
+      ...raw,
+      team,
+      loadout,
+      status,
+      pending: status === "active" ? pending : null,
+      reward: raw.reward === true,
+      earnedXp: integer(raw.earnedXp, 0, 10000000) ? raw.earnedXp : 0,
+      loot: Array.isArray(raw.loot) ? raw.loot.filter(n => typeof n === "string").slice(0, 400) : [],
+      awarded: Array.isArray(raw.awarded) ? raw.awarded.filter(n => raw.enemies.some(e => e.id === n)) : []
+    };
+  } catch {
+    return null;
+  }
+}
+function newRun(profile) {
+  const names = profile.equipped.filter(Boolean);
+  return {
+    version: 1,
+    id: `run-${Date.now()}-${crypto.randomUUID()}`,
+    seq: 0,
+    status: "active",
+    updatedAt: Date.now(),
+    wave: 1,
+    turn: 1,
+    team: names.map(name => trained(characterRoster.find(f => f.name === name), profile.xp[name] || 0, profile.awakened.includes(name))),
+    enemies: makeWave(1),
+    loadout: Object.fromEntries(names.map(name => [name, [...profile.loadout[name]]])),
+    energy: 3,
+    groove: 28,
+    reward: false,
+    earnedXp: 0,
+    loot: [],
+    awarded: [],
+    pending: null
+  };
+}
+function applyRunCheckpoint(p, snapshot, gains = {}) {
+  if (!p.run || p.run.id !== snapshot.id || p.run.status !== "active" || snapshot.seq <= p.run.seq) return p;
+  const xp = {
+    ...p.xp
+  };
+  if (gains.xp) for (const f of snapshot.team) xp[f.name] = experience((xp[f.name] || 0) + gains.xp).xp;
+  return {
+    ...p,
+    run: snapshot,
+    xp,
+    pins: [...new Set([...p.pins, ...(gains.pins || [])])],
+    coins: p.coins + (gains.victory ? 5 : 0),
+    hasPlayed: true,
+    bestFloor: Math.max(p.bestFloor, snapshot.wave),
+    floorRecoveryAvailable: p.floorRecoveryAvailable && snapshot.wave < 10
+  };
+}
 const profileKey = "chibi.reapers-run.party.v1";
 function equippedBy(profile, name, id) {
   return profile.equipped.find(partner => partner && partner !== name && profile.loadout[partner]?.includes(id));
@@ -921,6 +1003,7 @@ function loadProfile() {
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({
+      run: validRun(saved.run, owned),
       wishEvents: Array.isArray(saved.wishEvents) ? saved.wishEvents.filter(validWishEvent) : [],
       wishHistoryStartedAt: Number(saved.wishHistoryStartedAt) || 0,
       wishHistoryBaseline: Number(saved.wishHistoryBaseline) || 0,
@@ -952,6 +1035,7 @@ function loadProfile() {
     }));
   } catch {}
   return accrueDailyWishes(assignBasePsychs({
+    run: null,
     wishEvents: [],
     wishHistoryStartedAt: 0,
     wishHistoryBaseline: 0,
@@ -1524,7 +1608,7 @@ function QuestMenu({
   }, "Fermer"))));
 }
 function combatFingerprint(p) {
-  return JSON.stringify([p.owned, p.equipped, p.loadout, p.xp, p.awakened, p.levels]);
+  return JSON.stringify([p.owned, p.equipped, p.loadout, p.xp, p.awakened, p.levels, p.run ? [p.run.id, p.run.seq, p.run.status] : null]);
 }
 function InlinePanel({
   title,
@@ -1696,7 +1780,7 @@ function HubHome({
   }))), React.createElement("button", {
     className: "hub-play",
     onClick: () => navigate("team")
-  }, React.createElement("small", null, "ROGUELIKE"), React.createElement("b", null, names.length === 2 ? "Préparer le combat" : "Former ma Team"), React.createElement("span", null, "100 \xE9tages \xE0 d\xE9fier \u2192")), React.createElement("div", {
+  }, React.createElement("small", null, "ROGUELIKE"), React.createElement("b", null, profile.run?.status === "active" ? `Reprendre · Étage ${profile.run.wave}` : names.length === 2 ? "Préparer le combat" : "Former ma Team"), React.createElement("span", null, "100 \xE9tages \xE0 d\xE9fier \u2192")), React.createElement("div", {
     className: "hub-shortcuts"
   }, React.createElement("button", {
     onClick: () => navigate("quests")
@@ -1730,6 +1814,8 @@ function App() {
   const runSignature = React.useRef(null);
   const [editingSlot, setEditingSlot] = useState(null);
   const [battleLoadout, setBattleLoadout] = useState({});
+  const [resumeRun, setResumeRun] = useState(null);
+  const [abandonConfirm, setAbandonConfirm] = useState(false);
   const [party, setParty] = useState(null);
   const [result, setResult] = useState([]);
   const [quantity, setQuantity] = useState(1);
@@ -1934,36 +2020,44 @@ function App() {
     });
     setEditingSlot(null);
   }
-  if (party) return React.createElement(Battle, {
+  const resume = () => {
+    const run = loadProfile().run;
+    if (!run || run.status !== "active") return;
+    runSignature.current = combatFingerprint(loadProfile());
+    setResumeRun(run);
+    setBattleLoadout(run.loadout);
+    setParty(run.team);
+  };
+  const startRun = () => {
+    let created = null;
+    setProfile(p => {
+      if (p.run?.status === "active" || p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
+      created = newRun(p);
+      return {
+        ...p,
+        run: created,
+        hasPlayed: true,
+        bestFloor: Math.max(1, p.bestFloor)
+      };
+    });
+    if (created) {
+      runSignature.current = combatFingerprint(loadProfile());
+      setResumeRun(created);
+      setBattleLoadout(created.loadout);
+      setParty(created.team);
+    }
+  };
+  if (party && resumeRun) return React.createElement(Battle, {
+    key: resumeRun.id,
+    initialRun: resumeRun,
     initialTeam: party,
     loadout: battleLoadout,
     coins: profile.coins,
-    onDrops: ids => setProfile(p => ({
-      ...p,
-      pins: [...new Set([...p.pins, ...ids])]
-    })),
-    onExperience: amount => setProfile(p => ({
-      ...p,
-      xp: {
-        ...p.xp,
-        ...Object.fromEntries(party.map(f => [f.name, experience((p.xp[f.name] || 0) + amount).xp]))
-      }
-    })),
-    onReach: floor => setProfile(p => ({
-      ...p,
-      hasPlayed: true,
-      bestFloor: Math.max(p.bestFloor, Math.min(100, floor))
-    })),
-    onVictory: floor => setProfile(p => ({
-      ...p,
-      coins: p.coins + 5,
-      hasPlayed: true,
-      bestFloor: Math.max(p.bestFloor, Math.min(100, floor)),
-      floorRecoveryAvailable: p.floorRecoveryAvailable && floor < 10
-    })),
+    onCheckpoint: (snapshot, gains) => setProfile(p => applyRunCheckpoint(p, snapshot, gains)),
     leave: () => {
       runSignature.current = null;
       setParty(null);
+      setResumeRun(null);
       setScreen("team");
       setResult([]);
     }
@@ -2209,22 +2303,38 @@ function App() {
         [name]: ids
       }
     }))
-  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
+  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), profile.run?.status === "active" && React.createElement("div", {
+    className: "run-resume"
+  }, React.createElement("p", null, "Run sauvegard\xE9e \xB7 \xC9tage ", profile.run.wave, " \xB7 Palier ", difficultyAt(profile.run.wave).tier, " \xB7 ", profile.run.team.map(f => f.name).join(" / ")), React.createElement("button", {
     className: "pull-button",
-    disabled: fighters.length !== 2 || !fighters.every(name => profile.loadout[name]?.length) || !fighters.some(name => profile.loadout[name]?.some(offensive)),
+    onClick: resume
+  }, "Reprendre l\u2019\xE9tage ", profile.run.wave), React.createElement("button", {
+    onClick: () => setAbandonConfirm(true)
+  }, "Abandonner la run")), profile.run?.status === "lost" && React.createElement("p", null, "Run perdue \xB7 Une nouvelle run commence \xE0 l\u2019\xE9tage 1."), abandonConfirm && React.createElement(WishDialog, {
+    title: "Abandonner la run ?",
+    close: () => setAbandonConfirm(false)
+  }, React.createElement("p", null, "La reprise de cette run sera supprim\xE9e. Tes personnages, tes badges et tes r\xE9compenses d\xE9j\xE0 gagn\xE9es sont conserv\xE9s."), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    onClick: () => setAbandonConfirm(false)
+  }, "Annuler"), React.createElement("button", {
     onClick: () => {
-      setProfile(p => ({
+      setProfile(p => p.run?.status === "active" ? {
         ...p,
-        hasPlayed: true,
-        bestFloor: Math.max(1, p.bestFloor)
-      }));
-      runSignature.current = combatFingerprint(profile);
-      setBattleLoadout(Object.fromEntries(fighters.map(name => [name, [...profile.loadout[name]]])));
-      setParty(fighters.map(name => {
-        const f = characterRoster.find(f => f.name === name);
-        return trained(f, profile.xp[name] || 0, profile.awakened.includes(name));
-      }));
+        run: {
+          ...p.run,
+          status: "abandoned",
+          seq: p.run.seq + 1,
+          pending: null,
+          updatedAt: Date.now()
+        }
+      } : p);
+      setAbandonConfirm(false);
     }
+  }, "Abandonner"))), React.createElement("button", {
+    className: "pull-button",
+    disabled: profile.run?.status === "active" || fighters.length !== 2 || !fighters.every(name => profile.loadout[name]?.length) || !fighters.some(name => profile.loadout[name]?.some(offensive)),
+    onClick: startRun
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
   }, "La sauvegarde locale est indisponible dans ce navigateur."))));
@@ -2303,15 +2413,14 @@ function turnOrder(team, enemies, turn) {
 const planCost = plan => plan?.kind === "psych" ? psychs[plan.pin]?.cost || 0 : 0;
 const planName = plan => !plan ? "Choisir une action" : plan.kind === "guard" ? "Défense" : plan.kind === "burst" ? "Sync Burst" : psychs[plan.pin].name;
 function Battle({
+  initialRun,
   initialTeam,
   loadout,
   coins,
-  onDrops,
-  onExperience,
-  onReach,
-  onVictory,
+  onCheckpoint,
   leave
 }) {
+  const checkpointSeq = React.useRef(initialRun.seq);
   const [fullscreen, setFullscreen] = useState(false);
   useEffect(() => {
     const receive = event => {
@@ -2353,23 +2462,23 @@ function Battle({
     id: -1,
     time: 0
   });
-  const awarded = React.useRef(new Set());
-  const clearedWave = React.useRef(false);
-  const [earnedXp, setEarnedXp] = useState(0);
-  const [wave, setWave] = useState(1);
+  const awarded = React.useRef(new Set(initialRun.awarded));
+  const clearedWave = React.useRef(initialRun.reward);
+  const [earnedXp, setEarnedXp] = useState(initialRun.earnedXp);
+  const [wave, setWave] = useState(initialRun.wave);
   const [team, setTeam] = useState(initialTeam);
-  const [enemies, setEnemies] = useState(() => makeWave(1));
-  const [selected, setSelected] = useState(10);
-  const [energy, setEnergy] = useState(3);
-  const [groove, setGroove] = useState(28);
-  const [turn, setTurn] = useState(1);
+  const [enemies, setEnemies] = useState(initialRun.enemies);
+  const [selected, setSelected] = useState(initialRun.enemies.find(e => e.hp > 0)?.id || initialRun.wave * 10);
+  const [energy, setEnergy] = useState(initialRun.energy);
+  const [groove, setGroove] = useState(initialRun.groove);
+  const [turn, setTurn] = useState(initialRun.turn);
   const [message, setMessage] = useState("Choisis 1 action par personnage, puis lance le tour.");
   const [busy, setBusy] = useState(false);
   const [hitFeedback, setHitFeedback] = useState(null);
   const [impact, setImpact] = useState(null);
-  const [loot, setLoot] = useState([]);
+  const [loot, setLoot] = useState(initialRun.loot);
   const [dropReveal, setDropReveal] = useState([]);
-  const [reward, setReward] = useState(false);
+  const [reward, setReward] = useState(initialRun.reward);
   const [actor, setActor] = useState("");
   const [activeAction, setActiveAction] = useState(null);
   const inspected = enemies.find(enemy => enemy.id === inspectedId);
@@ -2442,12 +2551,20 @@ function Battle({
     setImpact(null);
     setHitFeedback(null);
   };
-  const resolveRound = async () => {
-    if (running.current || busy || reward || !ready) return;
+  const saveCheckpoint = (snapshot, gains = {}) => onCheckpoint({
+    ...snapshot,
+    version: 1,
+    id: initialRun.id,
+    seq: ++checkpointSeq.current,
+    updatedAt: Date.now(),
+    loadout
+  }, gains);
+  const resolveRound = async (recovery = null) => {
+    if (running.current || busy || reward || !recovery && !ready) return;
     running.current = true;
     const token = generation.current;
-    const steps = turnOrder(team, enemies, turn);
-    const choices = {
+    const steps = recovery?.steps || turnOrder(team, enemies, turn);
+    const choices = recovery?.choices || {
       ...plans
     };
     let fighters = team.map(f => ({
@@ -2456,10 +2573,10 @@ function Battle({
       monsters = enemies.map(e => ({
         ...e
       })),
-      en = energy - reserved,
+      en = recovery ? energy : energy - reserved,
       sync = groove;
-    const shields = new Map();
-    const performed = new Set();
+    const shields = new Map(recovery?.shields || []);
+    const performed = new Set(recovery?.performed || []);
     const drops = [];
     let xp = 0;
     const pause = () => new Promise(resolve => setTimeout(resolve, 700));
@@ -2476,12 +2593,34 @@ function Battle({
       } : f);
     };
     const passiveBonus = (pattern, base) => Math.max(0, ...fighters.filter(f => f.hp > 0).flatMap(f => (loadout[f.name] || []).map(id => psychs[id]).filter(pin => pattern.test(pin.psych)).map(pin => base * pinRankMultiplier(pin))));
+    const persist = (pending, gains = {}, nextTurn = turn) => saveCheckpoint({
+      status: fighters.every(f => f.hp <= 0) ? "lost" : wave === 100 && monsters.every(e => e.hp <= 0) ? "complete" : "active",
+      wave,
+      turn: nextTurn,
+      team: fighters,
+      enemies: monsters,
+      energy: en,
+      groove: sync,
+      reward: monsters.every(e => e.hp <= 0),
+      earnedXp: earnedXp + xp,
+      loot: [...loot, ...drops.map(pin => pin.name)],
+      awarded: [...awarded.current],
+      pending: fighters.every(f => f.hp <= 0) || monsters.every(e => e.hp <= 0) ? null : pending
+    }, gains);
     setBusy(true);
     setQueue(steps);
     setEnergy(en);
-    for (let index = 0; index < steps.length; index++) {
+    persist({
+      steps,
+      choices,
+      index: recovery?.index || 0,
+      shields: [...shields],
+      performed: [...performed]
+    });
+    for (let index = recovery?.index || 0; index < steps.length; index++) {
       if (token !== generation.current) return;
       if (!monsters.some(e => e.hp > 0) || !fighters.some(f => f.hp > 0)) break;
+      const gains = {};
       const step = steps[index];
       setQueueIndex(index);
       setHitFeedback(null);
@@ -2567,21 +2706,33 @@ function Battle({
         const earned = defeated.reduce((sum, e) => sum + e.xp, 0);
         if (earned) {
           xp += earned;
-          onExperience(earned);
+          gains.xp = earned;
           fighters = fighters.map(f => gainExperience(f, earned));
         }
         const found = defeated.filter(() => Math.random() < .25).map(() => pick(pinList));
         if (found.length) {
           drops.push(...found);
-          onDrops(found.map(pin => pin.id));
+          gains.pins = found.map(pin => pin.id);
         }
       }
+      if (monsters.every(e => e.hp <= 0) && !clearedWave.current) {
+        clearedWave.current = true;
+        gains.victory = true;
+      }
+      persist({
+        steps,
+        choices,
+        index: index + 1,
+        shields: [...shields],
+        performed: [...performed]
+      }, gains);
       publish();
       await pause();
     }
     if (token !== generation.current) return;
     const unused = Object.entries(choices).reduce((sum, [name, plan]) => sum + (performed.has(name) ? 0 : planCost(plan)), 0);
     en = Math.min(3, en + unused + 2);
+    persist(null, {}, fighters.some(f => f.hp > 0) && monsters.some(e => e.hp > 0) ? turn + 1 : turn);
     publish();
     resetPlanning();
     if (xp) setEarnedXp(old => old + xp);
@@ -2592,11 +2743,7 @@ function Battle({
       })));
     }
     if (!monsters.some(e => e.hp > 0)) {
-      if (!clearedWave.current) {
-        clearedWave.current = true;
-        onVictory(wave);
-        setReward(true);
-      }
+      setReward(true);
       setMessage("Vague terminée !");
     } else if (fighters.some(f => f.hp > 0)) {
       setTurn(old => old + 1);
@@ -2605,28 +2752,36 @@ function Battle({
     setBusy(false);
     running.current = false;
   };
-  const nextWave = boost => {
-    if (wave >= maxFloor) return;
-    if (boost === "vitality") {
-      setTeam(current => current.map(fighter => ({
-        ...fighter,
-        maxHp: fighter.maxHp + 18,
-        hp: fighter.maxHp + 18
-      })));
-    } else if (boost === "power") {
-      setGroove(value => Math.min(100, value + 35));
-      setTeam(current => current.map(fighter => ({
-        ...fighter,
-        hp: fighter.maxHp
-      })));
-    } else {
-      setEnergy(3);
-      setTeam(current => current.map(fighter => ({
-        ...fighter,
-        hp: fighter.maxHp
-      })));
+  useEffect(() => {
+    if (initialRun.pending) {
+      const timer = setTimeout(() => resolveRound(initialRun.pending), 0);
+      return () => clearTimeout(timer);
     }
-    const next = wave + 1;
+  }, []);
+  const nextWave = () => {
+    if (wave >= maxFloor || busy || !reward) return;
+    const next = wave + 1,
+      heal = difficultyAt(next).tier > difficultyAt(wave).tier;
+    const nextTeam = team.map(f => ({
+        ...f,
+        hp: heal ? f.maxHp : f.hp
+      })),
+      nextEnemies = makeWave(next);
+    saveCheckpoint({
+      status: "active",
+      wave: next,
+      turn: 1,
+      team: nextTeam,
+      enemies: nextEnemies,
+      energy,
+      groove,
+      reward: false,
+      earnedXp: 0,
+      loot: [],
+      awarded: [],
+      pending: null
+    });
+    setTeam(nextTeam);
     resetPlanning();
     setLoot([]);
     setEarnedXp(0);
@@ -2638,37 +2793,15 @@ function Battle({
     awarded.current.clear();
     clearedWave.current = false;
     setWave(next);
-    onReach(next);
     setTurn(1);
-    setEnemies(makeWave(next));
+    setEnemies(nextEnemies);
     setSelected(next * 10);
     setReward(false);
-    setMessage(isBossWave(next) ? `Wave ${next}. A boss Noise is closing in.` : `Wave ${next}. New Noise closing in.`);
+    setMessage(heal ? `Palier ${difficultyAt(next).tier} · Team entièrement soignée.` : `Étage ${next} · PV conservés.`);
   };
   const teamDefeated = team.every(fighter => fighter.hp <= 0);
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
-  const retry = () => {
-    resetPlanning();
-    setLoot([]);
-    setEarnedXp(0);
-    setInspectedId(null);
-    lastTap.current = {
-      id: -1,
-      time: 0
-    };
-    awarded.current.clear();
-    clearedWave.current = false;
-    setWave(1);
-    setTurn(1);
-    const saved = loadProfile();
-    setTeam(initialTeam.map(f => trained(characterRoster.find(base => base.name === f.name), saved.xp[f.name] || 0, saved.awakened.includes(f.name))));
-    setEnemies(makeWave(1));
-    setSelected(10);
-    setEnergy(3);
-    setGroove(28);
-    setMessage("Choisis 1 action par personnage, puis lance le tour.");
-  };
   return React.createElement("main", {
     className: "game-shell combat-hud"
   }, React.createElement("header", {
@@ -2692,9 +2825,8 @@ function Battle({
   }), " ", coins), React.createElement("button", {
     className: "currency",
     disabled: busy,
-    onClick: () => {
-      if (window.confirm("Quitter cette partie et revenir au duo ?")) leave();
-    }
+    onClick: leave,
+    title: "Mettre la run en pause et revenir \xE0 Team"
   }, "Mon duo"), React.createElement("button", {
     className: "sound-button",
     "aria-label": "Sound settings"
@@ -2893,7 +3025,7 @@ function Battle({
   })), React.createElement("button", {
     className: "resolve-round",
     disabled: busy || reward || !ready || teamDefeated,
-    onClick: resolveRound
+    onClick: () => resolveRound()
   }, busy ? "Tour en cours…" : "Lancer le tour")))), React.createElement("aside", {
     className: "route-panel"
   }, React.createElement("div", {
@@ -2945,32 +3077,19 @@ function Battle({
     className: "overlay"
   }, React.createElement("div", {
     className: "modal reward-modal"
-  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, wave === maxFloor ? "Étage 100 · Ascension terminée !" : "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +", earnedXp, " XP par personnage."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), wave < maxFloor ? React.createElement("div", {
-    className: "reward-grid"
-  }, React.createElement("button", {
-    onClick: () => nextWave("power")
-  }, React.createElement(Icon, {
-    name: "bolt"
-  }), React.createElement("b", null, "HOT STREAK"), React.createElement("span", null, "Start with +35 Groove")), React.createElement("button", {
-    onClick: () => nextWave("vitality")
-  }, React.createElement(Icon, {
-    name: "heart"
-  }), React.createElement("b", null, "SECOND WIND"), React.createElement("span", null, "Max HP +18")), React.createElement("button", {
-    onClick: () => nextWave("energy")
-  }, React.createElement(Icon, {
-    name: "star"
-  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))) : React.createElement("button", {
+  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, wave === maxFloor ? "Étage 100 · Ascension terminée !" : "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +", earnedXp, " XP par personnage."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), wave < maxFloor ? React.createElement(React.Fragment, null, React.createElement("p", null, difficultyAt(wave + 1).tier > difficultyAt(wave).tier ? "Nouveau palier : soin complet de la Team." : "Les PV sont conservés. Prochain soin au changement de palier."), React.createElement("button", {
+    className: "fullscreen-button",
+    onClick: nextWave
+  }, "Continuer \xB7 \xC9tage ", wave + 1)) : React.createElement("button", {
     className: "fullscreen-button",
     onClick: leave
   }, "Retour \xE0 Team \xB7 Voir les qu\xEAtes"))), teamDefeated && !busy && React.createElement("div", {
     className: "overlay"
   }, React.createElement("div", {
     className: "modal game-over"
-  }, React.createElement("small", null, "RUN TERMINATED"), React.createElement("h2", null, "ERASED"), React.createElement("p", null, "You reached wave ", wave, ". The streets will remember your score."), React.createElement("button", {
-    onClick: retry
-  }, "RESTART RUN"), React.createElement("button", {
+  }, React.createElement("small", null, "RUN TERMINATED"), React.createElement("h2", null, "ERASED"), React.createElement("p", null, "You reached wave ", wave, ". The streets will remember your score."), React.createElement("p", null, "La reprise de cette run a \xE9t\xE9 supprim\xE9e."), React.createElement("button", {
     onClick: leave
-  }, "Changer de duo"))));
+  }, "Retour \xE0 Team"))));
 }
 document.addEventListener("click", event => {
   const button = event.target?.closest?.("button");
