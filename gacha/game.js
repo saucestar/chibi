@@ -225,7 +225,39 @@ function Sprite({
     "aria-label": fighter.name
   });
 }
-const psychs = Object.fromEntries(pinList.map(pin => [pin.id, pin]));
+const basePsych = {
+  NEKU: "pin266",
+  SHIKI: "groove-pawn",
+  BEAT: "sk8-combo",
+  JOSHUA: "joshua-phone"
+};
+const partnerPsychs = [{
+  id: "groove-pawn",
+  name: "Groove Pawn",
+  psych: "Mr. Mew",
+  kind: "special",
+  power: 22
+}, {
+  id: "sk8-combo",
+  name: "Beat Partner Pin",
+  psych: "SK8 Combo",
+  kind: "physical",
+  power: 22
+}, {
+  id: "joshua-phone",
+  name: "Joshua Partner Pin",
+  psych: "Chute d’objets",
+  kind: "special",
+  power: 22
+}].map(pin => ({
+  ...pin,
+  number: "",
+  row: -1,
+  col: 0,
+  drain: false,
+  cost: 1
+}));
+const psychs = Object.fromEntries([...pinList, ...partnerPsychs].map(pin => [pin.id, pin]));
 const types = {
   physical: "ATK",
   special: "ATK SPE",
@@ -236,6 +268,23 @@ const types = {
 function PinIcon({
   pin
 }) {
+  if (pin.row < 0) return React.createElement("i", {
+    "aria-hidden": "true",
+    style: {
+      display: "grid",
+      placeItems: "center",
+      width: 28,
+      height: 28,
+      borderRadius: "50%",
+      background: "var(--indigo)",
+      color: "white",
+      fontStyle: "normal"
+    }
+  }, {
+    "groove-pawn": "♟",
+    "sk8-combo": "★",
+    "joshua-phone": "☎"
+  }[pin.id]);
   return React.createElement("i", {
     "aria-hidden": "true",
     style: {
@@ -290,14 +339,29 @@ function pick(items) {
 }
 const offensive = id => ["physical", "special"].includes(psychs[id]?.kind);
 const profileKey = "chibi.reapers-run.party.v1";
+function assignBasePsychs(profile) {
+  const pins = [...profile.pins],
+    loadout = {
+      ...profile.loadout
+    };
+  if (profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
+  for (const name of profile.owned) {
+    if (!pins.includes(loadout[name]) && loadout[name] !== basePsych[name]) loadout[name] = basePsych[name];
+  }
+  return {
+    ...profile,
+    pins,
+    loadout
+  };
+}
 function loadProfile() {
   try {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
     const equipped = [...new Set(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
-    const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id => Object.hasOwn(psychs, id));
+    const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return {
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
       owned,
       equipped,
       pins,
@@ -306,9 +370,9 @@ function loadProfile() {
       wins: Object.fromEntries(owned.map(n => [n, Math.max(0, Math.floor(Number(saved.wins?.[n]) || 0))])),
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
-      loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => pins.includes(String(id)))),
+      loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name, id]) => owned.includes(name) && (pins.includes(String(id)) || basePsych[name] === id))),
       coins: saved.coins
-    };
+    });
   } catch {}
   return {
     pins: [],
@@ -415,7 +479,7 @@ function App() {
     }
     displayProfile(next);
   };
-  const starter = p => p.owned.length < 2 || !p.pins.some(offensive);
+  const starter = p => p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name => offensive(basePsych[name])));
   const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
   const openWish = (id, count) => {
@@ -472,7 +536,7 @@ function App() {
           copies: next.copies[name]
         });
       }
-      return next;
+      return assignBasePsychs(next);
     });
     if (draws.length) {
       turning.current = true;
@@ -672,7 +736,7 @@ function App() {
     value: profile.loadout[name] || "",
     onChange: e => {
       const psych = e.target.value;
-      setProfile(p => p.pins.includes(psych) ? {
+      setProfile(p => p.pins.includes(psych) || basePsych[name] === psych ? {
         ...p,
         loadout: {
           ...p.loadout,
@@ -683,7 +747,9 @@ function App() {
   }, React.createElement("option", {
     value: "",
     disabled: true
-  }, "Choisir un psych"), profile.pins.map(id => [id, psychs[id]]).map(([id, item]) => React.createElement("option", {
+  }, "Choisir un psych"), React.createElement("option", {
+    value: basePsych[name]
+  }, psychs[basePsych[name]].name.replace(" (Pin)", ""), " \xB7 Psych de base \xB7 ", psychs[basePsych[name]].cost, " EN"), profile.pins.filter(id => id !== basePsych[name]).map(id => [id, psychs[id]]).map(([id, item]) => React.createElement("option", {
     key: id,
     value: id
   }, "#", item.number, " ", item.name, " \xB7 ", types[item.kind], " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
