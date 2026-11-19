@@ -149,10 +149,7 @@ function Sprite({
   action?: Action;
   combat?: boolean;
 }) {
-  const isAttacking =
-    combat &&
-    ((fighter.name === "NEKU" && ["pyro", "shockwave", "burst"].includes(action ?? "")) ||
-      ((fighter.name === "BEAT" || fighter.name === "SHIKI") && ["shockwave", "burst"].includes(action ?? "")));
+  const isAttacking = combat && !!fighter.attackSprite && ["pyro", "shockwave", "burst"].includes(action ?? "");
   const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
   const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
 
@@ -170,7 +167,14 @@ function Sprite({
   );
 }
 
-type Profile = { owned: string[]; equipped: string[]; coins: number };
+const psychs = {
+  pyro: { name: "Fiery Spirit", image: fierySpiritPin, cost: 1 },
+  shockwave: { name: "Masamune", image: masamunePin, cost: 2 },
+  heal: { name: "Konohana", image: konohanaPin, cost: 2 },
+};
+type Psych = keyof typeof psychs;
+const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
+type Profile = { owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function loadProfile(): Profile {
@@ -178,47 +182,62 @@ function loadProfile(): Profile {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
     const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped, coins: saved.coins };
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped, loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))), coins: saved.coins };
   } catch {}
-  return { owned: [], equipped: [], coins: 180 };
+  return { owned: [], equipped: [], loadout: {}, coins: 180 };
 }
 
 function App() {
-  const [profile, setProfile] = useState(loadProfile);
+  const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState("");
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key === profileKey) displayProfile(loadProfile());
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+  const setProfile = (update: (old: Profile) => Profile) => {
+    let next = update(profile);
     try {
-      localStorage.setItem(profileKey, JSON.stringify(profile));
+      next = update(localStorage.getItem(profileKey) ? loadProfile() : profile);
+      localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
     } catch { setSaveError(true); }
-  }, [profile]);
+    displayProfile(next);
+  };
 
   const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
   const price = profile.owned.length < 2 ? 0 : 100;
   const recruit = () => {
     if (!missing.length || profile.coins < price) return;
     const recruit = missing[Math.floor(Math.random() * missing.length)];
-    setProfile({ ...profile, coins: profile.coins - price, owned: [...profile.owned, recruit.name] });
-    setResult(recruit.name + " rejoint ta collection.");
+    setProfile(p => p.owned.includes(recruit.name) || p.coins < price ? p : ({ ...p, coins: p.coins - price, owned: [...p.owned, recruit.name] }));
+    setResult(recruit.name);
   };
   const equip = (name: string) => {
     const selected = profile.equipped.includes(name);
     if (!profile.owned.includes(name) || (!selected && profile.equipped.length >= 2)) return;
-    setProfile({ ...profile, equipped: selected ? profile.equipped.filter(n => n !== name) : [...profile.equipped, name] });
+    setProfile(p => ({ ...p, equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2) }));
   };
-  if (party) return <Battle initialTeam={party} coins={profile.coins}
+  if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
     setCoins={(update) => setProfile(p => ({ ...p, coins: update(p.coins) }))}
     leave={() => { setParty(null); setResult(""); }} />;
-  return <main className="game-shell party-lobby"><section>
-    <h1>Reaper's Run</h1>
+  if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Gacha personnages</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
     {missing.length > 0 && <><p>Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits.</p>
       <button className="pull-button" disabled={profile.coins < price} onClick={recruit}>
         {price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces"}</button></>}
-    <p aria-live="polite">{result}</p>
+    <div aria-live="polite">{result && <div key={result} className="recruit-reveal">
+      <Sprite fighter={characterRoster.find(f => f.name === result)!}/><strong>{result}</strong><span>Recrue débloquée</span>
+    </div>}</div>
+    {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
+  </section></main>;
+  return <main className="game-shell party-lobby"><section><h1>Préparer le duo</h1>
+    {profile.owned.length < 2 && <p>Débloque deux personnages dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
     <h2>Ton duo · {profile.equipped.length} / 2</h2>
     <div className="party-list">{characterRoster.map(f => {
       const owned = profile.owned.includes(f.name), selected = profile.equipped.includes(f.name);
@@ -228,13 +247,21 @@ function App() {
         <span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
       </button>;
     })}</div>
-    <button className="pull-button" disabled={profile.equipped.length !== 2}
+    {profile.equipped.map(name => <label className="psych-choice" key={name}>Psych de {name}
+      <select value={profile.loadout[name] || ""} onChange={e => {
+        const psych = e.target.value as Psych;
+        setProfile(p => ({ ...p, loadout: { ...p.loadout, [name]: psych } }));
+      }}><option value="" disabled>Choisir un psych</option>
+        {Object.entries(psychs).map(([id, item]) => <option key={id} value={id}>{item.name} · {item.cost} EN</option>)}
+      </select></label>)}
+    {profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && <p>Équipe au moins un psych offensif.</p>}
+    <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal")}
       onClick={() => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)!))}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }
 
-function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[]; coins: number; setCoins: (update: (n: number) => number) => void; leave: () => void }) {
+function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; setCoins: (update: (n: number) => number) => void; leave: () => void }) {
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
@@ -247,8 +274,7 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState<number | null>(null);
   const [reward, setReward] = useState(false);
-  const [summon, setSummon] = useState(false);
-  const [summonResult, setSummonResult] = useState<string | null>(null);
+  const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
   const [activeAction, setActiveAction] = useState<Action>(null);
 
@@ -385,15 +411,6 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
     setMessage(isBossWave(next) ? `Wave ${next}. A boss Noise is closing in.` : `Wave ${next}. New Noise closing in.`);
   };
 
-  const pull = () => {
-    if (coins < 100) return;
-    setCoins((value) => value - 100);
-    const result = Math.random() > 0.7 ? "RARE PIN: BLACK METEOR" : "PIN: SHOCKWAVE";
-    setSummonResult(result);
-    if (result.startsWith("RARE")) setGroove(100);
-    else setEnergy(3);
-  };
-
   const teamDefeated = team.every((fighter) => fighter.hp <= 0);
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
@@ -423,15 +440,7 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
           <span>
             <Icon name="star" /> SCORE <b>{String((wave - 1) * 2350).padStart(6, "0")}</b>
           </span>
-          <button
-            className="currency"
-            onClick={() => {
-              setSummon(true);
-              setSummonResult(null);
-            }}
-          >
-            <Icon name="coin" /> {coins} <small>SUMMON</small>
-          </button>
+          <span className="currency"><Icon name="coin" /> {coins}</span>
           <button className="currency" disabled={busy} onClick={() => { if (window.confirm("Quitter cette partie et revenir au duo ?")) leave(); }}>Mon duo</button>
           <button className="sound-button" aria-label="Sound settings">
             <i />
@@ -536,7 +545,7 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
                   className={`arena-hero ${fighter.hp <= 0 ? "defeated" : ""}`}
                   key={fighter.name}
                 >
-                  <Sprite fighter={fighter} action={activeAction} combat />
+                  <Sprite fighter={fighter} action={activeAction === "burst" || fighter.name === actor ? activeAction : null} combat />
                   <span>{fighter.name}</span>
                 </div>
               ))}
@@ -557,39 +566,17 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
               </div>
             </div>
             <div className="actions">
-              <button
-                disabled={busy || energy < 1}
-                onClick={() => dealDamage(24, "FIERY SPIRIT", 1, 18, "pyro")}
-                title="Fiery Spirit, Spirited Fire (#155) — Pyrokinesis"
-              >
-                <span className="action-icon pin-badge">
-                  <img src={fierySpiritPin} alt="Fiery Spirit pin" />
-                </span>
-                <b>FIERY SPIRIT</b>
-                <small>PYROKINESIS · 1 EN</small>
-              </button>
-              <button
-                disabled={busy || energy < 2}
-                onClick={() => dealDamage(44, "MASAMUNE", 2, 28, "shockwave")}
-                title="Masamune (#081) — Shockwave"
-              >
-                <span className="action-icon pin-badge">
-                  <img src={masamunePin} alt="Masamune pin" />
-                </span>
-                <b>MASAMUNE</b>
-                <small>SHOCKWAVE · 2 EN</small>
-              </button>
-              <button
-                disabled={busy || energy < 2}
-                onClick={heal}
-                title="Konohana (#101) — Cure Drink"
-              >
-                <span className="action-icon pin-badge">
-                  <img src={konohanaPin} alt="Konohana pin" />
-                </span>
-                <b>KONOHANA</b>
-                <small>CURE DRINK · 2 EN</small>
-              </button>
+              {team.map(f => {
+                const id = loadout[f.name], pin = psychs[id];
+                return <button key={f.name} disabled={busy || f.hp <= 0 || energy < pin.cost} onClick={() => {
+                  setActor(f.name);
+                  if (id === "heal") heal();
+                  else dealDamage(id === "pyro" ? 24 : 44, pin.name, pin.cost, id === "pyro" ? 18 : 28, id);
+                }}>
+                  <span className="action-icon pin-badge"><img src={pin.image} alt="" /></span>
+                  <b>{pin.name}</b><small>{f.name} · {pin.cost} EN</small>
+                </button>;
+              })}
               <button disabled={busy} onClick={guard}>
                 <span className="action-icon gray">
                   <Icon name="guard" />
@@ -647,36 +634,6 @@ function Battle({ initialTeam, coins, setCoins, leave }: { initialTeam: Fighter[
                 <span>Restore HP & Energy</span>
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {summon && (
-        <div className="overlay">
-          <div className="modal summon-modal">
-            <button className="close" onClick={() => setSummon(false)}>
-              ×
-            </button>
-            <small>UNDERGROUND GACHA</small>
-            <h2>PIN DROP</h2>
-            <div className={`pin-orb ${summonResult ? "revealed" : ""}`}>
-              <Icon name={summonResult?.startsWith("RARE") ? "star" : "bolt"} />
-            </div>
-            {summonResult ? (
-              <>
-                <strong>{summonResult}</strong>
-                <p>
-                  {summonResult.startsWith("RARE")
-                    ? "Groove instantly charged to 100%."
-                    : "Energy restored to maximum."}
-                </p>
-              </>
-            ) : (
-              <p>Spend 100¥ for a random combat pin.</p>
-            )}
-            <button className="pull-button" onClick={pull} disabled={coins < 100}>
-              <Icon name="coin" /> {summonResult ? "PULL AGAIN · 100" : "SUMMON · 100"}
-            </button>
           </div>
         </div>
       )}

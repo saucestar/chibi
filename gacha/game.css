@@ -1221,3 +1221,13 @@ button, input { font: inherit; }
 .party-list button[aria-pressed=true] { border-color: #ff602a; }
 .party-list button:disabled .hero-sprite { filter: grayscale(1); }
 .party-lobby .pull-button:disabled { opacity: .48; }
+
+.recruit-reveal { position:relative; overflow:hidden; isolation:isolate; display:grid; justify-items:center; padding:20px; margin-top:18px; border:1px solid #fd824e; background:#20262a; animation:recruit-in .65s ease-out both; }
+.recruit-reveal::before { content:""; position:absolute; inset:-100%; z-index:-1; background:conic-gradient(transparent 15%,#874528,transparent 45%,#435b60,transparent 80%); animation:recruit-spin 1.1s ease-out both; }
+.recruit-reveal strong { font:800 30px "Barlow Condensed",sans-serif; }
+@keyframes recruit-in { from { opacity:0; transform:scale(.85); } 65% { transform:scale(1.025); } to { opacity:1; transform:scale(1); } }
+@keyframes recruit-spin { from { transform:rotate(-120deg); } to { transform:rotate(0); } }
+.psych-choice { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:12px 0; }
+.psych-choice select { background:#242d30; color:white; padding:8px; }
+.party-lobby a { color:#ffad79; }
+@media (prefers-reduced-motion:reduce) { .recruit-reveal,.recruit-reveal::before { animation:none; } }

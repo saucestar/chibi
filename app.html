@@ -382,17 +382,8 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
   </section>
 
   <!-- GACHA: the collectible card game (built together, its own cards and art) -->
-  <section class="page" data-page="gacha" aria-label="Gacha">
-    <div class="pn wide">
-      <div class="chip"><i>13</i>GACHA</div><div class="win"><b></b><b></b></div><div class="tape"></div>
-      <div class="big"><b>BIENTÔT</b><strong>✦ ✦ ✦</strong></div>
-      <p class="txt">Le jeu de cartes à collectionner de TWEWY Co-op arrive ici : tirages, collection, decks et duels, avec vos propres cartes.</p>
-      <div class="lp-list" style="--cols:minmax(0,1fr) 90px"><div class="lp-hrow"><span>Au programme</span><span class="r">Statut</span></div><div class="lp-body">
-        <div class="lp-row"><span><i class="dot acid"></i>Tirages de cartes</span><span class="r dim">en préparation</span></div>
-        <div class="lp-row"><span><i class="dot acid"></i>Collection sauvegardée sur ton compte</span><span class="r dim">en préparation</span></div>
-        <div class="lp-row"><span><i class="dot acid"></i>Decks et duels</span><span class="r dim">en préparation</span></div>
-      </div></div>
-    </div>
+  <section class="page game-page" data-page="gacha" aria-label="Gacha">
+    <iframe class="game-frame" src="gacha/index.html?vue=gacha" title="Gacha personnages" loading="lazy"></iframe>
   </section>
 
   <section class="page game-page" data-page="game" aria-label="Jeu Reaper's Run">
@@ -483,6 +474,7 @@ setAccent(SWATCHES.includes(savedAc) ? savedAc : SWATCHES[0]);
 // ---------------- tabs
 const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
 const loaded = {};
+window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 function show(p){
   if(!PAGE_NAMES[p]) p = 'home';
   document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p));

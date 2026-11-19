@@ -206,7 +206,7 @@ function Sprite({
   action = null,
   combat = false
 }) {
-  const isAttacking = combat && (fighter.name === "NEKU" && ["pyro", "shockwave", "burst"].includes(action ?? "") || (fighter.name === "BEAT" || fighter.name === "SHIKI") && ["shockwave", "burst"].includes(action ?? ""));
+  const isAttacking = combat && !!fighter.attackSprite && ["pyro", "shockwave", "burst"].includes(action ?? "");
   const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
   const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
   return React.createElement("div", {
@@ -225,6 +225,24 @@ function Sprite({
     "aria-label": fighter.name
   });
 }
+const psychs = {
+  pyro: {
+    name: "Fiery Spirit",
+    image: fierySpiritPin,
+    cost: 1
+  },
+  shockwave: {
+    name: "Masamune",
+    image: masamunePin,
+    cost: 2
+  },
+  heal: {
+    name: "Konohana",
+    image: konohanaPin,
+    cost: 2
+  }
+};
+const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const profileKey = "chibi.reapers-run.party.v1";
 function loadProfile() {
   try {
@@ -234,50 +252,63 @@ function loadProfile() {
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return {
       owned,
       equipped,
+      loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))),
       coins: saved.coins
     };
   } catch {}
   return {
     owned: [],
     equipped: [],
+    loadout: {},
     coins: 180
   };
 }
 function App() {
-  const [profile, setProfile] = useState(loadProfile);
+  const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState(null);
   const [result, setResult] = useState("");
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
+    const sync = event => {
+      if (event.key === profileKey) displayProfile(loadProfile());
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+  const setProfile = update => {
+    let next = update(profile);
     try {
-      localStorage.setItem(profileKey, JSON.stringify(profile));
+      next = update(localStorage.getItem(profileKey) ? loadProfile() : profile);
+      localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
     } catch {
       setSaveError(true);
     }
-  }, [profile]);
+    displayProfile(next);
+  };
   const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
   const price = profile.owned.length < 2 ? 0 : 100;
   const recruit = () => {
     if (!missing.length || profile.coins < price) return;
     const recruit = missing[Math.floor(Math.random() * missing.length)];
-    setProfile({
-      ...profile,
-      coins: profile.coins - price,
-      owned: [...profile.owned, recruit.name]
+    setProfile(p => p.owned.includes(recruit.name) || p.coins < price ? p : {
+      ...p,
+      coins: p.coins - price,
+      owned: [...p.owned, recruit.name]
     });
-    setResult(recruit.name + " rejoint ta collection.");
+    setResult(recruit.name);
   };
   const equip = name => {
     const selected = profile.equipped.includes(name);
     if (!profile.owned.includes(name) || !selected && profile.equipped.length >= 2) return;
-    setProfile({
-      ...profile,
-      equipped: selected ? profile.equipped.filter(n => n !== name) : [...profile.equipped, name]
-    });
+    setProfile(p => ({
+      ...p,
+      equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2)
+    }));
   };
   if (party) return React.createElement(Battle, {
     initialTeam: party,
+    loadout: profile.loadout,
     coins: profile.coins,
     setCoins: update => setProfile(p => ({
       ...p,
@@ -288,15 +319,28 @@ function App() {
       setResult("");
     }
   });
-  return React.createElement("main", {
+  if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h1", null, "Reaper's Run"), React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), missing.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, "Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits."), React.createElement("button", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), missing.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, "Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits."), React.createElement("button", {
     className: "pull-button",
     disabled: profile.coins < price,
     onClick: recruit
-  }, price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces")), React.createElement("p", {
+  }, price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces")), React.createElement("div", {
     "aria-live": "polite"
-  }, result), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {
+  }, result && React.createElement("div", {
+    key: result,
+    className: "recruit-reveal"
+  }, React.createElement(Sprite, {
+    fighter: characterRoster.find(f => f.name === result)
+  }), React.createElement("strong", null, result), React.createElement("span", null, "Recrue d\xE9bloqu\xE9e"))), saveError && React.createElement("p", {
+    role: "alert"
+  }, "Sauvegarde locale indisponible.")));
+  return React.createElement("main", {
+    className: "game-shell party-lobby"
+  }, React.createElement("section", null, React.createElement("h1", null, "Pr\xE9parer le duo"), profile.owned.length < 2 && React.createElement("p", null, "D\xE9bloque deux personnages dans ", React.createElement("a", {
+    href: "../app.html#gacha",
+    target: "_top"
+  }, "l\u2019onglet Gacha"), "."), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {
     className: "party-list"
   }, characterRoster.map(f => {
     const owned = profile.owned.includes(f.name),
@@ -309,9 +353,30 @@ function App() {
     }, React.createElement(Sprite, {
       fighter: f
     }), React.createElement("strong", null, f.name), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
-  })), React.createElement("button", {
+  })), profile.equipped.map(name => React.createElement("label", {
+    className: "psych-choice",
+    key: name
+  }, "Psych de ", name, React.createElement("select", {
+    value: profile.loadout[name] || "",
+    onChange: e => {
+      const psych = e.target.value;
+      setProfile(p => ({
+        ...p,
+        loadout: {
+          ...p.loadout,
+          [name]: psych
+        }
+      }));
+    }
+  }, React.createElement("option", {
+    value: "",
+    disabled: true
+  }, "Choisir un psych"), Object.entries(psychs).map(([id, item]) => React.createElement("option", {
+    key: id,
+    value: id
+  }, item.name, " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
     className: "pull-button",
-    disabled: profile.equipped.length !== 2,
+    disabled: profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal"),
     onClick: () => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)))
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
@@ -319,6 +384,7 @@ function App() {
 }
 function Battle({
   initialTeam,
+  loadout,
   coins,
   setCoins,
   leave
@@ -334,8 +400,7 @@ function Battle({
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState(null);
   const [reward, setReward] = useState(false);
-  const [summon, setSummon] = useState(false);
-  const [summonResult, setSummonResult] = useState(null);
+  const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
   const livingEnemies = enemies.filter(enemy => enemy.hp > 0);
@@ -470,13 +535,6 @@ function Battle({
     setReward(false);
     setMessage(isBossWave(next) ? `Wave ${next}. A boss Noise is closing in.` : `Wave ${next}. New Noise closing in.`);
   };
-  const pull = () => {
-    if (coins < 100) return;
-    setCoins(value => value - 100);
-    const result = Math.random() > 0.7 ? "RARE PIN: BLACK METEOR" : "PIN: SHOCKWAVE";
-    setSummonResult(result);
-    if (result.startsWith("RARE")) setGroove(100);else setEnergy(3);
-  };
   const teamDefeated = team.every(fighter => fighter.hp <= 0);
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
@@ -502,15 +560,11 @@ function Battle({
     className: "run-stats"
   }, React.createElement("span", null, React.createElement(Icon, {
     name: "star"
-  }), " SCORE ", React.createElement("b", null, String((wave - 1) * 2350).padStart(6, "0"))), React.createElement("button", {
-    className: "currency",
-    onClick: () => {
-      setSummon(true);
-      setSummonResult(null);
-    }
+  }), " SCORE ", React.createElement("b", null, String((wave - 1) * 2350).padStart(6, "0"))), React.createElement("span", {
+    className: "currency"
   }, React.createElement(Icon, {
     name: "coin"
-  }), " ", coins, " ", React.createElement("small", null, "SUMMON")), React.createElement("button", {
+  }), " ", coins), React.createElement("button", {
     className: "currency",
     disabled: busy,
     onClick: () => {
@@ -600,7 +654,7 @@ function Battle({
     key: fighter.name
   }, React.createElement(Sprite, {
     fighter: fighter,
-    action: activeAction,
+    action: activeAction === "burst" || fighter.name === actor ? activeAction : null,
     combat: true
   }), React.createElement("span", null, fighter.name)))), React.createElement("div", {
     className: "message-strip"
@@ -613,34 +667,23 @@ function Battle({
     className: pip < energy ? "full" : ""
   })))), React.createElement("div", {
     className: "actions"
-  }, React.createElement("button", {
-    disabled: busy || energy < 1,
-    onClick: () => dealDamage(24, "FIERY SPIRIT", 1, 18, "pyro"),
-    title: "Fiery Spirit, Spirited Fire (#155) \u2014 Pyrokinesis"
-  }, React.createElement("span", {
-    className: "action-icon pin-badge"
-  }, React.createElement("img", {
-    src: fierySpiritPin,
-    alt: "Fiery Spirit pin"
-  })), React.createElement("b", null, "FIERY SPIRIT"), React.createElement("small", null, "PYROKINESIS \xB7 1 EN")), React.createElement("button", {
-    disabled: busy || energy < 2,
-    onClick: () => dealDamage(44, "MASAMUNE", 2, 28, "shockwave"),
-    title: "Masamune (#081) \u2014 Shockwave"
-  }, React.createElement("span", {
-    className: "action-icon pin-badge"
-  }, React.createElement("img", {
-    src: masamunePin,
-    alt: "Masamune pin"
-  })), React.createElement("b", null, "MASAMUNE"), React.createElement("small", null, "SHOCKWAVE \xB7 2 EN")), React.createElement("button", {
-    disabled: busy || energy < 2,
-    onClick: heal,
-    title: "Konohana (#101) \u2014 Cure Drink"
-  }, React.createElement("span", {
-    className: "action-icon pin-badge"
-  }, React.createElement("img", {
-    src: konohanaPin,
-    alt: "Konohana pin"
-  })), React.createElement("b", null, "KONOHANA"), React.createElement("small", null, "CURE DRINK \xB7 2 EN")), React.createElement("button", {
+  }, team.map(f => {
+    const id = loadout[f.name],
+      pin = psychs[id];
+    return React.createElement("button", {
+      key: f.name,
+      disabled: busy || f.hp <= 0 || energy < pin.cost,
+      onClick: () => {
+        setActor(f.name);
+        if (id === "heal") heal();else dealDamage(id === "pyro" ? 24 : 44, pin.name, pin.cost, id === "pyro" ? 18 : 28, id);
+      }
+    }, React.createElement("span", {
+      className: "action-icon pin-badge"
+    }, React.createElement("img", {
+      src: pin.image,
+      alt: ""
+    })), React.createElement("b", null, pin.name), React.createElement("small", null, f.name, " \xB7 ", pin.cost, " EN"));
+  }), React.createElement("button", {
     disabled: busy,
     onClick: guard
   }, React.createElement("span", {
@@ -682,24 +725,7 @@ function Battle({
     onClick: () => nextWave("energy")
   }, React.createElement(Icon, {
     name: "star"
-  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))))), summon && React.createElement("div", {
-    className: "overlay"
-  }, React.createElement("div", {
-    className: "modal summon-modal"
-  }, React.createElement("button", {
-    className: "close",
-    onClick: () => setSummon(false)
-  }, "\xD7"), React.createElement("small", null, "UNDERGROUND GACHA"), React.createElement("h2", null, "PIN DROP"), React.createElement("div", {
-    className: `pin-orb ${summonResult ? "revealed" : ""}`
-  }, React.createElement(Icon, {
-    name: summonResult?.startsWith("RARE") ? "star" : "bolt"
-  })), summonResult ? React.createElement(React.Fragment, null, React.createElement("strong", null, summonResult), React.createElement("p", null, summonResult.startsWith("RARE") ? "Groove instantly charged to 100%." : "Energy restored to maximum.")) : React.createElement("p", null, "Spend 100\xA5 for a random combat pin."), React.createElement("button", {
-    className: "pull-button",
-    onClick: pull,
-    disabled: coins < 100
-  }, React.createElement(Icon, {
-    name: "coin"
-  }), " ", summonResult ? "PULL AGAIN · 100" : "SUMMON · 100"))), teamDefeated && React.createElement("div", {
+  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))))), teamDefeated && React.createElement("div", {
     className: "overlay"
   }, React.createElement("div", {
     className: "modal game-over"
