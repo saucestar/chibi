@@ -763,3 +763,6 @@
 }
 .sprite-frames-20 { animation:cloud-idle 2.5s steps(1,end) infinite; }
 @media(prefers-reduced-motion:reduce) { .sprite-frames-20 { animation:none; } }
+
+.save-sync-notice { margin:0; padding:8px 12px; color:#fff4d7; background:#241a3d; font:600 12px/1.4 Segoe UI,sans-serif; }
+body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3px; z-index:12; max-width:60%; border-radius:8px; font-size:9px; }

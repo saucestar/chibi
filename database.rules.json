@@ -2,183 +2,352 @@
   "rules": {
     ".read": false,
     ".write": false,
-
     "assignments": {
       ".read": "auth != null",
       "$chibi": {
         ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId && root.child('settings/selectionClosed').val() !== true && root.child('hiddenChibis').child($chibi).val() !== true) || (!newData.exists() && data.child('discordId').val() === auth.token.discordId))",
         ".validate": "newData.hasChildren(['discordId', 'discordUsername'])",
-        "discordId": { ".validate": "newData.isString() && newData.val().length <= 25" },
-        "discordUsername": { ".validate": "newData.isString() && newData.val().length <= 64" },
-        "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
-        "$other": { ".validate": false }
+        "discordId": {
+          ".validate": "newData.isString() && newData.val().length <= 25"
+        },
+        "discordUsername": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "posts": {
       ".read": "auth != null",
       "$chibi": {
         "$post": {
           ".write": "auth != null && (auth.token.admin === true || root.child('assignments').child($chibi).child('discordId').val() === auth.token.discordId)",
           ".validate": "newData.hasChildren(['image', 'createdAt'])",
-          "image": { ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 700000" },
-          "caption": { ".validate": "newData.isString() && newData.val().length <= 150" },
-          "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+          "image": {
+            ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length <= 700000"
+          },
+          "caption": {
+            ".validate": "newData.isString() && newData.val().length <= 150"
+          },
+          "createdAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+          },
           "likes": {
             "$uid": {
               ".write": "auth != null && auth.token.discordId === $uid",
               ".validate": "newData.val() === true"
             }
           },
-          "$other": { ".validate": false }
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
-
     "profiles": {
       ".read": "auth != null",
       "$chibi": {
         ".write": "auth != null && (auth.token.admin === true || root.child('assignments').child($chibi).child('discordId').val() === auth.token.discordId)",
-        "bio": { ".validate": "newData.isString() && newData.val().length <= 300" },
-        "$other": { ".validate": false }
+        "bio": {
+          ".validate": "newData.isString() && newData.val().length <= 300"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "chat": {
       ".read": "auth != null",
-      ".indexOn": ["createdAt"],
+      ".indexOn": [
+        "createdAt"
+      ],
       "$msg": {
         ".write": "auth != null && (auth.token.admin === true || (!data.exists() && newData.child('discordId').val() === auth.token.discordId) || (data.child('discordId').val() === auth.token.discordId && !newData.exists()))",
         ".validate": "newData.hasChildren(['text', 'discordId', 'createdAt'])",
-        "text": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000" },
-        "discordId": { ".validate": "newData.isString()" },
-        "discordUsername": { ".validate": "newData.isString() && newData.val().length <= 64" },
-        "chibiId": { ".validate": "newData.isString() && newData.val().length <= 64" },
-        "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
-        "$other": { ".validate": false }
+        "text": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000"
+        },
+        "discordId": {
+          ".validate": "newData.isString()"
+        },
+        "discordUsername": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "chibiId": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "coop": {
       ".read": "auth != null",
       "$uid": {
         ".write": "auth != null && (auth.token.discordId === $uid || (auth.token.admin === true && !newData.exists()))",
         ".validate": "newData.hasChildren(['updatedAt'])",
-        "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
-        "progress": { ".validate": "newData.isString() && newData.val().length <= 4000" },
-        "version": { ".validate": "newData.isString() && newData.val().length <= 16" },
-        "bonusXp": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
-        "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "name": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "progress": {
+          ".validate": "newData.isString() && newData.val().length <= 4000"
+        },
+        "version": {
+          ".validate": "newData.isString() && newData.val().length <= 16"
+        },
+        "bonusXp": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
         "unlocked": {
-          "$ach": { ".validate": "$ach.length <= 32 && newData.isString() && newData.val().length <= 10" }
+          "$ach": {
+            ".validate": "$ach.length <= 32 && newData.isString() && newData.val().length <= 10"
+          }
         },
         "music": {
-          "together": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000" },
+          "together": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
+          },
           "top": {
             "$vid": {
               ".validate": "$vid.length <= 16 && newData.hasChildren(['t', 'm'])",
-              "t": { ".validate": "newData.isString() && newData.val().length <= 200" },
-              "m": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-              "$other": { ".validate": false }
+              "t": {
+                ".validate": "newData.isString() && newData.val().length <= 200"
+              },
+              "m": {
+                ".validate": "newData.isNumber() && newData.val() >= 0"
+              },
+              "$other": {
+                ".validate": false
+              }
             }
           },
-          "$other": { ".validate": false }
+          "$other": {
+            ".validate": false
+          }
         },
         "friends": {
           "$fid": {
             ".validate": "$fid.length <= 25",
-            "n": { ".validate": "newData.isString() && newData.val().length <= 64" },
-            "p": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "l": { ".validate": "newData.isNumber() && newData.val() >= 0" },
-            "$other": { ".validate": false }
+            "n": {
+              ".validate": "newData.isString() && newData.val().length <= 64"
+            },
+            "p": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "l": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "missions": {
       ".read": "auth != null",
       "$day": {
         "$uid": {
           ".write": "auth != null && (auth.token.discordId === $uid || (auth.token.admin === true && !newData.exists()))",
           ".validate": "$day.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.hasChildren(['score', 'updatedAt'])",
-          "name": { ".validate": "newData.isString() && newData.val().length <= 64" },
-          "score": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000" },
-          "kills": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000" },
-          "battles": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000" },
-          "quests": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3" },
-          "start": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
-          "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
-          "$other": { ".validate": false }
+          "name": {
+            ".validate": "newData.isString() && newData.val().length <= 64"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000"
+          },
+          "kills": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+          },
+          "battles": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000"
+          },
+          "quests": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3"
+          },
+          "start": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
-
     "jam": {
       "$host": {
         ".read": "auth != null && (auth.token.discordId === $host || data.child('guest').val() === auth.token.discordId)",
         ".write": "auth != null && (auth.token.discordId === $host || (data.child('guest').val() === auth.token.discordId && newData.child('guest').val() === auth.token.discordId && newData.child('host').val() === $host))",
         ".validate": "newData.hasChildren(['host', 'guest', 'rev']) && newData.child('host').val() === $host",
-        "host": { ".validate": "newData.isString()" },
-        "guest": { ".validate": "newData.isString() && newData.val().length <= 25" },
-        "rev": { ".validate": "newData.isNumber()" },
-        "w": { ".validate": "newData.isString() && newData.val().length <= 40" },
-        "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "host": {
+          ".validate": "newData.isString()"
+        },
+        "guest": {
+          ".validate": "newData.isString() && newData.val().length <= 25"
+        },
+        "rev": {
+          ".validate": "newData.isNumber()"
+        },
+        "w": {
+          ".validate": "newData.isString() && newData.val().length <= 40"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
         "cur": {
-          "id": { ".validate": "newData.isString() && newData.val().length <= 16" },
-          "title": { ".validate": "newData.isString() && newData.val().length <= 200" },
-          "by": { ".validate": "newData.isString() && newData.val().length <= 64" },
-          "key": { ".validate": "newData.isString() && newData.val().length <= 40" },
-          "paused": { ".validate": "newData.isBoolean()" },
-          "pos": { ".validate": "newData.isNumber()" },
-          "start": { ".validate": "newData.isNumber()" },
-          "$other": { ".validate": false }
+          "id": {
+            ".validate": "newData.isString() && newData.val().length <= 16"
+          },
+          "title": {
+            ".validate": "newData.isString() && newData.val().length <= 200"
+          },
+          "by": {
+            ".validate": "newData.isString() && newData.val().length <= 64"
+          },
+          "key": {
+            ".validate": "newData.isString() && newData.val().length <= 40"
+          },
+          "paused": {
+            ".validate": "newData.isBoolean()"
+          },
+          "pos": {
+            ".validate": "newData.isNumber()"
+          },
+          "start": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
         },
         "queue": {
           "$key": {
             ".validate": "$key.length <= 40 && newData.hasChildren(['id'])",
-            "id": { ".validate": "newData.isString() && newData.val().length <= 16" },
-            "title": { ".validate": "newData.isString() && newData.val().length <= 200" },
-            "by": { ".validate": "newData.isString() && newData.val().length <= 64" },
-            "at": { ".validate": "newData.isNumber()" },
-            "$other": { ".validate": false }
+            "id": {
+              ".validate": "newData.isString() && newData.val().length <= 16"
+            },
+            "title": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
+            },
+            "by": {
+              ".validate": "newData.isString() && newData.val().length <= 64"
+            },
+            "at": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "clock": {
-          "$uid": { ".validate": "$uid === auth.token.discordId && newData.isNumber() && newData.val() <= now + 60000" }
+          "$uid": {
+            ".validate": "$uid === auth.token.discordId && newData.isNumber() && newData.val() <= now + 60000"
+          }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
     "library": {
       "$uid": {
         ".read": "auth != null && auth.token.discordId === $uid",
         ".write": "auth != null && (auth.token.discordId === $uid || (auth.token.admin === true && !newData.exists()))",
-        "updatedAt": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
         "lists": {
           "$key": {
             ".validate": "$key.length <= 80 && newData.hasChildren(['n', 'k'])",
-            "n": { ".validate": "newData.isString() && newData.val().length <= 200" },
-            "k": { ".validate": "newData.val() === 'yt' || newData.val() === 'sp'" },
-            "u": { ".validate": "newData.isNumber() && newData.val() <= now + 60000" },
-            "t": {
-              "$i": { ".validate": "$i.length <= 4 && newData.isString() && newData.val().length <= 260" }
+            "n": {
+              ".validate": "newData.isString() && newData.val().length <= 200"
             },
-            "$other": { ".validate": false }
+            "k": {
+              ".validate": "newData.val() === 'yt' || newData.val() === 'sp'"
+            },
+            "u": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "t": {
+              "$i": {
+                ".validate": "$i.length <= 4 && newData.isString() && newData.val().length <= 260"
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
         "gone": {
-          "$key": { ".validate": "$key.length <= 80 && newData.isNumber()" }
+          "$key": {
+            ".validate": "$key.length <= 80 && newData.isNumber()"
+          }
         },
-        "$other": { ".validate": false }
+        "$other": {
+          ".validate": false
+        }
       }
     },
-
-    "customChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
-    "hiddenChibis": { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
-    "chibiOrder":   { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" },
-    "settings":     { ".read": "auth != null", ".write": "auth != null && auth.token.admin === true" }
+    "customChibis": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "hiddenChibis": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "chibiOrder": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "settings": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.admin === true"
+    },
+    "gameSaves": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['version','rev','initialSource','profileJson','client','updatedAt']) && ((!data.exists() && newData.child('rev').val() === 1 && newData.child('initialSource').val() === 'mobile-v1') || (data.exists() && newData.child('rev').val() === data.child('rev').val() + 1 && newData.child('initialSource').val() === data.child('initialSource').val()))",
+        "version": {
+          ".validate": "newData.val() === 1"
+        },
+        "rev": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() % 1 === 0"
+        },
+        "initialSource": {
+          ".validate": "newData.val() === 'mobile-v1'"
+        },
+        "profileJson": {
+          ".validate": "newData.isString() && newData.val().length <= 60000"
+        },
+        "client": {
+          ".validate": "newData.isString() && newData.val().length <= 80"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
   }
 }

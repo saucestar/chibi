@@ -886,10 +886,21 @@ function App() {
     const sync = event => {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
+    const cloudLoaded = () => {
+      displayProfile(loadProfile());
+      setParty(null);
+      setResult([]);
+      setPhase("ready");
+    };
+    window.addEventListener("chibi:save-loaded", cloudLoaded);
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("storage", sync);
+      window.removeEventListener("chibi:save-loaded", cloudLoaded);
+    };
   }, []);
   const setProfile = update => {
+    if (window.ChibiGameSync && !window.ChibiGameSync.state.ready) return;
     let current = profile;
     try {
       if (localStorage.getItem(profileKey)) current = loadProfile();
@@ -902,6 +913,7 @@ function App() {
       setSaveError(true);
     }
     displayProfile(next);
+    window.ChibiGameSync?.save(next);
   };
   const starter = p => p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name => offensive(basePsych[name])));
   const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
@@ -1908,4 +1920,32 @@ document.addEventListener("click", event => {
     easing: "ease-out"
   });
 }, true);
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+function SaveBoundary() {
+  const [status, setStatus] = useState(() => window.ChibiGameSync?.state || {
+    ready: true,
+    kind: "local",
+    message: ""
+  });
+  useEffect(() => {
+    const update = () => setStatus({
+      ...window.ChibiGameSync.state
+    });
+    window.addEventListener("chibi:save-state", update);
+    return () => window.removeEventListener("chibi:save-state", update);
+  }, []);
+  if (!status.ready) return React.createElement("main", {
+    className: "game-shell party-lobby"
+  }, React.createElement("section", null, React.createElement("h1", null, "Progression"), React.createElement("p", {
+    role: "status"
+  }, status.message), React.createElement("p", null, "La progression du t\xE9l\xE9phone est prioritaire. Aucune sauvegarde locale n\u2019a \xE9t\xE9 supprim\xE9e."), React.createElement("button", {
+    onClick: () => location.reload()
+  }, "R\xE9essayer"), React.createElement("a", {
+    href: "../app.html",
+    target: "_top"
+  }, "Retour \xE0 l\u2019application")));
+  return React.createElement(React.Fragment, null, status.kind !== "synced" && status.kind !== "saving" && status.message && React.createElement("p", {
+    className: "save-sync-notice",
+    role: "status"
+  }, status.message), React.createElement(App, null));
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));

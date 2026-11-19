@@ -1,3 +1,4 @@
+declare global { interface Window { ChibiGameSync?: any; } }
 const { useEffect, useMemo, useState } = React;
 const nekuSprite = "./assets/game/neku-idle.png";
 const beatSprite = "./assets/game/beat-idle.png";
@@ -449,16 +450,20 @@ function App() {
     const sync = (event: StorageEvent) => {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
+    const cloudLoaded=()=>{displayProfile(loadProfile());setParty(null);setResult([]);setPhase("ready");};
+    window.addEventListener("chibi:save-loaded",cloudLoaded);
     window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
+    return () => {window.removeEventListener("storage", sync);window.removeEventListener("chibi:save-loaded",cloudLoaded);};
   }, []);
   const setProfile = (update: (old: Profile) => Profile) => {
+    if(window.ChibiGameSync && !window.ChibiGameSync.state.ready)return;
     let current = profile;
     try { if (localStorage.getItem(profileKey)) current = loadProfile(); } catch {}
     const next = update(current);
     try { localStorage.setItem(profileKey, JSON.stringify(next)); setSaveError(false); }
     catch { setSaveError(true); }
     displayProfile(next);
+    window.ChibiGameSync?.save(next);
   };
 
   const starter = (p:Profile) => p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name=>offensive(basePsych[name])));
@@ -1098,4 +1103,10 @@ document.addEventListener("click",event=>{
   if(!button || button.disabled || matchMedia("(prefers-reduced-motion: reduce)").matches)return;
   button.animate([{filter:"brightness(1.23)"},{filter:"brightness(1)"}],{duration:240,easing:"ease-out"});
 },true);
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+function SaveBoundary() {
+  const [status,setStatus]=useState(()=>window.ChibiGameSync?.state||{ready:true,kind:"local",message:""});
+  useEffect(()=>{const update=()=>setStatus({...window.ChibiGameSync.state});window.addEventListener("chibi:save-state",update);return()=>window.removeEventListener("chibi:save-state",update);},[]);
+  if(!status.ready)return <main className="game-shell party-lobby"><section><h1>Progression</h1><p role="status">{status.message}</p><p>La progression du téléphone est prioritaire. Aucune sauvegarde locale n’a été supprimée.</p><button onClick={()=>location.reload()}>Réessayer</button><a href="../app.html" target="_top">Retour à l’application</a></section></main>;
+  return <>{status.kind!=="synced"&&status.kind!=="saving"&&status.message&&<p className="save-sync-notice" role="status">{status.message}</p>}<App/></>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
