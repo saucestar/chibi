@@ -319,6 +319,8 @@ function grantStarterNeku(p:Profile):Profile {
 }
 function assignBasePsychs(profile:Profile):Profile {
   profile=grantStarterNeku(profile);
+  const counts=Object.fromEntries(profile.owned.map(name=>[name,Math.min(5,Math.max(0,Math.floor(Number(profile.copies[name])||0)))]));
+  profile={...profile,copies:counts,levels:{...counts},awakened:profile.awakened.filter(name=>counts[name]===5)};
   const pins=[...profile.pins];
   if(profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
   const loadout:Record<string,string[]>={};
@@ -346,13 +348,20 @@ function loadProfile(): Profile {
       return owned.includes(name) && (i===0 || name!==saved.equipped[0]) ? name : "";
     });
     const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]?.row>=0);
+    const copies=Object.fromEntries(owned.map(name=>{
+      const value=saved.copies?.[name];
+      // An explicit duplicate count is authoritative; only old saves lacking it use legacy star data.
+      const count=value!==undefined && Number.isFinite(Number(value))?Math.min(5,Math.max(0,Math.floor(Number(value)))):
+        saved.awakened?.includes(name)||Number(saved.levels?.[name])===5?5:0;
+      return [name,count];
+    }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
-      copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
+      copies,
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
-      levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
-      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
+      levels: {...copies},
+      awakened: owned.filter(name => copies[name]===5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
   } catch {}
   return assignBasePsychs({pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 });
 }
@@ -674,11 +683,10 @@ function App() {
           continue;
         }
         const name=pick(portalPool(id,next)).name;
-        const roll=Math.random(), rank=roll<.5?0:roll<.78?1:roll<.92?2:roll<.98?3:4;
         if(next.owned.includes(name)) next.copies[name]=Math.min(5,(next.copies[name]||0)+1);
         else { next.owned.push(name); next.copies[name]=0; }
-        next.levels[name]=next.copies[name]===5 ? 5 : Math.max(next.levels[name]||0,rank);
-        draws.push({name,rank,copies:next.copies[name]});
+        next.levels[name]=next.copies[name];
+        draws.push({name,rank:next.levels[name],copies:next.copies[name]});
       }
       return assignBasePsychs(next);
     });

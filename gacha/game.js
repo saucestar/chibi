@@ -607,6 +607,15 @@ function grantStarterNeku(p) {
 }
 function assignBasePsychs(profile) {
   profile = grantStarterNeku(profile);
+  const counts = Object.fromEntries(profile.owned.map(name => [name, Math.min(5, Math.max(0, Math.floor(Number(profile.copies[name]) || 0)))]));
+  profile = {
+    ...profile,
+    copies: counts,
+    levels: {
+      ...counts
+    },
+    awakened: profile.awakened.filter(name => counts[name] === 5)
+  };
   const pins = [...profile.pins];
   if (profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
   const loadout = {};
@@ -647,6 +656,11 @@ function loadProfile() {
       return owned.includes(name) && (i === 0 || name !== saved.equipped[0]) ? name : "";
     });
     const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id => psychs[id]?.row >= 0);
+    const copies = Object.fromEntries(owned.map(name => {
+      const value = saved.copies?.[name];
+      const count = value !== undefined && Number.isFinite(Number(value)) ? Math.min(5, Math.max(0, Math.floor(Number(value)))) : saved.awakened?.includes(name) || Number(saved.levels?.[name]) === 5 ? 5 : 0;
+      return [name, count];
+    }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
       pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
@@ -663,10 +677,12 @@ function loadProfile() {
       equipped,
       pins,
       wishStep,
-      copies: Object.fromEntries(owned.map(n => [n, saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5, Math.max(0, Math.floor(Number(saved.copies?.[n]) || 0)))])),
+      copies,
       xp: Object.fromEntries(owned.map(n => [n, Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n] >= 0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
-      levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
-      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
+      levels: {
+        ...copies
+      },
+      awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
       loadout: saved.loadout || {},
       coins: saved.coins
     });
@@ -1360,16 +1376,14 @@ function App() {
           continue;
         }
         const name = pick(portalPool(id, next)).name;
-        const roll = Math.random(),
-          rank = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
         if (next.owned.includes(name)) next.copies[name] = Math.min(5, (next.copies[name] || 0) + 1);else {
           next.owned.push(name);
           next.copies[name] = 0;
         }
-        next.levels[name] = next.copies[name] === 5 ? 5 : Math.max(next.levels[name] || 0, rank);
+        next.levels[name] = next.copies[name];
         draws.push({
           name,
-          rank,
+          rank: next.levels[name],
           copies: next.copies[name]
         });
       }
