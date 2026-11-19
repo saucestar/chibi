@@ -87,3 +87,34 @@
 .bingo-member button { margin-left:auto; }
 @media (prefers-reduced-motion:reduce) { .bingo-crank.turning,.bingo-ball { animation-duration:.01s; } }
 
+
+.portal-carousel { min-width:0; margin:12px 0; }
+.portal-nav { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:4px; color:var(--ink); }
+.portal-nav span { font-size:14px; }
+.portal-nav button { min-width:42px; min-height:36px; font-size:20px; line-height:1; }
+.portal-nav button:disabled { opacity:.45; }
+.portal-track { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:#897eae #eeecf3; border:1px solid var(--line); }
+.portal-track[data-locked=true] { overflow:hidden; }
+.portal-banner { position:relative; isolation:isolate; overflow:hidden; flex:0 0 100%; min-width:0; height:132px; scroll-snap-align:start; display:flex; align-items:end; padding:14px; color:white; background:linear-gradient(90deg,#191632ec,#38335c99),url(./assets/game/battle-bg.jpg) center/cover; }
+.portal-partners { background:linear-gradient(108deg,#30203f,#60557e 63%,#b6a8c7); }
+.portal-banner::before { content:""; position:absolute; z-index:-1; inset:8px; border-block:1px solid #f7effb66; pointer-events:none; }
+.portal-banner strong { position:relative; z-index:1; font:normal clamp(22px,4vw,32px)/1 var(--title); text-shadow:0 2px 5px #1a123e; }
+.portal-banner > div { position:absolute; right:3%; bottom:12px; display:flex; align-items:end; transform-origin:bottom right; }
+@media(prefers-reduced-motion:reduce){.portal-banner .hero-sprite { animation:none; }}
+
+.party-lobby section:has(.portal-carousel) { display:block; max-width:650px; }
+.portal-track { box-sizing:content-box; }
+.portal-banner { box-sizing:border-box; height:auto; aspect-ratio:1; }
+.portal-shibuya { background:#191824 url(./assets/bingo/first-week.webp) center/cover; }
+.portal-shibuya::before { content:none; }
+.portal-film { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.portal-banner .film-wish { position:absolute; top:64%; height:12%; width:31%; opacity:0; cursor:pointer; }
+.portal-banner .film-wish:focus-visible { opacity:1; background:transparent; }
+.portal-banner .wish-1 { left:5%; }
+.portal-banner .wish-10 { left:63%; }
+.portal-banner .film-crank { left:45.4%; top:70%; width:9.2%; opacity:0; }
+.portal-banner .film-crank:is(.turning,:focus-visible) { opacity:1; }
+.portal-banner .film-ball { left:47%; top:81%; width:6%; }
+.portal-partners strong { font-size:clamp(30px,7vw,58px); }
+.portal-partners > div { right:12%; bottom:20%; transform:scale(1.65); }
+@media(prefers-reduced-motion:reduce){.portal-film { visibility:hidden; }}

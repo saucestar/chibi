@@ -253,6 +253,96 @@ const portals = {
   shibuya: "Shibuya",
   partners: "Partenaires"
 };
+function PortalCarousel({
+  value,
+  onChange,
+  phase,
+  onWish,
+  canWish,
+  quantity,
+  advance
+}) {
+  const locked = phase !== "ready";
+  const track = React.useRef(null);
+  const entries = Object.entries(portals);
+  const index = entries.findIndex(([id]) => id === value);
+  const choose = target => {
+    if (locked || !track.current || target < 0 || target >= entries.length) return;
+    track.current.scrollTo({
+      left: target * track.current.clientWidth,
+      behavior: "instant"
+    });
+    onChange(entries[target][0]);
+  };
+  return React.createElement("div", {
+    className: "portal-carousel",
+    role: "region",
+    "aria-label": "Portails gacha"
+  }, React.createElement("div", {
+    className: "portal-nav"
+  }, React.createElement("button", {
+    "aria-label": "Portail pr\xE9c\xE9dent",
+    disabled: locked || index === 0,
+    onClick: () => choose(index - 1)
+  }, "\u2039"), React.createElement("span", {
+    "aria-live": "polite"
+  }, portals[value], " \xB7 ", index + 1, " / ", entries.length), React.createElement("button", {
+    "aria-label": "Portail suivant",
+    disabled: locked || index === entries.length - 1,
+    onClick: () => choose(index + 1)
+  }, "\u203A")), React.createElement("div", {
+    className: "portal-track",
+    ref: track,
+    "data-locked": locked,
+    tabIndex: locked ? -1 : 0,
+    "aria-label": "Choisir un portail",
+    onKeyDown: e => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        choose(index + (e.key === "ArrowLeft" ? -1 : 1));
+      }
+    },
+    onScroll: e => {
+      if (locked) return;
+      const el = e.currentTarget,
+        active = entries[Math.round(el.scrollLeft / el.clientWidth)];
+      if (active) onChange(active[0]);
+    }
+  }, entries.map(([id, title]) => React.createElement("div", {
+    key: id,
+    className: 'portal-banner portal-' + id
+  }, id === "shibuya" ? React.createElement(React.Fragment, null, value === id && React.createElement("video", {
+    className: "portal-film",
+    autoPlay: true,
+    muted: true,
+    playsInline: true,
+    preload: "auto",
+    poster: "./assets/bingo/first-week.webp",
+    src: "./assets/bingo/first-week.mp4"
+  }), [1, 10].map(n => React.createElement("button", {
+    className: "film-wish wish-" + n,
+    key: n,
+    tabIndex: value === id ? 0 : -1,
+    disabled: locked || !canWish(n),
+    "aria-label": n === 1 ? "Faire un vœu" : "Faire dix vœux",
+    onClick: () => onWish(n)
+  })), React.createElement("button", {
+    className: "film-crank bingo-crank " + (value === id && phase === "spin" ? "turning" : ""),
+    disabled: locked || !canWish(quantity),
+    tabIndex: value === id ? 0 : -1,
+    "aria-label": "Tourner la manivelle",
+    onClick: () => onWish(quantity),
+    onAnimationEnd: advance
+  }), value === id && phase === "drop" && React.createElement("span", {
+    className: "film-ball bingo-ball",
+    onAnimationEnd: advance
+  })) : React.createElement(React.Fragment, null, React.createElement("strong", null, title), React.createElement("div", {
+    "aria-hidden": "true"
+  }, characterRoster.filter(f => (id === "partners" ? ["BEAT", "JOSHUA"] : ["NEKU", "SHIKI"]).includes(f.name)).map(f => React.createElement(Sprite, {
+    key: f.name,
+    fighter: f
+  }))))))));
+}
 const bases = {
   NEKU: [24, 32, 14],
   SHIKI: [22, 26, 20],
@@ -354,17 +444,17 @@ function App() {
     displayProfile(next);
   };
   const starter = p => p.owned.length < 2 || !p.pins.some(offensive);
-  const wishCost = p => quantity === 1 && starter(p) ? 0 : 100 * quantity;
+  const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
-  const recruit = () => {
+  const recruit = (count = quantity) => {
     if (turning.current) return;
     const draws = [];
     setProfile(p => {
-      if (p.coins < wishCost(p)) return p;
+      if (p.coins < wishCost(p, count)) return p;
       const next = {
         ...p,
         pins: [...p.pins],
-        coins: p.coins - wishCost(p),
+        coins: p.coins - wishCost(p, count),
         owned: [...p.owned],
         levels: {
           ...p.levels
@@ -373,7 +463,7 @@ function App() {
           ...p.copies
         }
       };
-      for (let i = 0; i < quantity; i++) {
+      for (let i = 0; i < count; i++) {
         next.wishStep = (next.wishStep + 1) % 10;
         if (next.wishStep !== 0 && Math.random() >= 0.10) {
           const pin = pick(pinList);
@@ -444,14 +534,23 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("label", null, "Portail ", React.createElement("select", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement(PortalCarousel, {
     value: portal,
-    disabled: phase !== "ready",
-    onChange: e => setPortal(e.target.value)
-  }, Object.entries(portals).map(([id, title]) => React.createElement("option", {
-    key: id,
-    value: id
-  }, title)))), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), React.createElement("div", null, [1, 10].map(n => React.createElement("button", {
+    onChange: setPortal,
+    phase: phase,
+    quantity: quantity,
+    canWish: n => wishCost(profile, n) <= profile.coins,
+    onWish: n => {
+      setQuantity(n);
+      recruit(n);
+    },
+    advance: () => {
+      if (phase === "spin") setPhase("drop");else if (phase === "drop") {
+        turning.current = false;
+        setPhase("ready");
+      }
+    }
+  }), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), portal === "partners" && React.createElement(React.Fragment, null, React.createElement("div", null, [1, 10].map(n => React.createElement("button", {
     key: n,
     disabled: phase !== "ready",
     "aria-pressed": n === quantity,
@@ -466,7 +565,7 @@ function App() {
     alt: "Bingo Kai"
   }), React.createElement("button", {
     className: `bingo-crank ${phase === "spin" ? "turning" : ""}`,
-    onClick: recruit,
+    onClick: () => recruit(),
     disabled: phase !== "ready" || profile.coins < price,
     "aria-label": `Faire ${quantity} vœu(x) pour ${price} pièces`,
     onAnimationEnd: e => {
@@ -478,7 +577,7 @@ function App() {
       turning.current = false;
       setPhase("ready");
     }
-  }))), React.createElement("p", null, price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
+  })))), React.createElement("p", null, price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
     "aria-live": "polite"
   }, phase === "ready" && result.map((draw, i) => "pin" in draw ? React.createElement("div", {
     className: "recruit-reveal",
