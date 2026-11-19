@@ -1306,11 +1306,20 @@ function App() {
     "aria-hidden": "true"
   })), React.createElement("div", {
     className: "wish-commands"
-  }, [1, 10].map(n => React.createElement("button", {
+  }, [1, 10].map(n => React.createElement("div", {
     key: n,
+    className: "wish-option"
+  }, React.createElement("button", {
+    "aria-describedby": `wish-price-${id}-${n}`,
     disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
     onClick: () => openWish(id, n)
-  }, React.createElement("strong", null, n, " ", n === 1 ? "vœu" : "vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
+  }, React.createElement("strong", null, n, " ", n === 1 ? "vœu" : "vœux")), React.createElement("span", {
+    className: "wish-price",
+    id: `wish-price-${id}-${n}`,
+    "aria-label": `${wishCost(profile, n)} pièces requises`
+  }, React.createElement(Icon, {
+    name: "coin"
+  }), React.createElement("span", null, "\xD7 ", wishCost(profile, n).toLocaleString("fr-FR")))))), React.createElement("p", {
     className: "portal-caption"
   }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",

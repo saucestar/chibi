@@ -642,8 +642,10 @@ function App() {
           <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
           <span className="bingo-crank" aria-hidden="true"/>
         </div>
-        <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}>
-          <strong>{n} {n===1?"vœu":"vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
+        <div className="wish-commands">{[1,10].map(n=><div key={n} className="wish-option">
+          <button aria-describedby={`wish-price-${id}-${n}`} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
+          <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString("fr-FR")}</span></span>
+        </div>)}</div>
         <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
 
