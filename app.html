@@ -39,10 +39,8 @@ button{ font-family:inherit; }
 @media (max-width:420px){ .sw{ gap:3px; } .sw button{ width:12px !important; height:12px !important; } .logo b, .logo i{ -webkit-text-stroke-width:4px; } }
 .sw button{ width:15px; height:15px; border:2px solid var(--ink); padding:0; cursor:pointer; box-shadow:1px 1px 0 #000; }
 .sw button.on{ outline:2px solid #fff; outline-offset:1px; }
-.addr{ margin-top:8px; display:flex; align-items:center; gap:8px; background:#2c2a31; border-radius:16px; padding:6px 12px; color:#d8d4de; font:800 12px 'Montserrat',sans-serif; letter-spacing:.4px; }
-.addr svg{ flex-shrink:0; }
-.addr span{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.addr .days{ margin-left:auto; background:var(--yellow); color:var(--ink); font:900 italic 11px 'Montserrat',sans-serif; padding:2px 8px; transform:rotate(-3deg); border:2px solid var(--ink); white-space:nowrap; }
+.wallet{display:flex;align-items:center;gap:.45rem;margin-top:8px;color:var(--yellow);font:800 14px Montserrat,sans-serif;font-variant-numeric:tabular-nums}
+.wallet::before{content:"";width:13px;height:13px;border:2px solid #af7522;border-radius:50%;background:#ffd75a;box-shadow:inset 2px 0 #fff0a5}
 
 /* ---------- tabs: bottom bar on phones, top-right pills on big screens (like the launcher) ---------- */
 .tabs{ position:fixed; left:0; right:0; bottom:0; z-index:60; display:flex; gap:2px; background:var(--paper);
@@ -253,11 +251,7 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
     <div class="logo"><b>TWEWY</b><i>CO-OP</i></div>
     <div class="sw" id="sw"></div>
   </div>
-  <div class="addr">
-    <svg width="12" height="14" viewBox="0 0 12 14"><rect x="1" y="6" width="10" height="7" rx="1.5" fill="#9a96a2"/><path d="M3.5 6V4.2a2.5 2.5 0 0 1 5 0V6" stroke="#9a96a2" stroke-width="1.8" fill="none"/></svg>
-    <span id="addr">UG.SHIBUYA / TWEWY-COOP</span>
-    <span class="days">JG ✦ 7 DAYS</span>
-  </div>
+  <div class="wallet" role="status"><span id="walletAmount">180</span> pièces</div>
 </header>
 
 <nav class="tabs" id="tabs">
@@ -491,6 +485,18 @@ setAccent(SWATCHES.includes(savedAc) ? savedAc : SWATCHES[0]);
 // ---------------- tabs
 const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
 const loaded = {};
+const walletKey = 'chibi.reapers-run.party.v1';
+function refreshWallet(){
+  let amount = 180;
+  try {
+    const saved = JSON.parse(localStorage.getItem(walletKey));
+    if (Number.isSafeInteger(saved?.coins) && saved.coins >= 0) amount = saved.coins;
+  } catch {}
+  document.getElementById('walletAmount').textContent = amount.toLocaleString('fr-FR');
+}
+window.addEventListener('storage', e => { if (e.key === walletKey || e.key === null) refreshWallet(); });
+window.addEventListener('pageshow', refreshWallet);
+refreshWallet();
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 function show(p){
   if(!PAGE_NAMES[p]) p = 'home';
@@ -499,7 +505,7 @@ function show(p){
   $('moreBtn').classList.toggle('on', p === 'profile' || p === 'friends');
   document.querySelectorAll('#moreSheet [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === p));
   document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.dataset.page === p));
-  $('addr').textContent = 'UG.SHIBUYA / TWEWY-COOP / ' + PAGE_NAMES[p];
+  refreshWallet();
   try{ history.replaceState(null, '', location.pathname + (p === 'home' ? '' : '#' + p)); }catch(e){}
   window.scrollTo(0, 0);
   if(me && !loaded[p]){ loaded[p] = true; LOADERS[p](); }
