@@ -177,58 +177,6 @@ function PinIcon({ pin }: {pin:Pin}) {
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
 const portals = { shibuya:"Shibuya", partners:"Partenaires" };
-function PortalCarousel({value,onChange,locked}: {value:string; onChange:(id:string)=>void; locked:boolean}) {
-  const track=React.useRef<HTMLDivElement>(null);
-  const drag=React.useRef<{y:number; top:number; index:number}|null>(null);
-  const entries=Object.entries(portals);
-  const index=entries.findIndex(([id])=>id===value);
-  function choose(target:number) {
-    const el=track.current;
-    if(locked || !el) return;
-    const next=Math.max(0,Math.min(entries.length-1,target));
-    el.scrollTo({top:next*el.clientHeight,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
-  }
-  function endDrag(e:React.PointerEvent<HTMLDivElement>) {
-    if(!drag.current) return;
-    const start=drag.current;
-    drag.current=null;
-    const el=e.currentTarget;
-    delete el.dataset.dragging;
-    const distance=start.y-e.clientY;
-    const step=e.type==="pointerup" && Math.abs(distance)>Math.min(50,el.clientHeight*.15)?Math.sign(distance):0;
-    choose(start.index+step);
-  }
-  return <div className="portal-carousel" role="region" aria-label="Portails gacha">
-    <div className="portal-track" ref={track} data-locked={locked} tabIndex={locked?-1:0} aria-label="Choisir un portail"
-      onKeyDown={e=>{if(e.key==="ArrowUp" || e.key==="ArrowDown"){e.preventDefault();choose(index+(e.key==="ArrowUp"?-1:1));}}}
-      onPointerDown={e=>{
-        if(locked || e.pointerType!=="mouse" || e.button!==0) return;
-        const el=e.currentTarget;
-        drag.current={y:e.clientY,top:el.scrollTop,index};
-        el.dataset.dragging="true";
-        el.setPointerCapture(e.pointerId);
-      }}
-      onPointerMove={e=>{if(drag.current)e.currentTarget.scrollTop=drag.current.top+drag.current.y-e.clientY;}}
-      onPointerUp={endDrag} onPointerCancel={endDrag}
-      onScroll={e=>{
-        const el=e.currentTarget,active=entries[Math.round(el.scrollTop/el.clientHeight)];
-        if(!locked && active) onChange(active[0]);
-      }}>
-      {entries.map(([id,title])=><div key={id} className={"portal-banner portal-"+id}>
-        {id==="shibuya" && <img className="first-week-cast" alt="" src="./assets/bingo/first-week-cast.webp"/>}
-        {id==="shibuya" && value===id && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-          <video className="portal-entrance" src="./assets/bingo/first-week-entrance.mp4" poster="./assets/bingo/first-week-art.webp" autoPlay muted playsInline onEnded={e=>{e.currentTarget.hidden=true;}} aria-hidden="true"/>}
-        {id==="partners" && <div className="portal-cast" aria-hidden="true">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
-        <strong>{id==="shibuya"?"First Week #1":title}</strong>
-      </div>)}
-    </div>
-    <div className="portal-nav">
-      <button disabled={locked || index===0} aria-label="Portail précédent" onClick={()=>choose(index-1)}>↑</button>
-      <span aria-live="polite">{portals[value]} · {index+1} / {entries.length}</span>
-      <button disabled={locked || index===entries.length-1} aria-label="Portail suivant" onClick={()=>choose(index+1)}>↓</button>
-    </div>
-  </div>;
-}
 const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16] };
 function trained(f:Fighter, wins:number, awake:boolean) {
   const n = Math.floor(wins/3), [atk,mag,speed] = bases[f.name];
@@ -291,7 +239,7 @@ function App() {
   const starter = (p:Profile) => p.owned.length < 2 || !p.pins.some(offensive);
   const wishCost = (p:Profile,n=quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
-  const recruit = (count=quantity) => {
+  const recruit = (id:string,count:number) => {
     if (turning.current) return;
     const draws:Wish[] = [];
     setProfile(p => {
@@ -308,7 +256,7 @@ function App() {
         const missing=characterRoster.filter(f=>!next.owned.includes(f.name));
         const available=characterRoster.filter(f=>(next.copies[f.name]||0)<5);
         const pool=missing.length ? missing : available.length ? available : characterRoster;
-        const weighted=portal==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
+        const weighted=id==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
         const name=weighted[Math.floor(Math.random()*weighted.length)].name;
         const roll=Math.random(), rank=roll<.5?0:roll<.78?1:roll<.92?2:roll<.98?3:4;
         if(next.owned.includes(name)) next.copies[name]=Math.min(5,(next.copies[name]||0)+1);
@@ -318,7 +266,7 @@ function App() {
       }
       return next;
     });
-    if(draws.length){turning.current=true;setResult(draws);setPhase("spin");}
+    if(draws.length){turning.current=true;setPortal(id);setQuantity(count);setResult(draws);setPhase("spin");}
   };
   const awaken = (name:string) => setProfile(p=>p.copies[name]===5 && !p.awakened.includes(name)
     ? {...p,awakened:[...p.awakened,name]} : p);
@@ -336,22 +284,25 @@ function App() {
     <p>10 % de chance de tirer un personnage. Chaque dixième vœu garantit un personnage, tous portails confondus. Garantie dans {10-profile.wishStep} vœu(x).</p>
     {starter(profile) && <p>Les vœux simples sont gratuits jusqu’à obtenir deux personnages et un psych offensif.</p>}
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
-    <PortalCarousel value={portal} onChange={setPortal} locked={phase!=="ready"}/>
-    <div className="bingo-stage"><div className="bingo-machine">
-      <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai" />
-      <button className={`bingo-crank ${phase === "spin" ? "turning" : ""}`} onClick={()=>recruit()}
-        disabled={phase !== "ready" || profile.coins < price}
-        aria-label={`Faire ${quantity} vœu(x) pour ${price} pièces`}
-        onAnimationEnd={e => { if (e.animationName === "bingo-turn") setPhase("drop"); }}/>
-      {phase === "drop" && <span className="bingo-ball" onAnimationEnd={() => {
-        turning.current = false; setPhase("ready");
-      }} />}
-    </div></div>
-    <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>{setQuantity(n);recruit(n);}}>
-      <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
-    {portal==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
-    <p>{price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`}</p>
-    <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>
+    <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
+      <div className={"portal-scene scene-"+id}>
+        {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+          <video className="portal-art" src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp" autoPlay muted playsInline aria-hidden="true"/>}
+        {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
+        <h3>{id==="shibuya"?"First Week #1":title}</h3>
+        <div className="bingo-machine">
+          <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
+          <button className={"bingo-crank "+(id===portal && phase==="spin"?"turning":"")} disabled={phase!=="ready" || profile.coins<price}
+            aria-label={`Faire ${quantity} vœu(x) sur ${title} pour ${price} pièces`} onClick={()=>recruit(id,quantity)}
+            onAnimationEnd={e=>{if(e.animationName==="bingo-turn")setPhase("drop");}}/>
+          {id===portal && phase==="drop" && <span className="bingo-ball" onAnimationEnd={()=>{turning.current=false;setPhase("ready");}}/>}
+        </div>
+        <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>recruit(id,n)}>
+          <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
+      </div>
+      {id==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
+      {id===portal && <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>}
+    </article>)}</div>
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
       <RankBadge level={profile.levels[name]}/><b>{name}</b><span>{profile.copies[name]||0}/5 doublons</span>
       {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&

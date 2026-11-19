@@ -253,109 +253,6 @@ const portals = {
   shibuya: "Shibuya",
   partners: "Partenaires"
 };
-function PortalCarousel({
-  value,
-  onChange,
-  locked
-}) {
-  const track = React.useRef(null);
-  const drag = React.useRef(null);
-  const entries = Object.entries(portals);
-  const index = entries.findIndex(([id]) => id === value);
-  function choose(target) {
-    const el = track.current;
-    if (locked || !el) return;
-    const next = Math.max(0, Math.min(entries.length - 1, target));
-    el.scrollTo({
-      top: next * el.clientHeight,
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
-    });
-  }
-  function endDrag(e) {
-    if (!drag.current) return;
-    const start = drag.current;
-    drag.current = null;
-    const el = e.currentTarget;
-    delete el.dataset.dragging;
-    const distance = start.y - e.clientY;
-    const step = e.type === "pointerup" && Math.abs(distance) > Math.min(50, el.clientHeight * .15) ? Math.sign(distance) : 0;
-    choose(start.index + step);
-  }
-  return React.createElement("div", {
-    className: "portal-carousel",
-    role: "region",
-    "aria-label": "Portails gacha"
-  }, React.createElement("div", {
-    className: "portal-track",
-    ref: track,
-    "data-locked": locked,
-    tabIndex: locked ? -1 : 0,
-    "aria-label": "Choisir un portail",
-    onKeyDown: e => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        e.preventDefault();
-        choose(index + (e.key === "ArrowUp" ? -1 : 1));
-      }
-    },
-    onPointerDown: e => {
-      if (locked || e.pointerType !== "mouse" || e.button !== 0) return;
-      const el = e.currentTarget;
-      drag.current = {
-        y: e.clientY,
-        top: el.scrollTop,
-        index
-      };
-      el.dataset.dragging = "true";
-      el.setPointerCapture(e.pointerId);
-    },
-    onPointerMove: e => {
-      if (drag.current) e.currentTarget.scrollTop = drag.current.top + drag.current.y - e.clientY;
-    },
-    onPointerUp: endDrag,
-    onPointerCancel: endDrag,
-    onScroll: e => {
-      const el = e.currentTarget,
-        active = entries[Math.round(el.scrollTop / el.clientHeight)];
-      if (!locked && active) onChange(active[0]);
-    }
-  }, entries.map(([id, title]) => React.createElement("div", {
-    key: id,
-    className: "portal-banner portal-" + id
-  }, id === "shibuya" && React.createElement("img", {
-    className: "first-week-cast",
-    alt: "",
-    src: "./assets/bingo/first-week-cast.webp"
-  }), id === "shibuya" && value === id && !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
-    className: "portal-entrance",
-    src: "./assets/bingo/first-week-entrance.mp4",
-    poster: "./assets/bingo/first-week-art.webp",
-    autoPlay: true,
-    muted: true,
-    playsInline: true,
-    onEnded: e => {
-      e.currentTarget.hidden = true;
-    },
-    "aria-hidden": "true"
-  }), id === "partners" && React.createElement("div", {
-    className: "portal-cast",
-    "aria-hidden": "true"
-  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
-    key: f.name,
-    fighter: f
-  }))), React.createElement("strong", null, id === "shibuya" ? "First Week #1" : title)))), React.createElement("div", {
-    className: "portal-nav"
-  }, React.createElement("button", {
-    disabled: locked || index === 0,
-    "aria-label": "Portail pr\xE9c\xE9dent",
-    onClick: () => choose(index - 1)
-  }, "\u2191"), React.createElement("span", {
-    "aria-live": "polite"
-  }, portals[value], " \xB7 ", index + 1, " / ", entries.length), React.createElement("button", {
-    disabled: locked || index === entries.length - 1,
-    "aria-label": "Portail suivant",
-    onClick: () => choose(index + 1)
-  }, "\u2193")));
-}
 const bases = {
   NEKU: [24, 32, 14],
   SHIKI: [22, 26, 20],
@@ -459,7 +356,7 @@ function App() {
   const starter = p => p.owned.length < 2 || !p.pins.some(offensive);
   const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
-  const recruit = (count = quantity) => {
+  const recruit = (id, count) => {
     if (turning.current) return;
     const draws = [];
     setProfile(p => {
@@ -489,7 +386,7 @@ function App() {
         const missing = characterRoster.filter(f => !next.owned.includes(f.name));
         const available = characterRoster.filter(f => (next.copies[f.name] || 0) < 5);
         const pool = missing.length ? missing : available.length ? available : characterRoster;
-        const weighted = portal === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
+        const weighted = id === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
         const name = weighted[Math.floor(Math.random() * weighted.length)].name;
         const roll = Math.random(),
           rank = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
@@ -508,6 +405,8 @@ function App() {
     });
     if (draws.length) {
       turning.current = true;
+      setPortal(id);
+      setQuantity(count);
       setResult(draws);
       setPhase("spin");
     }
@@ -547,42 +446,54 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement(PortalCarousel, {
-    value: portal,
-    onChange: setPortal,
-    locked: phase !== "ready"
-  }), React.createElement("div", {
-    className: "bingo-stage"
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("div", {
+    className: "portal-list"
+  }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
+    key: id,
+    className: "portal-card",
+    "aria-label": title
   }, React.createElement("div", {
+    className: "portal-scene scene-" + id
+  }, id === "shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
+    className: "portal-art",
+    src: "./assets/bingo/first-week-clean.mp4",
+    poster: "./assets/bingo/first-week-clean.webp",
+    autoPlay: true,
+    muted: true,
+    playsInline: true,
+    "aria-hidden": "true"
+  }), id === "partners" && React.createElement("div", {
+    className: "portal-duo"
+  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
+    key: f.name,
+    fighter: f
+  }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("div", {
     className: "bingo-machine"
   }, React.createElement("img", {
     className: "bingo-body",
     src: "./assets/bingo/machine.webp",
     alt: "Bingo Kai"
   }), React.createElement("button", {
-    className: `bingo-crank ${phase === "spin" ? "turning" : ""}`,
-    onClick: () => recruit(),
+    className: "bingo-crank " + (id === portal && phase === "spin" ? "turning" : ""),
     disabled: phase !== "ready" || profile.coins < price,
-    "aria-label": `Faire ${quantity} vœu(x) pour ${price} pièces`,
+    "aria-label": `Faire ${quantity} vœu(x) sur ${title} pour ${price} pièces`,
+    onClick: () => recruit(id, quantity),
     onAnimationEnd: e => {
       if (e.animationName === "bingo-turn") setPhase("drop");
     }
-  }), phase === "drop" && React.createElement("span", {
+  }), id === portal && phase === "drop" && React.createElement("span", {
     className: "bingo-ball",
     onAnimationEnd: () => {
       turning.current = false;
       setPhase("ready");
     }
-  }))), React.createElement("div", {
+  })), React.createElement("div", {
     className: "wish-commands"
   }, [1, 10].map(n => React.createElement("button", {
     key: n,
     disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
-    onClick: () => {
-      setQuantity(n);
-      recruit(n);
-    }
-  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), React.createElement("p", null, price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
+    onClick: () => recruit(id, n)
+  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces"))))), id === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), id === portal && React.createElement("div", {
     "aria-live": "polite"
   }, phase === "ready" && result.map((draw, i) => "pin" in draw ? React.createElement("div", {
     className: "recruit-reveal",
@@ -596,7 +507,7 @@ function App() {
     fighter: characterRoster.find(f => f.name === draw.name)
   }), React.createElement("strong", null, draw.name), React.createElement(RankBadge, {
     level: draw.rank
-  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue")))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
+  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"))))))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
     className: "bingo-member",
     key: name
   }, React.createElement(RankBadge, {
