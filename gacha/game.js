@@ -14,6 +14,105 @@ const fierySpiritPin = "./assets/game/pin-fiery-spirit.png";
 const masamunePin = "./assets/game/pin-masamune.png";
 const konohanaPin = "./assets/game/pin-konohana.png";
 const battleBackground = "./assets/game/battle-bg.jpg";
+const elementNames = {
+  normal: "Normal",
+  fire: "Feu",
+  water: "Eau",
+  electric: "Électrik",
+  grass: "Plante",
+  ice: "Glace",
+  fighting: "Combat",
+  poison: "Poison",
+  ground: "Sol",
+  flying: "Vol",
+  psychic: "Psy",
+  bug: "Insecte",
+  rock: "Roche",
+  ghost: "Spectre",
+  dragon: "Dragon",
+  dark: "Ténèbres",
+  steel: "Acier",
+  fairy: "Fée"
+};
+const typeChart = {
+  normal: [[], ["rock", "steel"], ["ghost"]],
+  fire: [["grass", "ice", "bug", "steel"], ["fire", "water", "rock", "dragon"], []],
+  water: [["fire", "ground", "rock"], ["water", "grass", "dragon"], []],
+  electric: [["water", "flying"], ["electric", "grass", "dragon"], ["ground"]],
+  grass: [["water", "ground", "rock"], ["fire", "grass", "poison", "flying", "bug", "dragon", "steel"], []],
+  ice: [["grass", "ground", "flying", "dragon"], ["fire", "water", "ice", "steel"], []],
+  fighting: [["normal", "ice", "rock", "dark", "steel"], ["poison", "flying", "psychic", "bug", "fairy"], ["ghost"]],
+  poison: [["grass", "fairy"], ["poison", "ground", "rock", "ghost"], ["steel"]],
+  ground: [["fire", "electric", "poison", "rock", "steel"], ["grass", "bug"], ["flying"]],
+  flying: [["grass", "fighting", "bug"], ["electric", "rock", "steel"], []],
+  psychic: [["fighting", "poison"], ["psychic", "steel"], ["dark"]],
+  bug: [["grass", "psychic", "dark"], ["fire", "fighting", "poison", "flying", "ghost", "steel", "fairy"], []],
+  rock: [["fire", "ice", "flying", "bug"], ["fighting", "ground", "steel"], []],
+  ghost: [["psychic", "ghost"], ["dark"], ["normal"]],
+  dragon: [["dragon"], ["steel"], ["fairy"]],
+  dark: [["psychic", "ghost"], ["fighting", "dark", "fairy"], []],
+  steel: [["ice", "rock", "fairy"], ["fire", "water", "electric", "steel"], []],
+  fairy: [["fighting", "dragon", "dark"], ["fire", "poison", "steel"], []]
+};
+const characterElements = {
+  NEKU: ["psychic"],
+  SHIKI: ["normal"],
+  BEAT: ["fighting"],
+  JOSHUA: ["psychic", "flying"],
+  CLOUD: ["fighting", "steel"],
+  AERITH: ["grass", "fairy"]
+};
+const enemyElements = {
+  frog: ["water"],
+  wolf: ["dark"],
+  shinigami: ["dark", "flying"],
+  "jey-pengi": ["water", "ice"],
+  "electro-pengi": ["electric"],
+  "psyche-fox": ["psychic"]
+};
+function effectiveness(attack, defense) {
+  const [strong, weak, immune] = typeChart[attack];
+  return defense.reduce((v, t) => v * (immune.includes(t) ? 0 : strong.includes(t) ? 2 : weak.includes(t) ? .5 : 1), 1);
+}
+function typedDamage(base, attack, defense) {
+  const scale = effectiveness(attack, defense);
+  return scale === 0 ? 0 : Math.max(1, Math.round(base * scale));
+}
+function affinityText(scale) {
+  return scale === 0 ? "Sans effet" : scale > 1 ? `Super efficace ×${scale}` : scale < 1 ? `Résisté ×${scale}` : "×1";
+}
+function badgeElement(pin) {
+  const power = pin.psych,
+    name = pin.name;
+  if (pin.id === "buster-sword") return "steel";
+  if (pin.kind === "heal" || /Healing|Cure|Holy|Subconscious|Vent guérisseur/.test(power)) return "fairy";
+  if (/Pyrokinesis|Flame|Ignition|Fire|Explosion|Time Bomb/.test(power)) return "fire";
+  if (/Aqua|Splash/.test(power) || /Aqua|Water/.test(name)) return "water";
+  if (/Lightning|Thunder|Spark|Discharge|Laser/.test(power)) return "electric";
+  if (/Freeze|Frostbite/.test(power) || /Ice |Frozen|Blizzard/.test(name)) return "ice";
+  if (/Earthquake|Pressure Mine/.test(power)) return "ground";
+  if (/Rock Bind|Lode/.test(power)) return "rock";
+  if (/Entanglement/.test(power)) return "grass";
+  if (/Black Hole|Dark Barrier|Doomed/.test(power)) return "dark";
+  if (/Invisibility|Summon Rhyme|Grave Marker|Mr. Mew/.test(power)) return pin.id === "groove-pawn" ? "normal" : "ghost";
+  if (/Twister|Vortex Saber/.test(power)) return "flying";
+  if (/Crawler|Sweeper/.test(power)) return "bug";
+  if (/Psychokinesis|Teleport|Chute d’objets/.test(power)) return "psychic";
+  if (/Sword|Lance|Spear/.test(power)) return "steel";
+  if (/SK8|Shockwave|Vulcan|Massive Hit|Velocity/.test(power)) return "fighting";
+  if (/Irregular Note|Street Jam|Stellar/.test(power)) return "fairy";
+  return "normal";
+}
+function TypeChips({
+  elements
+}) {
+  return React.createElement("span", {
+    className: "type-chips"
+  }, elements.map(t => React.createElement("span", {
+    key: t,
+    className: `element element-${t}`
+  }, elementNames[t])));
+}
 const characterRoster = [{
   name: "CLOUD",
   portraitCenter: 64,
@@ -323,7 +422,10 @@ const partnerPsychs = [{
   drain: false,
   cost: 1
 }));
-const psychs = Object.fromEntries([...pinList, ...partnerPsychs].map(pin => [pin.id, pin]));
+const psychs = Object.fromEntries([...pinList, ...partnerPsychs].map(pin => [pin.id, {
+  ...pin,
+  element: badgeElement(pin)
+}]));
 const types = {
   physical: "ATK",
   special: "ATK SPE",
@@ -460,6 +562,9 @@ function pick(items) {
 }
 const offensive = id => ["physical", "special"].includes(psychs[id]?.kind);
 const profileKey = "chibi.reapers-run.party.v1";
+function equippedBy(profile, name, id) {
+  return profile.equipped.find(partner => partner && partner !== name && profile.loadout[partner]?.includes(id));
+}
 function availablePsychs(profile, name) {
   return [...new Set([basePsych[name], ...profile.pins])].filter(id => Boolean(psychs[id]));
 }
@@ -476,6 +581,18 @@ function assignBasePsychs(profile) {
     }, name);
     const equipped = [...new Set(ids)].filter(id => allowed.includes(id)).slice(0, 3);
     loadout[name] = equipped.length ? equipped : [basePsych[name]];
+  }
+  const used = new Set();
+  for (const name of profile.equipped.filter(Boolean)) {
+    loadout[name] = (loadout[name] || []).filter(id => !used.has(id));
+    if (!loadout[name].length) {
+      const replacement = availablePsychs({
+        ...profile,
+        pins
+      }, name).find(id => !used.has(id));
+      if (replacement) loadout[name] = [replacement];
+    }
+    loadout[name].forEach(id => used.add(id));
   }
   return {
     ...profile,
@@ -494,6 +611,9 @@ function loadProfile() {
     const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
+      bestFloor: Math.min(100, Math.max(0, Math.floor(Number(saved.bestFloor ?? saved.highestFloor ?? 0) || 0))),
+      claimedQuests: Array.isArray(saved.claimedQuests) ? [...new Set(saved.claimedQuests.filter(id => typeof id === "string"))] : [],
+      floorRecoveryAvailable: saved.floorRecoveryAvailable === true || saved.floorRecoveryAvailable !== false && saved.bestFloor === undefined && owned.length > 0,
       owned,
       equipped,
       pins,
@@ -507,6 +627,9 @@ function loadProfile() {
     });
   } catch {}
   return {
+    bestFloor: 0,
+    claimedQuests: [],
+    floorRecoveryAvailable: false,
     pins: [],
     wishStep: 0,
     copies: {},
@@ -716,6 +839,7 @@ function PsychEquipment({
   const inspect = inspected ? psychs[inspected] : null;
   const toggle = id => {
     setInspected(id);
+    if (equippedBy(profile, name, id)) return;
     setDraft(old => old.includes(id) ? old.filter(value => value !== id) : old.length < 3 ? [...old, id] : old);
   };
   const start = () => {
@@ -761,19 +885,24 @@ function PsychEquipment({
     return pin ? React.createElement("button", {
       key: id,
       className: "badge-slot",
-      "aria-label": pin.name,
+      "aria-label": `${pin.name}${equippedBy(profile, name, id) ? ` · Équipé par ${equippedBy(profile, name, id)}` : ""}`,
+      disabled: Boolean(equippedBy(profile, name, id)),
       "aria-pressed": draft.includes(id),
       onClick: () => toggle(id)
     }, React.createElement(BadgeArt, {
       pin: pin
-    })) : React.createElement("span", {
+    }), equippedBy(profile, name, id) && React.createElement("small", {
+      className: "badge-owner"
+    }, equippedBy(profile, name, id))) : React.createElement("span", {
       key: i,
       className: "badge-slot",
       "aria-hidden": "true"
     });
   })), inspect && React.createElement("p", {
     className: "badge-info"
-  }, React.createElement("b", null, inspect.name.replace(" (Pin)", "")), " \xB7 ", types[inspect.kind], " \xB7 ", inspect.cost, " EN"), draft.length === 3 && React.createElement("p", {
+  }, React.createElement("b", null, inspect.name.replace(" (Pin)", "")), " \xB7 ", types[inspect.kind], " \xB7 ", inspect.cost, " EN ", React.createElement(TypeChips, {
+    elements: [inspect.element || badgeElement(inspect)]
+  }), equippedBy(profile, name, inspect.id) && React.createElement("span", null, " \xB7 \xC9quip\xE9 par ", equippedBy(profile, name, inspect.id))), draft.length === 3 && React.createElement("p", {
     className: "equipment-help"
   }, "Retire un psych \xE9quip\xE9 pour le remplacer."), !draft.length && React.createElement("p", {
     className: "equipment-help"
@@ -847,7 +976,9 @@ function BadgeCatalogue({
   })), selected && React.createElement("p", {
     className: "badge-info",
     "aria-live": "polite"
-  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN"), React.createElement("nav", {
+  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN ", React.createElement(TypeChips, {
+    elements: [selected.element || badgeElement(selected)]
+  })), React.createElement("nav", {
     "aria-label": "Pages du catalogue"
   }, React.createElement("button", {
     disabled: !page,
@@ -862,6 +993,105 @@ function BadgeCatalogue({
   }, "\u203A")), React.createElement("button", {
     onClick: () => setOpen(false)
   }, "Fermer"), React.createElement("small", null, "Visuels DS \xB7 NightOwl35. Donn\xE9es \xB7 TWEWY Wiki.")));
+}
+const maxFloor = 100;
+function questsFor(p) {
+  const badges = new Set(p.pins.filter(id => psychs[id]?.row >= 0)).size;
+  const bestLevel = Math.max(1, ...Object.values(p.xp).map(x => experience(x).level));
+  return [...Array.from({
+    length: 10
+  }, (_, i) => ({
+    id: `floor-${(i + 1) * 10}`,
+    title: `Atteindre l’étage ${(i + 1) * 10}`,
+    progress: p.bestFloor,
+    goal: (i + 1) * 10,
+    reward: 100
+  })), ...Array.from({
+    length: Math.floor(pinList.length / 10)
+  }, (_, i) => ({
+    id: `badges-${(i + 1) * 10}`,
+    title: `Collectionner ${(i + 1) * 10} badges`,
+    progress: badges,
+    goal: (i + 1) * 10,
+    reward: 20
+  })), ...[2, 4, 6].map(n => ({
+    id: `recruits-${n}`,
+    title: `Débloquer ${n} personnages`,
+    progress: p.owned.length,
+    goal: n,
+    reward: n * 25
+  })), ...[5, 10, 25].map(n => ({
+    id: `level-${n}`,
+    title: `Monter un personnage au niveau ${n}`,
+    progress: bestLevel,
+    goal: n,
+    reward: n * 10
+  })), {
+    id: "awaken-1",
+    title: "Éveiller 1 personnage",
+    progress: p.awakened.length,
+    goal: 1,
+    reward: 150
+  }];
+}
+function claimQuests(p, ids) {
+  const ready = questsFor(p).filter(q => ids.includes(q.id) && q.progress >= q.goal && !p.claimedQuests.includes(q.id));
+  return {
+    ...p,
+    coins: p.coins + ready.reduce((sum, q) => sum + q.reward, 0),
+    claimedQuests: [...p.claimedQuests, ...ready.map(q => q.id)]
+  };
+}
+function QuestMenu({
+  profile,
+  save
+}) {
+  const [open, setOpen] = useState(false);
+  const quests = questsFor(profile),
+    ready = quests.filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id));
+  const [category, setCategory] = useState("floor");
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    onClick: () => setOpen(true)
+  }, "Qu\xEAtes", ready.length ? ` · ${ready.length}` : ""), open && React.createElement(WishDialog, {
+    className: "quest-menu",
+    title: "Qu\xEAtes",
+    close: () => setOpen(false)
+  }, React.createElement("p", null, "R\xE9compenses uniques \xB7 Progression r\xE9troactive"), profile.floorRecoveryAvailable && React.createElement("button", {
+    className: "floor-recovery",
+    onClick: () => save(p => ({
+      ...p,
+      bestFloor: Math.max(p.bestFloor, 10),
+      floorRecoveryAvailable: false
+    }))
+  }, "Rattraper mon ancien \xE9tage 10"), React.createElement("div", {
+    className: "quest-tabs"
+  }, [["floor", "Étages"], ["badges", "Collection"], ["other", "Personnages"]].map(([id, name]) => React.createElement("button", {
+    key: id,
+    "aria-pressed": category === id,
+    onClick: () => setCategory(id)
+  }, name))), React.createElement("div", {
+    className: "quest-list"
+  }, quests.filter(q => category === "other" ? !/^(floor|badges)-/.test(q.id) : q.id.startsWith(category + "-")).map(q => {
+    const claimed = profile.claimedQuests.includes(q.id),
+      done = q.progress >= q.goal;
+    return React.createElement("article", {
+      key: q.id
+    }, React.createElement("div", null, React.createElement("b", null, q.title), React.createElement("small", null, Math.min(q.goal, q.progress), " / ", q.goal, " \xB7 ", q.reward, " pi\xE8ces"), React.createElement("progress", {
+      max: q.goal,
+      value: Math.min(q.goal, q.progress),
+      "aria-label": q.title
+    })), React.createElement("button", {
+      disabled: claimed || !done,
+      onClick: () => save(p => claimQuests(p, [q.id]))
+    }, claimed ? "Récupéré" : "Récupérer"));
+  })), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    disabled: !ready.length,
+    onClick: () => save(p => claimQuests(p, questsFor(p).map(q => q.id)))
+  }, "Tout r\xE9cup\xE9rer \xB7 ", ready.reduce((sum, q) => sum + q.reward, 0), " pi\xE8ces"), React.createElement("button", {
+    onClick: () => setOpen(false)
+  }, "Fermer"))));
 }
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
@@ -905,7 +1135,7 @@ function App() {
     try {
       if (localStorage.getItem(profileKey)) current = loadProfile();
     } catch {}
-    const next = update(current);
+    const next = assignBasePsychs(update(current));
     try {
       localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
@@ -1015,9 +1245,15 @@ function App() {
         ...Object.fromEntries(party.map(f => [f.name, experience((p.xp[f.name] || 0) + amount).xp]))
       }
     })),
-    onVictory: () => setProfile(p => ({
+    onReach: floor => setProfile(p => ({
       ...p,
-      coins: p.coins + 5
+      bestFloor: Math.max(p.bestFloor, Math.min(100, floor))
+    })),
+    onVictory: floor => setProfile(p => ({
+      ...p,
+      coins: p.coins + 5,
+      bestFloor: Math.max(p.bestFloor, Math.min(100, floor)),
+      floorRecoveryAvailable: p.floorRecoveryAvailable && floor < 10
     })),
     leave: () => {
       setParty(null);
@@ -1026,9 +1262,14 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement(BadgeCatalogue, {
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement("div", {
+    className: "lobby-tools"
+  }, React.createElement(BadgeCatalogue, {
     owned: profile.pins
-  }), React.createElement("div", {
+  }), React.createElement(QuestMenu, {
+    profile: profile,
+    save: setProfile
+  })), React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -1147,7 +1388,9 @@ function App() {
       onClick: () => setEditingSlot(index)
     }, fighter && stats ? React.createElement(React.Fragment, null, React.createElement(Sprite, {
       fighter: fighter
-    }), React.createElement("strong", null, name), React.createElement(RankBadge, {
+    }), React.createElement("strong", null, name), React.createElement(TypeChips, {
+      elements: characterElements[name]
+    }), React.createElement(RankBadge, {
       level: profile.levels[name]
     }), React.createElement("small", null, "PV ", stats.maxHp, React.createElement("br", null), "ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed), React.createElement(XpProgress, {
       xp: stats.xp
@@ -1174,9 +1417,14 @@ function App() {
     onClick: () => chooseFighter("")
   }, "Retirer"), React.createElement("button", {
     onClick: () => setEditingSlot(null)
-  }, "Fermer"))), React.createElement(BadgeCatalogue, {
+  }, "Fermer"))), React.createElement("div", {
+    className: "lobby-tools"
+  }, React.createElement(BadgeCatalogue, {
     owned: profile.pins
-  }), fighters.map(name => React.createElement(PsychEquipment, {
+  }), React.createElement(QuestMenu, {
+    profile: profile,
+    save: setProfile
+  })), fighters.map(name => React.createElement(PsychEquipment, {
     key: name,
     name: name,
     profile: profile,
@@ -1280,6 +1528,7 @@ function Battle({
   coins,
   onDrops,
   onExperience,
+  onReach,
   onVictory,
   leave
 }) {
@@ -1336,6 +1585,7 @@ function Battle({
   const [turn, setTurn] = useState(1);
   const [message, setMessage] = useState("Choisis 1 action par personnage, puis lance le tour.");
   const [busy, setBusy] = useState(false);
+  const [hitFeedback, setHitFeedback] = useState(null);
   const [impact, setImpact] = useState(null);
   const [loot, setLoot] = useState([]);
   const [dropReveal, setDropReveal] = useState([]);
@@ -1410,6 +1660,7 @@ function Battle({
     setActor("");
     setActiveAction(null);
     setImpact(null);
+    setHitFeedback(null);
   };
   const resolveRound = async () => {
     if (running.current || busy || reward || !ready) return;
@@ -1453,6 +1704,7 @@ function Battle({
       if (!monsters.some(e => e.hp > 0) || !fighters.some(f => f.hp > 0)) break;
       const step = steps[index];
       setQueueIndex(index);
+      setHitFeedback(null);
       setImpact(null);
       setActiveAction(null);
       setActor("");
@@ -1460,7 +1712,14 @@ function Battle({
         const attacker = monsters.find(e => e.id === step.id);
         if (attacker.hp <= 0) continue;
         const target = fighters.find(f => f.name === step.target && f.hp > 0) || fighters.find(f => f.hp > 0);
-        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : Math.max(3, Math.round(attacker.attack * (shields.has(target.name) ? .45 : 1)));
+        const attackType = enemyElements[attacker.kind][0],
+          scale = effectiveness(attackType, characterElements[target.name]);
+        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(attacker.attack * (shields.has(target.name) ? .45 : 1))), attackType, characterElements[target.name]);
+        setHitFeedback({
+          side: "ally",
+          target: target.name,
+          label: scale === 0 ? "Sans effet" : `${damage} PV · ${affinityText(scale)}`
+        });
         fighters = fighters.map(f => f.name === target.name ? {
           ...f,
           hp: Math.max(0, f.hp - damage)
@@ -1482,7 +1741,7 @@ function Battle({
           sync = 0;
           monsters = monsters.map(e => ({
             ...e,
-            hp: Math.max(0, e.hp - 58)
+            hp: Math.max(0, e.hp - typedDamage(58, "normal", enemyElements[e.kind]))
           }));
           setActiveAction("burst");
           setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
@@ -1504,7 +1763,13 @@ function Battle({
             const target = monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0);
             const physical = pin.kind === "physical";
             const amount = Math.round((physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
-            const damage = Math.max(1, Math.round(amount * (hasPassive(/^Resonance/) ? 1.15 : 1)) + Math.floor(Math.random() * 7) - 3);
+            const scale = effectiveness(pin.element, enemyElements[target.kind]);
+            const damage = typedDamage(Math.max(1, Math.round(amount * (hasPassive(/^Resonance/) ? 1.15 : 1)) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]);
+            setHitFeedback({
+              side: "enemy",
+              target: String(target.id),
+              label: scale === 0 ? "Sans effet" : `${damage} dégâts · ${affinityText(scale)}`
+            });
             monsters = monsters.map(e => e.id === target.id ? {
               ...e,
               hp: Math.max(0, e.hp - damage)
@@ -1549,7 +1814,7 @@ function Battle({
     if (!monsters.some(e => e.hp > 0)) {
       if (!clearedWave.current) {
         clearedWave.current = true;
-        onVictory();
+        onVictory(wave);
         setReward(true);
       }
       setMessage("Vague terminée !");
@@ -1561,6 +1826,7 @@ function Battle({
     running.current = false;
   };
   const nextWave = boost => {
+    if (wave >= maxFloor) return;
     if (boost === "vitality") {
       setTeam(current => current.map(fighter => ({
         ...fighter,
@@ -1592,6 +1858,7 @@ function Battle({
     awarded.current.clear();
     clearedWave.current = false;
     setWave(next);
+    onReach(next);
     setTurn(1);
     setEnemies(makeWave(next));
     setSelected(next * 10);
@@ -1669,7 +1936,9 @@ function Battle({
     fighter: fighter
   })), React.createElement("div", {
     className: "fighter-info"
-  }, React.createElement("small", null, fighter.role), React.createElement("h2", null, fighter.name), React.createElement(XpProgress, {
+  }, React.createElement("small", null, fighter.role), React.createElement("h2", null, fighter.name), React.createElement(TypeChips, {
+    elements: characterElements[fighter.name]
+  }), React.createElement(XpProgress, {
     xp: fighter.xp || 0
   }), React.createElement("div", {
     className: "health-readout"
@@ -1753,7 +2022,10 @@ function Battle({
   }, React.createElement(EnemySprite, {
     kind: enemy.kind,
     boss: enemy.boss
-  }), React.createElement("span", {
+  }), hitFeedback?.side === "enemy" && hitFeedback.target === String(enemy.id) && React.createElement("span", {
+    className: "hit-feedback",
+    key: queueIndex
+  }, hitFeedback.label), React.createElement("span", {
     className: "enemy-hp",
     "aria-hidden": "true"
   }, React.createElement("i", {
@@ -1769,7 +2041,10 @@ function Battle({
     fighter: fighter,
     action: activeAction === "burst" || fighter.name === actor ? activeAction : null,
     combat: true
-  }), React.createElement("span", null, fighter.name)))), React.createElement("p", {
+  }), React.createElement("span", null, fighter.name), hitFeedback?.side === "ally" && hitFeedback.target === fighter.name && React.createElement("span", {
+    className: "hit-feedback",
+    key: queueIndex
+  }, hitFeedback.label)))), React.createElement("p", {
     className: "combat-status",
     role: "status"
   }, message)), React.createElement("section", {
@@ -1790,7 +2065,9 @@ function Battle({
     })
   }, React.createElement(HudPortrait, {
     enemy: enemy
-  }), React.createElement("b", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("button", {
+  }), React.createElement("b", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp, " PV \xB7 ", affinityText(effectiveness(psychs[targetPin].element, enemyElements[enemy.kind]))), React.createElement(TypeChips, {
+    elements: enemyElements[enemy.kind]
+  })))), React.createElement("button", {
     onClick: () => setTargetPin(null)
   }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "psych-action-menu"
@@ -1805,7 +2082,7 @@ function Battle({
       })
     }, React.createElement(PinIcon, {
       pin: pin
-    }), React.createElement("b", null, pin.name), React.createElement("span", null, types[pin.kind], " \xB7 ", pin.cost, " EN"));
+    }), React.createElement("b", null, pin.name), React.createElement("span", null, elementNames[pin.element || badgeElement(pin)], " \xB7 ", types[pin.kind], " \xB7 ", pin.cost, " EN"));
   }), React.createElement("button", {
     onClick: () => choose({
       kind: "guard"
@@ -1869,7 +2146,9 @@ function Battle({
   }, React.createElement(EnemySprite, {
     kind: inspected.kind,
     boss: inspected.boss
-  })), React.createElement("dl", null, React.createElement("dt", null, "Niveau"), React.createElement("dd", null, inspected.level), React.createElement("dt", null, "PV"), React.createElement("dd", null, inspected.hp, " / ", inspected.maxHp), React.createElement("dt", null, "ATK"), React.createElement("dd", null, inspected.attack), React.createElement("dt", null, "SPE"), React.createElement("dd", null, inspected.speed), React.createElement("dt", null, "XP par personnage"), React.createElement("dd", null, inspected.xp), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
+  })), React.createElement("dl", null, React.createElement("dt", null, "Niveau"), React.createElement("dd", null, inspected.level), React.createElement("dt", null, "PV"), React.createElement("dd", null, inspected.hp, " / ", inspected.maxHp), React.createElement("dt", null, "ATK"), React.createElement("dd", null, inspected.attack), React.createElement("dt", null, "SPE"), React.createElement("dd", null, inspected.speed), React.createElement("dt", null, "XP par personnage"), React.createElement("dd", null, inspected.xp), React.createElement("dt", null, "\xC9l\xE9ments"), React.createElement("dd", null, React.createElement(TypeChips, {
+    elements: enemyElements[inspected.kind]
+  })), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
     className: "pull-button",
     onClick: () => setInspectedId(null)
   }, "Fermer")), dropReveal.length > 0 && React.createElement(WishDialog, {
@@ -1884,7 +2163,7 @@ function Battle({
     className: "overlay"
   }, React.createElement("div", {
     className: "modal reward-modal"
-  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +", earnedXp, " XP par personnage."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), React.createElement("div", {
+  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, wave === maxFloor ? "Étage 100 · Ascension terminée !" : "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +", earnedXp, " XP par personnage."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), wave < maxFloor ? React.createElement("div", {
     className: "reward-grid"
   }, React.createElement("button", {
     onClick: () => nextWave("power")
@@ -1898,7 +2177,10 @@ function Battle({
     onClick: () => nextWave("energy")
   }, React.createElement(Icon, {
     name: "star"
-  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))))), teamDefeated && !busy && React.createElement("div", {
+  }), React.createElement("b", null, "FULL CHARGE"), React.createElement("span", null, "Restore HP & Energy"))) : React.createElement("button", {
+    className: "fullscreen-button",
+    onClick: leave
+  }, "Retour \xE0 Team \xB7 Voir les qu\xEAtes"))), teamDefeated && !busy && React.createElement("div", {
     className: "overlay"
   }, React.createElement("div", {
     className: "modal game-over"

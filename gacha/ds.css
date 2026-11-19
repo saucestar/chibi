@@ -766,3 +766,34 @@
 
 .save-sync-notice { margin:0; padding:8px 12px; color:#fff4d7; background:#241a3d; font:600 12px/1.4 Segoe UI,sans-serif; }
 body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3px; z-index:12; max-width:60%; border-radius:8px; font-size:9px; }
+
+/* Touch-first game surfaces. Keep editable fields selectable. */
+.game-shell,.game-shell * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; -webkit-tap-highlight-color:transparent; }
+.game-shell :is(input,textarea,[contenteditable=true]) { -webkit-user-select:text; user-select:text; }
+.game-shell img,.game-shell canvas { -webkit-user-drag:none; }
+.game-shell button { touch-action:manipulation; }
+.lobby-tools { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+.party-lobby .lobby-tools button,.quest-menu button { min-height:44px; }
+.party-lobby .quest-menu { width:min(94vw,560px); }
+.quest-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:12px 0; }
+.quest-list { max-height:min(48dvh,440px); overflow-y:auto; overscroll-behavior:contain; padding:5px; }
+.quest-list article { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:10px; padding:12px 3px; border-bottom:1px solid #bcb1d0; }
+.quest-list article b { display:block; font-size:13px; }
+.quest-list article small { display:block; font-size:11px; margin:5px 0; }
+.quest-list progress { display:block; width:100%; accent-color:#6a4caa; height:6px; }
+.quest-menu .dialog-actions { flex-wrap:wrap; margin-top:12px; }
+.quest-menu .floor-recovery { width:100%; margin-bottom:8px; }
+.type-chips { display:inline-flex; flex-wrap:wrap; justify-content:center; gap:3px; vertical-align:middle; }
+.element { --element:#746c83; display:inline-block; padding:2px 6px; border-radius:999px; background:var(--element); border:1px solid #ffffff70; color:white; text-shadow:0 1px 2px #0009; font:700 9px/1.2 'Segoe UI',sans-serif; white-space:nowrap; }
+.element-fire{--element:#ad3e17}.element-water{--element:#2261b2}.element-electric{--element:#8b6900}.element-grass{--element:#397333}.element-ice{--element:#237a84}.element-fighting{--element:#9f3c37}.element-poison{--element:#864095}.element-ground{--element:#8b642d}.element-flying{--element:#7058ab}.element-psychic{--element:#ad386d}.element-bug{--element:#63751c}.element-rock{--element:#806d34}.element-ghost{--element:#5c4985}.element-dragon{--element:#5635af}.element-dark{--element:#473b3c}.element-steel{--element:#5f647d}.element-fairy{--element:#9f4e7e}
+.combat-hud .fighter-info { position:relative; }
+.combat-hud .fighter-info>.type-chips { position:absolute; right:4px; top:3px; max-width:55%; }
+.combat-hud .fighter-info>.type-chips .element { font-size:6px; padding:1px 3px; }
+.combat-hud .inline-action-menu .target-menu .type-chips { grid-column:2; display:flex; }
+.combat-hud .inline-action-menu .target-menu .element { font-size:7px; }
+.combat-hud .inline-action-menu .target-menu { grid-auto-rows:minmax(44px,1fr); }
+.combat-hud .arena-hero .hit-feedback,.combat-hud .enemy-unit .hit-feedback { position:absolute; z-index:7; top:10%; left:50%; bottom:auto; transform:translateX(-50%); width:max-content; max-width:180px; border:1px solid #f0d696; border-radius:8px; padding:5px 8px; background:#201531ee; color:#fff1c0; font:700 10px/1.2 'Segoe UI',sans-serif; text-align:center; pointer-events:none; }
+@media(prefers-reduced-motion:no-preference) { .hit-feedback { animation:affinity-pop .3s ease-out both; } @keyframes affinity-pop { from {opacity:0;translate:0 5px} to {opacity:1;translate:0 0} } }
+@media(pointer:coarse) { .game-shell .badge-book nav button,.quest-tabs button,.quest-list button,.party-lobby .dialog-actions button { min-height:44px; min-width:44px; } }
+.party-lobby .badge-book button.badge-slot:disabled { opacity:.45; filter:grayscale(.5); }
+.badge-book .badge-owner { position:absolute; bottom:2px; left:2px; right:2px; margin:0; border-radius:4px; padding:2px; background:#171027; color:white; font:700 8px/1.2 Segoe UI,sans-serif; }
