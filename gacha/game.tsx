@@ -878,6 +878,10 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
               <Icon name="bolt" /> SYNC BURST
             </button>
           </div>
+          <div className="energy-card" aria-label={`Énergie disponible : ${busy?energy:energy-(chooser?otherCost:reserved)} sur 3`}>
+            <div><span>ÉNERGIE</span><b>{busy?energy:energy-(chooser?otherCost:reserved)} / 3 EN</b></div>
+            <div className="energy-pips" aria-hidden="true">{[0,1,2].map(pip=><i key={pip} className={pip<(busy?energy:energy-(chooser?otherCost:reserved))?"full":""}/>)}</div>
+          </div>
         </aside>
 
         <section className="battle-column">
@@ -950,7 +954,6 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
 
           <button onClick={()=>setTargetPin(null)}>Retour aux actions</button>
         </>:<>
-          <p className="action-energy">{energy-otherCost} EN disponibles</p>
           <div className="psych-action-menu">{(loadout[choosing.name]||[]).map(id=>{
             const pin=psychs[id];return <button key={id} disabled={pin.cost+otherCost>energy} onClick={()=>offensive(id)?setTargetPin(id):choose({kind:"psych",pin:id})}>
               <PinIcon pin={pin}/><b>{pin.name}</b><span>{types[pin.kind]} · {pin.cost} EN</span>
@@ -962,7 +965,6 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
           <button onClick={()=>setChooser(null)}>Annuler</button>
         </>}
             </div>:<>
-            <div className="planning-budget"><b>{energy} EN</b><span>{busy?"Tour en cours":`${reserved} EN réservée${reserved>1?"s":""} · +2 EN en fin de tour`}</span></div>
             <div className="planned-actions">{team.map(f=>{
               const plan=plans[f.name],target=enemies.find(e=>e.id===plan?.target);
               return <button key={f.name} disabled={busy||reward||f.hp<=0} onClick={()=>openChooser(f.name)}>

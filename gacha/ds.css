@@ -680,3 +680,17 @@
 .combat-hud .inline-action-menu .psych-action-menu { grid-auto-rows:44px; align-content:center; }
 @media(orientation:landscape) { .combat-hud .round-planner.choosing-action { height:min(55dvh,174px); } }
 @media(orientation:landscape) { .combat-hud .round-planner.choosing-action { height:min(57dvh,190px); } }
+
+/* Shared resource row: Groove and available energy take one half each. */
+.combat-hud .squad-panel { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.combat-hud .groove-card { grid-column:1; grid-row:2; width:100%; min-width:0; }
+.combat-hud .energy-card { grid-column:2; grid-row:2; min-width:0; height:28px; padding:4px 9px; border:1px solid #ae9bd4; border-radius:999px; background:#21163de3; box-shadow:var(--edge); color:#f3e3ff; }
+.combat-hud .energy-card>div:first-child { display:flex; justify-content:space-between; align-items:center; gap:4px; font:700 9px 'Segoe UI',sans-serif; }
+.combat-hud .energy-pips { display:flex; gap:3px; margin-top:3px; height:3px; }
+.combat-hud .energy-pips i { flex:1; border-radius:999px; background:#655877; }
+.combat-hud .energy-pips i.full { background:#ffe4a6; box-shadow:0 0 4px #ffdf9455; }
+.combat-hud .round-planner:not(.choosing-action) { grid-template-rows:minmax(0,1fr) 38px; }
+@media(orientation:portrait) {
+ .combat-hud .energy-card { height:27px; }
+ .combat-hud .round-planner:not(.choosing-action) { grid-template-rows:58px 36px; }
+}

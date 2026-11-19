@@ -1576,7 +1576,16 @@ function Battle({
     onClick: () => openChooser(livingTeam[0].name)
   }, React.createElement(Icon, {
     name: "bolt"
-  }), " SYNC BURST"))), React.createElement("section", {
+  }), " SYNC BURST")), React.createElement("div", {
+    className: "energy-card",
+    "aria-label": `Énergie disponible : ${busy ? energy : energy - (chooser ? otherCost : reserved)} sur 3`
+  }, React.createElement("div", null, React.createElement("span", null, "\xC9NERGIE"), React.createElement("b", null, busy ? energy : energy - (chooser ? otherCost : reserved), " / 3 EN")), React.createElement("div", {
+    className: "energy-pips",
+    "aria-hidden": "true"
+  }, [0, 1, 2].map(pip => React.createElement("i", {
+    key: pip,
+    className: pip < (busy ? energy : energy - (chooser ? otherCost : reserved)) ? "full" : ""
+  }))))), React.createElement("section", {
     className: "battle-column"
   }, React.createElement("div", {
     className: "battle-heading"
@@ -1667,9 +1676,7 @@ function Battle({
     enemy: enemy
   }), React.createElement("b", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("button", {
     onClick: () => setTargetPin(null)
-  }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("p", {
-    className: "action-energy"
-  }, energy - otherCost, " EN disponibles"), React.createElement("div", {
+  }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "psych-action-menu"
   }, (loadout[choosing.name] || []).map(id => {
     const pin = psychs[id];
@@ -1699,8 +1706,6 @@ function Battle({
   }), React.createElement("b", null, "Sync Burst"), React.createElement("span", null, "100% Groove \xB7 Tous les ennemis"))), React.createElement("button", {
     onClick: () => setChooser(null)
   }, "Annuler"))) : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "planning-budget"
-  }, React.createElement("b", null, energy, " EN"), React.createElement("span", null, busy ? "Tour en cours" : `${reserved} EN réservée${reserved > 1 ? "s" : ""} · +2 EN en fin de tour`)), React.createElement("div", {
     className: "planned-actions"
   }, team.map(f => {
     const plan = plans[f.name],
