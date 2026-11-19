@@ -754,8 +754,10 @@ function makeWishEvent(p, next, id, count, free, cost, draws) {
   };
 }
 function WishHistory({
-  profile
+  profile,
+  embedded = false
 }) {
+  const Panel = embedded ? InlinePanel : WishDialog;
   const [open, setOpen] = useState(false),
     [items, setItems] = useState([]),
     [selected, setSelected] = useState(null);
@@ -779,15 +781,18 @@ function WishHistory({
       setLoading(false);
     }
   };
+  useEffect(() => {
+    if (embedded) load(true);
+  }, [embedded]);
   const events = [...new Map([...items, ...profile.wishEvents].map(event => [event.id, event])).values()].sort((a, b) => b.id.localeCompare(a.id));
   const pending = new Set(profile.wishEvents.map(e => e.id));
-  return React.createElement(React.Fragment, null, React.createElement("button", {
+  return React.createElement(React.Fragment, null, !embedded && React.createElement("button", {
     onClick: () => {
       setOpen(true);
       setSelected(null);
       load(true);
     }
-  }, "Historique des v\u0153ux"), open && React.createElement(WishDialog, {
+  }, "Historique des v\u0153ux"), (open || embedded) && React.createElement(Panel, {
     className: "wish-history",
     title: "Historique des v\u0153ux",
     close: () => setOpen(false)
@@ -824,7 +829,7 @@ function WishHistory({
   }, "Actualiser"), more && React.createElement("button", {
     disabled: loading,
     onClick: () => load()
-  }, "Charger plus")))), React.createElement("button", {
+  }, "Charger plus")))), !embedded && React.createElement("button", {
     onClick: () => setOpen(false)
   }, "Fermer")));
 }
@@ -1316,8 +1321,10 @@ function PsychEquipment({
   }, "Enregistrer"))));
 }
 function BadgeCatalogue({
-  owned
+  owned,
+  embedded = false
 }) {
+  const Panel = embedded ? InlinePanel : WishDialog;
   const [open, setOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -1327,13 +1334,13 @@ function BadgeCatalogue({
     setPage(page + delta);
     setSelected(null);
   };
-  return React.createElement(React.Fragment, null, React.createElement("button", {
+  return React.createElement(React.Fragment, null, !embedded && React.createElement("button", {
     onClick: () => {
       setPage(0);
       setSelected(null);
       setOpen(true);
     }
-  }, "Catalogue des badges"), open && React.createElement(WishDialog, {
+  }, "Catalogue des badges"), (open || embedded) && React.createElement(Panel, {
     className: "badge-book",
     title: "Badges",
     close: () => setOpen(false)
@@ -1379,7 +1386,7 @@ function BadgeCatalogue({
     disabled: page + 1 >= pages,
     "aria-label": "Page suivante",
     onClick: () => move(1)
-  }, "\u203A")), React.createElement("button", {
+  }, "\u203A")), !embedded && React.createElement("button", {
     onClick: () => setOpen(false)
   }, "Fermer"), React.createElement("small", null, "Visuels DS \xB7 NightOwl35. Donn\xE9es \xB7 TWEWY Wiki.")));
 }
@@ -1453,8 +1460,10 @@ function claimQuests(p, ids) {
 }
 function QuestMenu({
   profile,
-  save
+  save,
+  embedded = false
 }) {
+  const Panel = embedded ? InlinePanel : WishDialog;
   const [missionStatus, setMissionStatus] = useState(() => window.ChibiGameSync?.missionState || "idle");
   useEffect(() => {
     const update = () => setMissionStatus(window.ChibiGameSync?.missionState || "idle");
@@ -1465,9 +1474,9 @@ function QuestMenu({
   const quests = questsFor(profile),
     ready = quests.filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id));
   const [category, setCategory] = useState("floor");
-  return React.createElement(React.Fragment, null, React.createElement("button", {
+  return React.createElement(React.Fragment, null, !embedded && React.createElement("button", {
     onClick: () => setOpen(true)
-  }, "Qu\xEAtes", ready.length ? ` · ${ready.length}` : ""), open && React.createElement(WishDialog, {
+  }, "Qu\xEAtes", ready.length ? ` · ${ready.length}` : ""), (open || embedded) && React.createElement(Panel, {
     className: "quest-menu",
     title: "Qu\xEAtes",
     close: () => setOpen(false)
@@ -1510,12 +1519,209 @@ function QuestMenu({
   }, React.createElement("button", {
     disabled: !ready.length,
     onClick: () => save(p => claimQuests(p, questsFor(p).map(q => q.id)))
-  }, "Tout r\xE9cup\xE9rer \xB7 ", ready.reduce((sum, q) => sum + q.reward, 0), " pi\xE8ces"), React.createElement("button", {
+  }, "Tout r\xE9cup\xE9rer \xB7 ", ready.reduce((sum, q) => sum + q.reward, 0), " pi\xE8ces"), !embedded && React.createElement("button", {
     onClick: () => setOpen(false)
   }, "Fermer"))));
 }
 function combatFingerprint(p) {
   return JSON.stringify([p.owned, p.equipped, p.loadout, p.xp, p.awakened, p.levels]);
+}
+function InlinePanel({
+  title,
+  children,
+  className = ""
+}) {
+  return React.createElement("section", {
+    className: `hub-panel ${className}`
+  }, React.createElement("h2", null, title), children);
+}
+function gameFullscreen() {
+  if (window.parent !== window) {
+    window.parent.postMessage({
+      type: "chibi:fullscreen",
+      action: "toggle"
+    }, location.protocol === "file:" ? "*" : location.origin);
+    return;
+  }
+  if (document.fullscreenElement) document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(() => {});
+}
+const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["collection", "Collection", "▦"], ["menu", "Menu", "☰"]];
+function GameHub({
+  profile,
+  screen,
+  navigate,
+  children
+}) {
+  const content = React.useRef(null);
+  useEffect(() => {
+    content.current?.scrollTo({
+      top: 0
+    });
+  }, [screen]);
+  return React.createElement("div", {
+    className: "game-hub game-shell"
+  }, React.createElement("header", {
+    className: "hub-header"
+  }, React.createElement("button", {
+    className: "hub-brand",
+    onClick: () => navigate("home"),
+    "aria-label": "Accueil du jeu"
+  }, "TWEWY ", React.createElement("span", null, "REAPERS\u2019 RUN")), React.createElement("div", {
+    className: "hub-wallet"
+  }, React.createElement("span", {
+    "aria-label": `${profile.coins} pièces`
+  }, React.createElement(Icon, {
+    name: "coin"
+  }), profile.coins.toLocaleString("fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement("button", {
+    className: "hub-fullscreen",
+    onClick: gameFullscreen,
+    "aria-label": "Basculer le plein \xE9cran"
+  }, "\u26F6")), React.createElement("div", {
+    className: "hub-content",
+    ref: content
+  }, React.createElement("div", {
+    className: "hub-screen",
+    key: screen
+  }, children)), React.createElement("nav", {
+    className: "hub-nav",
+    "aria-label": "Navigation du jeu"
+  }, hubScreens.map(([id, label, icon]) => React.createElement("button", {
+    key: id,
+    "aria-current": screen === id ? "page" : undefined,
+    onClick: () => navigate(id)
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, icon), React.createElement("b", null, label)))));
+}
+function CharacterDossier({
+  fighter,
+  profile,
+  base = false,
+  rate
+}) {
+  const owned = profile.owned.includes(fighter.name),
+    reference = base || !owned;
+  const stats = trained(fighter, reference ? 0 : profile.xp[fighter.name] || 0, !reference && profile.awakened.includes(fighter.name));
+  const rank = reference ? 0 : profile.levels[fighter.name] || 0,
+    pin = psychs[basePsych[fighter.name]];
+  return React.createElement("article", {
+    className: "character-dossier",
+    style: {
+      "--character-accent": fighter.accent
+    }
+  }, React.createElement("header", null, React.createElement("small", null, fighter.role), React.createElement("h3", null, fighter.name), React.createElement(TypeChips, {
+    elements: characterElements[fighter.name]
+  })), React.createElement("div", {
+    className: "dossier-art"
+  }, React.createElement("span", {
+    className: "dossier-orbit",
+    "aria-hidden": "true"
+  }), React.createElement(SpritePreview, {
+    fighter: fighter,
+    maximumScale: 2.6
+  }), React.createElement(RankBadge, {
+    level: rank
+  })), React.createElement("div", {
+    className: "dossier-stats"
+  }, React.createElement("p", null, reference ? "Stats de base · Niveau 1 · Rang E" : `Ta progression · Niveau ${stats.level} · Rang ${rank === 5 ? "étoile" : ranks[rank]}`), React.createElement("dl", null, [["PV", stats.maxHp], ["ATK", stats.atk], ["ATK SPE", stats.mag], ["SPE", stats.speed]].map(([name, value]) => React.createElement("div", {
+    key: name
+  }, React.createElement("dt", null, name), React.createElement("dd", null, value)))), React.createElement("div", {
+    className: "dossier-psych"
+  }, React.createElement(PinIcon, {
+    pin: pin
+  }), React.createElement("span", null, React.createElement("small", null, "Psych de d\xE9part"), React.createElement("b", null, pin.name.replace(" (Pin)", "")))), rate !== undefined && React.createElement("p", {
+    className: "dossier-rate"
+  }, "Prochain v\u0153u \xB7 ", (rate * 100).toLocaleString("fr-FR", {
+    maximumFractionDigits: 3
+  }), " %"), !reference && React.createElement("p", null, profile.copies[fighter.name] || 0, " / 5 doublons", profile.awakened.includes(fighter.name) ? " · Éveillé" : "")));
+}
+function CharacterCollection({
+  profile
+}) {
+  const [onlyOwned, setOnlyOwned] = useState(false),
+    [selected, setSelected] = useState(null);
+  return React.createElement("section", {
+    className: "hub-panel character-collection"
+  }, React.createElement("h1", null, "Personnages"), React.createElement("p", null, profile.owned.length, " / ", characterRoster.length, " d\xE9bloqu\xE9s"), React.createElement("div", {
+    className: "hub-tabs"
+  }, React.createElement("button", {
+    "aria-pressed": !onlyOwned,
+    onClick: () => setOnlyOwned(false)
+  }, "Tous"), React.createElement("button", {
+    "aria-pressed": onlyOwned,
+    onClick: () => setOnlyOwned(true)
+  }, "D\xE9bloqu\xE9s")), React.createElement("div", {
+    className: "character-grid"
+  }, characterRoster.filter(f => !onlyOwned || profile.owned.includes(f.name)).map(f => {
+    const owned = profile.owned.includes(f.name);
+    return React.createElement("button", {
+      key: f.name,
+      className: owned ? "" : "not-owned",
+      onClick: () => setSelected(f),
+      "aria-label": `Fiche de ${f.name}${owned ? "" : " · Non obtenu"}`
+    }, React.createElement(HudPortrait, {
+      fighter: f
+    }), React.createElement("b", null, f.name), React.createElement("small", null, owned ? `Niv. ${experience(profile.xp[f.name] || 0).level} · ${ranks[profile.levels[f.name] || 0]}` : "Non obtenu"));
+  })), selected && React.createElement(WishDialog, {
+    className: "character-sheet-dialog",
+    title: `Fiche · ${selected.name}`,
+    close: () => setSelected(null)
+  }, React.createElement(CharacterDossier, {
+    fighter: selected,
+    profile: profile
+  }), React.createElement("button", {
+    onClick: () => setSelected(null)
+  }, "Retour \xE0 la collection")));
+}
+function HubHome({
+  profile,
+  navigate
+}) {
+  const names = profile.equipped.filter(Boolean),
+    duo = (names.length ? names : ["NEKU"]).map(name => characterRoster.find(f => f.name === name));
+  const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length;
+  return React.createElement("section", {
+    className: "hub-home"
+  }, React.createElement("div", {
+    className: "hub-home-heading"
+  }, React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), React.createElement("h1", null, "\xC0 toi de jouer."), React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), React.createElement("div", {
+    className: "hub-home-stage"
+  }, React.createElement("div", {
+    className: "hub-home-halo",
+    "aria-hidden": "true"
+  }), duo.map(f => React.createElement(SpritePreview, {
+    key: f.name,
+    fighter: f,
+    maximumScale: 2.5
+  }))), React.createElement("button", {
+    className: "hub-play",
+    onClick: () => navigate("team")
+  }, React.createElement("small", null, "ROGUELIKE"), React.createElement("b", null, names.length === 2 ? "Préparer le combat" : "Former ma Team"), React.createElement("span", null, "100 \xE9tages \xE0 d\xE9fier \u2192")), React.createElement("div", {
+    className: "hub-shortcuts"
+  }, React.createElement("button", {
+    onClick: () => navigate("quests")
+  }, React.createElement("span", null, "\u25C7"), React.createElement("b", null, "Qu\xEAtes"), React.createElement("small", null, rewards ? `${rewards} récompense${rewards > 1 ? "s" : ""}` : "Ta progression")), React.createElement("button", {
+    onClick: () => navigate("summon")
+  }, React.createElement("span", null, "\u2726"), React.createElement("b", null, "Invocations"), React.createElement("small", null, profile.freeWishes, " v\u0153ux gratuits")), React.createElement("button", {
+    onClick: () => navigate("collection")
+  }, React.createElement("span", null, "\u25A6"), React.createElement("b", null, "Collection"), React.createElement("small", null, profile.owned.length, " personnages"))));
+}
+function HubMenu({
+  profile,
+  navigate
+}) {
+  return React.createElement("section", {
+    className: "hub-panel"
+  }, React.createElement("h1", null, "Menu"), React.createElement("div", {
+    className: "hub-menu-links"
+  }, [["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
+    key: id,
+    onClick: () => navigate(id)
+  }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u203A")))), React.createElement("section", {
+    className: "hub-help"
+  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Chaque vague vaincue rapporte 5 pi\xE8ces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e v\u0153u en garantit un. Les taux d\xE9taill\xE9s et les fiches sont accessibles sur chaque portail."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
 }
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
@@ -1530,6 +1736,33 @@ function App() {
   const [portal, setPortal] = useState("shibuya");
   const [phase, setPhase] = useState("ready");
   const turning = React.useRef(false);
+  const [screen, setScreen] = useState(gachaView ? "summon" : "home");
+  const [rateFighter, setRateFighter] = useState(null);
+  const navigate = next => {
+    if (turning.current) return;
+    setRateFighter(null);
+    setPhase("ready");
+    setScreen(next);
+  };
+  const navigationRef = React.useRef({
+    party,
+    navigate
+  });
+  navigationRef.current = {
+    party,
+    navigate
+  };
+  useEffect(() => {
+    const receive = event => {
+      if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
+      if (["home", "team", "summon", "collection", "quests", "journal", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+    };
+    window.addEventListener("message", receive);
+    if (window.parent !== window) window.parent.postMessage({
+      type: "chibi:game-ready"
+    }, location.protocol === "file:" ? "*" : location.origin);
+    return () => window.removeEventListener("message", receive);
+  }, []);
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
     try {
@@ -1731,24 +1964,52 @@ function App() {
     leave: () => {
       runSignature.current = null;
       setParty(null);
+      setScreen("team");
       setResult([]);
     }
   });
-  if (gachaView) return React.createElement("main", {
+  const hub = content => React.createElement(GameHub, {
+    profile: profile,
+    screen: screen,
+    navigate: navigate
+  }, content);
+  if (screen === "home") return hub(React.createElement(HubHome, {
+    profile: profile,
+    navigate: navigate
+  }));
+  if (screen === "menu") return hub(React.createElement(HubMenu, {
+    profile: profile,
+    navigate: navigate
+  }));
+  if (screen === "quests") return hub(React.createElement(QuestMenu, {
+    embedded: true,
+    profile: profile,
+    save: setProfile
+  }));
+  if (screen === "journal") return hub(React.createElement(WishHistory, {
+    embedded: true,
+    key: window.ChibiGameSync?.accountId || "local",
+    profile: profile
+  }));
+  if (screen === "collection") return hub(React.createElement(React.Fragment, null, React.createElement(CharacterCollection, {
+    profile: profile
+  }), React.createElement(BadgeCatalogue, {
+    embedded: true,
+    owned: profile.pins
+  })));
+  if (screen === "summon") return hub(React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), historyFull(profile) && React.createElement("p", {
+  }, React.createElement("section", null, React.createElement("h1", null, "Invocations"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), historyFull(profile) && React.createElement("p", {
     role: "status"
   }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
     className: "lobby-tools"
-  }, React.createElement(WishHistory, {
-    key: window.ChibiGameSync?.accountId || "local",
-    profile: profile
-  }), React.createElement(BadgeCatalogue, {
-    owned: profile.pins
-  }), React.createElement(QuestMenu, {
-    profile: profile,
-    save: setProfile
-  })), React.createElement("p", {
+  }, React.createElement("button", {
+    onClick: () => navigate("journal")
+  }, "Historique des v\u0153ux"), React.createElement("button", {
+    onClick: () => navigate("collection")
+  }, "Collection"), React.createElement("button", {
+    onClick: () => navigate("quests")
+  }, "Qu\xEAtes")), React.createElement("p", {
     className: "daily-wishes"
   }, "V\u0153ux gratuits \xB7 ", React.createElement("b", null, profile.freeWishes), React.createElement("small", null, parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), React.createElement("div", {
     className: "portal-list"
@@ -1774,6 +2035,7 @@ function App() {
     className: "portal-rates",
     onClick: () => {
       setPortal(id);
+      setRateFighter(null);
       setPhase("rates");
     },
     "aria-label": `Taux de ${id === "shibuya" ? "First Week #1" : title}`
@@ -1807,11 +2069,27 @@ function App() {
     className: "portal-caption"
   }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
-    title: `Taux · ${portalName}`,
+    className: rateFighter ? "character-sheet-dialog" : "portal-rates-dialog",
+    title: rateFighter ? `Fiche · ${rateFighter}` : `Taux · ${portalName}`,
     close: closeDialog
-  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, portalRoster(portal).map(f => React.createElement("li", {
-    key: f.name
-  }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l\u2019\xE9veiller ne modifie pas sa probabilit\xE9."), React.createElement("button", {
+  }, rateFighter ? React.createElement(React.Fragment, null, React.createElement(CharacterDossier, {
+    fighter: characterRoster.find(f => f.name === rateFighter),
+    profile: profile,
+    base: true,
+    rate: pool.filter(x => x.name === rateFighter).length / pool.length * (guaranteed ? 1 : characterChance)
+  }), React.createElement("button", {
+    onClick: () => setRateFighter(null)
+  }, "Retour aux taux")) : React.createElement(React.Fragment, null, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("p", null, "Touche un personnage pour voir sa fiche."), React.createElement("div", {
+    className: "rates-character-list"
+  }, portalRoster(portal).map(f => React.createElement("button", {
+    key: f.name,
+    onClick: () => setRateFighter(f.name),
+    "aria-label": `Fiche de ${f.name}`
+  }, React.createElement(HudPortrait, {
+    fighter: f
+  }), React.createElement("span", null, React.createElement("b", null, f.name), React.createElement("small", null, "Stats & psych de d\xE9part")), React.createElement("strong", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))), React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u203A")))), React.createElement("p", null, "Badges psych \xB7 ", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l\u2019\xE9veiller ne modifie pas sa probabilit\xE9.")), React.createElement("button", {
     onClick: closeDialog
   }, "Fermer")), phase === "confirm" && React.createElement(WishDialog, {
     key: "confirm",
@@ -1867,8 +2145,8 @@ function App() {
     onClick: () => awaken(name)
   }, "\xC9veiller \xB7 +20 PV"))), saveError && React.createElement("p", {
     role: "alert"
-  }, "Sauvegarde locale indisponible.")));
-  return React.createElement("main", {
+  }, "Sauvegarde locale indisponible."))));
+  return hub(React.createElement("main", {
     className: "game-shell party-lobby"
   }, React.createElement("section", null, React.createElement("h1", null, "Team"), React.createElement("div", {
     className: "team-slots"
@@ -1914,15 +2192,13 @@ function App() {
     role: "status"
   }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
     className: "lobby-tools"
-  }, React.createElement(WishHistory, {
-    key: window.ChibiGameSync?.accountId || "local",
-    profile: profile
-  }), React.createElement(BadgeCatalogue, {
-    owned: profile.pins
-  }), React.createElement(QuestMenu, {
-    profile: profile,
-    save: setProfile
-  })), fighters.map(name => React.createElement(PsychEquipment, {
+  }, React.createElement("button", {
+    onClick: () => navigate("journal")
+  }, "Historique des v\u0153ux"), React.createElement("button", {
+    onClick: () => navigate("collection")
+  }, "Collection"), React.createElement("button", {
+    onClick: () => navigate("quests")
+  }, "Qu\xEAtes")), fighters.map(name => React.createElement(PsychEquipment, {
     key: name,
     name: name,
     profile: profile,
@@ -1951,7 +2227,7 @@ function App() {
     }
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
-  }, "La sauvegarde locale est indisponible dans ce navigateur.")));
+  }, "La sauvegarde locale est indisponible dans ce navigateur."))));
 }
 function HudPortrait({
   fighter,

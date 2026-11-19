@@ -346,7 +346,8 @@ function makeWishEvent(p:Profile,next:Profile,id:string,count:number,free:number
  const at=Date.now();return {id:`${at}-${next.wishesMade}-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`,at,portal:id,count,freeUsed:free,coinsPaid:cost,coinsBefore:p.coins,coinsAfter:next.coins,freeBefore:p.freeWishes,freeAfter:next.freeWishes,first:p.wishesMade+1,last:next.wishesMade,
  drawsJson:JSON.stringify(draws.map(draw=>"pin" in draw?{pinId:draw.pin.id}:{name:draw.name,rank:draw.rank,copies:draw.copies}))};
 }
-function WishHistory({profile}:{profile:Profile}) {
+function WishHistory({profile,embedded=false}:{profile:Profile;embedded?:boolean}) {
+ const Panel=embedded?InlinePanel:WishDialog;
  const [open,setOpen]=useState(false),[items,setItems]=useState<WishEvent[]>([]),[selected,setSelected]=useState<WishEvent|null>(null);
  const [loading,setLoading]=useState(false),[error,setError]=useState(""),[cursor,setCursor]=useState<string|null>(null),[more,setMore]=useState(false);
  const load=async(reset=false)=>{
@@ -357,10 +358,11 @@ function WishHistory({profile}:{profile:Profile}) {
    setItems(old=>reset?result.items.filter(validWishEvent):[...old,...result.items.filter(validWishEvent)]);setCursor(result.cursor);setMore(result.more);
   }catch(e){setError(String((e as Error).message||"Historique indisponible"));}finally{setLoading(false);}
  };
+ useEffect(()=>{if(embedded)load(true);},[embedded]);
  const events=[...new Map([...items,...profile.wishEvents].map(event=>[event.id,event])).values()].sort((a,b)=>b.id.localeCompare(a.id));
  const pending=new Set(profile.wishEvents.map(e=>e.id));
- return <><button onClick={()=>{setOpen(true);setSelected(null);load(true);}}>Historique des vœux</button>
- {open&&<WishDialog className="wish-history" title="Historique des vœux" close={()=>setOpen(false)}>
+ return <>{!embedded&&<button onClick={()=>{setOpen(true);setSelected(null);load(true);}}>Historique des vœux</button>}
+ {(open||embedded)&&<Panel className="wish-history" title="Historique des vœux" close={()=>setOpen(false)}>
   <div key={selected?.id||"list"} className="wish-history-view">
   {selected?<>
    <p><b>{portals[selected.portal]||selected.portal}</b> · {new Date(selected.at).toLocaleString("fr-FR",{timeZone:"Europe/Paris"})}</p>
@@ -381,8 +383,8 @@ function WishHistory({profile}:{profile:Profile}) {
    </button>)}{!events.length&&!loading&&<p>Aucune invocation détaillée enregistrée pour le moment.</p>}</div>
    <div className="dialog-actions"><button disabled={loading} onClick={()=>load(true)}>Actualiser</button>{more&&<button disabled={loading} onClick={()=>load()}>Charger plus</button>}</div>
   </>}
-  </div><button onClick={()=>setOpen(false)}>Fermer</button>
- </WishDialog>}
+  </div>{!embedded&&<button onClick={()=>setOpen(false)}>Fermer</button>}
+ </Panel>}
  </>;
 }
 
@@ -601,7 +603,8 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
     </WishDialog>}
   </div>;
 }
-function BadgeCatalogue({owned}:{owned:string[]}) {
+function BadgeCatalogue({owned,embedded=false}:{owned:string[];embedded?:boolean}) {
+  const Panel=embedded?InlinePanel:WishDialog;
   const [open,setOpen]=useState(false);
   const [page,setPage]=useState(0);
   const [selected,setSelected]=useState<Pin|null>(null);
@@ -609,8 +612,8 @@ function BadgeCatalogue({owned}:{owned:string[]}) {
   const pages=Math.ceil(pinList.length/16);
   const move=(delta:number)=>{setPage(page+delta);setSelected(null);};
   return <>
-    <button onClick={()=>{setPage(0);setSelected(null);setOpen(true);}}>Catalogue des badges</button>
-    {open && <WishDialog className="badge-book" title="Badges" close={()=>setOpen(false)}>
+    {!embedded&&<button onClick={()=>{setPage(0);setSelected(null);setOpen(true);}}>Catalogue des badges</button>}
+    {(open||embedded) && <Panel className="badge-book" title="Badges" close={()=>setOpen(false)}>
       <div className="badge-counter">{collected.length} / {pinList.length} obtenus</div>
       <div className="badge-slots">
         {Array.from({length:16},(_,i)=>{
@@ -623,9 +626,9 @@ function BadgeCatalogue({owned}:{owned:string[]}) {
       </div>
       {selected && <p className="badge-info" aria-live="polite"><b>#{selected.number} {selected.name}</b> · {types[selected.kind]} · {selected.cost} EN · <PinRankInfo pin={selected}/> <TypeChips elements={[selected.element||badgeElement(selected)]}/></p>}
       <nav aria-label="Pages du catalogue"><button disabled={!page} aria-label="Page précédente" onClick={()=>move(-1)}>‹</button><span aria-live="polite">{page+1} / {pages}</span><button disabled={page+1>=pages} aria-label="Page suivante" onClick={()=>move(1)}>›</button></nav>
-      <button onClick={()=>setOpen(false)}>Fermer</button>
+      {!embedded&&<button onClick={()=>setOpen(false)}>Fermer</button>}
       <small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small>
-    </WishDialog>}
+    </Panel>}
   </>;
 }
 type Quest = {id:string;title:string;progress:number;goal:number;reward:number};
@@ -655,7 +658,8 @@ function claimQuests(p:Profile,ids:string[]):Profile {
  const ready=questsFor(p).filter(q=>ids.includes(q.id)&&q.progress>=q.goal&&!p.claimedQuests.includes(q.id));
  return {...p,coins:p.coins+ready.reduce((sum,q)=>sum+q.reward,0),claimedQuests:[...p.claimedQuests,...ready.map(q=>q.id)]};
 }
-function QuestMenu({profile,save}:{profile:Profile;save:(fn:(p:Profile)=>Profile)=>void}) {
+function QuestMenu({profile,save,embedded=false}:{profile:Profile;save:(fn:(p:Profile)=>Profile)=>void;embedded?:boolean}) {
+ const Panel=embedded?InlinePanel:WishDialog;
   const [missionStatus,setMissionStatus]=useState(()=>window.ChibiGameSync?.missionState||"idle");
   useEffect(()=>{const update=()=>setMissionStatus(window.ChibiGameSync?.missionState||"idle");window.addEventListener("chibi:mission-scores",update);return()=>window.removeEventListener("chibi:mission-scores",update);},[]);
 
@@ -663,8 +667,8 @@ function QuestMenu({profile,save}:{profile:Profile;save:(fn:(p:Profile)=>Profile
  const quests=questsFor(profile),ready=quests.filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id));
  const [category,setCategory]=useState("floor");
  return <>
-  <button onClick={()=>setOpen(true)}>Quêtes{ready.length?` · ${ready.length}`:""}</button>
-  {open&&<WishDialog className="quest-menu" title="Quêtes" close={()=>setOpen(false)}>
+  {!embedded&&<button onClick={()=>setOpen(true)}>Quêtes{ready.length?` · ${ready.length}`:""}</button>}
+  {(open||embedded)&&<Panel className="quest-menu" title="Quêtes" close={()=>setOpen(false)}>
    <p>Récompenses uniques · Progression rétroactive</p>
    {profile.floorRecoveryAvailable&&<button className="floor-recovery" onClick={()=>save(p=>({...p,bestFloor:Math.max(p.bestFloor,10),floorRecoveryAvailable:false}))}>Rattraper mon ancien étage 10</button>}
    <div className="quest-tabs">{[["floor","Étages"],["badges","Collection"],["other","Personnages"],["pc","Missions PC"]].map(([id,name])=><button key={id} aria-pressed={category===id} onClick={()=>setCategory(id)}>{name}</button>)}</div>
@@ -678,12 +682,64 @@ function QuestMenu({profile,save}:{profile:Profile;save:(fn:(p:Profile)=>Profile
     return <article key={q.id}><div><b>{q.title}</b><small>{Math.min(q.goal,q.progress)} / {q.goal} · {q.reward} pièces</small><progress max={q.goal} value={Math.min(q.goal,q.progress)} aria-label={q.title}/></div>
      <button disabled={claimed||!done} onClick={()=>save(p=>claimQuests(p,[q.id]))}>{claimed?"Récupéré":"Récupérer"}</button></article>;
    })}</div>}
-   <div className="dialog-actions"><button disabled={!ready.length} onClick={()=>save(p=>claimQuests(p,questsFor(p).map(q=>q.id)))}>Tout récupérer · {ready.reduce((sum,q)=>sum+q.reward,0)} pièces</button><button onClick={()=>setOpen(false)}>Fermer</button></div>
-  </WishDialog>}
+   <div className="dialog-actions"><button disabled={!ready.length} onClick={()=>save(p=>claimQuests(p,questsFor(p).map(q=>q.id)))}>Tout récupérer · {ready.reduce((sum,q)=>sum+q.reward,0)} pièces</button>{!embedded&&<button onClick={()=>setOpen(false)}>Fermer</button>}</div>
+  </Panel>}
  </>;
 }
 
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels]);}
+type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"menu";
+function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
+function gameFullscreen(){
+ if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
+ if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
+}
+const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["menu","Menu","☰"]];
+function GameHub({profile,screen,navigate,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;children:React.ReactNode}) {
+ const content=React.useRef<HTMLDivElement>(null);
+ useEffect(()=>{content.current?.scrollTo({top:0});},[screen]);
+ return <div className="game-hub game-shell">
+  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString("fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
+  <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
+  <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} onClick={()=>navigate(id)}><span aria-hidden="true">{icon}</span><b>{label}</b></button>)}</nav>
+ </div>;
+}
+function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;profile:Profile;base?:boolean;rate?:number}) {
+ const owned=profile.owned.includes(fighter.name),reference=base||!owned;
+ const stats=trained(fighter,reference?0:profile.xp[fighter.name]||0,!reference&&profile.awakened.includes(fighter.name));
+ const rank=reference?0:profile.levels[fighter.name]||0,pin=psychs[basePsych[fighter.name]];
+ return <article className="character-dossier" style={{"--character-accent":fighter.accent} as React.CSSProperties}>
+  <header><small>{fighter.role}</small><h3>{fighter.name}</h3><TypeChips elements={characterElements[fighter.name]}/></header>
+  <div className="dossier-art"><span className="dossier-orbit" aria-hidden="true"/><SpritePreview fighter={fighter} maximumScale={2.6}/><RankBadge level={rank}/></div>
+  <div className="dossier-stats"><p>{reference?"Stats de base · Niveau 1 · Rang E":`Ta progression · Niveau ${stats.level} · Rang ${rank===5?"étoile":ranks[rank]}`}</p>
+   <dl>{[["PV",stats.maxHp],["ATK",stats.atk],["ATK SPE",stats.mag],["SPE",stats.speed]].map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
+   <div className="dossier-psych"><PinIcon pin={pin}/><span><small>Psych de départ</small><b>{pin.name.replace(" (Pin)","")}</b></span></div>
+   {rate!==undefined&&<p className="dossier-rate">Prochain vœu · {(rate*100).toLocaleString("fr-FR",{maximumFractionDigits:3})} %</p>}
+   {!reference&&<p>{profile.copies[fighter.name]||0} / 5 doublons{profile.awakened.includes(fighter.name)?" · Éveillé":""}</p>}
+  </div>
+ </article>;
+}
+function CharacterCollection({profile}:{profile:Profile}) {
+ const [onlyOwned,setOnlyOwned]=useState(false),[selected,setSelected]=useState<Fighter|null>(null);
+ return <section className="hub-panel character-collection"><h1>Personnages</h1><p>{profile.owned.length} / {characterRoster.length} débloqués</p>
+  <div className="hub-tabs"><button aria-pressed={!onlyOwned} onClick={()=>setOnlyOwned(false)}>Tous</button><button aria-pressed={onlyOwned} onClick={()=>setOnlyOwned(true)}>Débloqués</button></div>
+  <div className="character-grid">{characterRoster.filter(f=>!onlyOwned||profile.owned.includes(f.name)).map(f=>{const owned=profile.owned.includes(f.name);return <button key={f.name} className={owned?"":"not-owned"} onClick={()=>setSelected(f)} aria-label={`Fiche de ${f.name}${owned?"":" · Non obtenu"}`}><HudPortrait fighter={f}/><b>{f.name}</b><small>{owned?`Niv. ${experience(profile.xp[f.name]||0).level} · ${ranks[profile.levels[f.name]||0]}`:"Non obtenu"}</small></button>;})}</div>
+  {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/><button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
+ </section>;
+}
+function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
+ const names=profile.equipped.filter(Boolean),duo=(names.length?names:["NEKU"]).map(name=>characterRoster.find(f=>f.name===name)!);
+ const rewards=questsFor(profile).filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id)).length;
+ return <section className="hub-home"><div className="hub-home-heading"><small>SHIBUYA · REAPERS’ GAME</small><h1>À toi de jouer.</h1><span>Record · Étage {profile.bestFloor} / 100</span></div>
+  <div className="hub-home-stage"><div className="hub-home-halo" aria-hidden="true"/>{duo.map(f=><SpritePreview key={f.name} fighter={f} maximumScale={2.5}/>)}</div>
+  <button className="hub-play" onClick={()=>navigate("team")}><small>ROGUELIKE</small><b>{names.length===2?"Préparer le combat":"Former ma Team"}</b><span>100 étages à défier →</span></button>
+  <div className="hub-shortcuts"><button onClick={()=>navigate("quests")}><span>◇</span><b>Quêtes</b><small>{rewards?`${rewards} récompense${rewards>1?"s":""}`:"Ta progression"}</small></button><button onClick={()=>navigate("summon")}><span>✦</span><b>Invocations</b><small>{profile.freeWishes} vœux gratuits</small></button><button onClick={()=>navigate("collection")}><span>▦</span><b>Collection</b><small>{profile.owned.length} personnages</small></button></div>
+ </section>;
+}
+function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+}
+
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const profileRef=React.useRef(profile);profileRef.current=profile;
@@ -696,6 +752,18 @@ function App() {
   const [portal,setPortal]=useState("shibuya");
   const [phase, setPhase] = useState<"ready" | "rates" | "confirm" | "crank" | "spin" | "drop" | "reveal">("ready");
   const turning = React.useRef(false);
+  const [screen,setScreen]=useState<GameScreen>(gachaView?"summon":"home");
+  const [rateFighter,setRateFighter]=useState<string|null>(null);
+  const navigate=(next:GameScreen)=>{if(turning.current)return;setRateFighter(null);setPhase("ready");setScreen(next);};
+  const navigationRef=React.useRef({party,navigate});navigationRef.current={party,navigate};
+  useEffect(()=>{
+   const receive=(event:MessageEvent)=>{if(event.source!==window.parent||(event.origin!==location.origin&&!(location.protocol==="file:"&&event.origin==="null"))||event.data?.type!=="chibi:game-navigate"||navigationRef.current.party)return;
+    if(["home","team","summon","collection","quests","journal","menu"].includes(event.data.screen))navigationRef.current.navigate(event.data.screen);
+   };
+   window.addEventListener("message",receive);
+   if(window.parent!==window)window.parent.postMessage({type:"chibi:game-ready"},location.protocol==="file:"?"*":location.origin);
+   return()=>window.removeEventListener("message",receive);
+  },[]);
   const [saveError, setSaveError] = useState(false);
   useEffect(()=>{
     try {
@@ -804,12 +872,18 @@ function App() {
     onExperience={(amount)=>setProfile(p=>({...p,xp:{...p.xp,...Object.fromEntries(party.map(f=>[f.name,experience((p.xp[f.name]||0)+amount).xp]))}}))}
     onReach={(floor)=>setProfile(p=>({...p,hasPlayed:true,bestFloor:Math.max(p.bestFloor,Math.min(100,floor))}))}
     onVictory={(floor)=>setProfile(p=>({...p,coins:p.coins+5,hasPlayed:true,bestFloor:Math.max(p.bestFloor,Math.min(100,floor)),floorRecoveryAvailable:p.floorRecoveryAvailable&&floor<10}))}
-    leave={() => { runSignature.current=null;setParty(null); setResult([]); }} />;
-  if (gachaView) return <main className="game-shell party-lobby"><section>
-    <h2>Bingo Kai</h2>
+    leave={() => { runSignature.current=null;setParty(null);setScreen("team"); setResult([]); }} />;
+  const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
+  if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
+  if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
+  if(screen==="quests")return hub(<QuestMenu embedded profile={profile} save={setProfile}/>);
+  if(screen==="journal")return hub(<WishHistory embedded key={window.ChibiGameSync?.accountId||"local"} profile={profile}/>);
+  if(screen==="collection")return hub(<><CharacterCollection profile={profile}/><BadgeCatalogue embedded owned={profile.pins}/></>);
+  if (screen==="summon") return hub(<main className="game-shell party-lobby"><section>
+    <h1>Invocations</h1>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
-    <div className="lobby-tools"><WishHistory key={window.ChibiGameSync?.accountId||"local"} profile={profile}/><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
+    <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
@@ -820,7 +894,7 @@ function App() {
         </>}
         {["partners","apocalyptic","destiny"].includes(id) && <div className="portal-duo">{characterRoster.filter(f=>(id==="partners"?["BEAT","JOSHUA"]:id==="apocalyptic"?["2B","A2"]:["SORA","RIKU"]).includes(f.name)).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
-        <button className="portal-rates" onClick={()=>{setPortal(id);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
+        <button className="portal-rates" onClick={()=>{setPortal(id);setRateFighter(null);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
           <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
           <span className="bingo-crank" aria-hidden="true"/>
@@ -834,12 +908,13 @@ function App() {
       </div>
 
     </article>)}</div>
-    {phase==="rates" && <WishDialog key="rates" title={`Taux · ${portalName}`} close={closeDialog}>
+    {phase==="rates" && <WishDialog key="rates" className={rateFighter?"character-sheet-dialog":"portal-rates-dialog"} title={rateFighter?`Fiche · ${rateFighter}`:`Taux · ${portalName}`} close={closeDialog}>
+      {rateFighter?<><CharacterDossier fighter={characterRoster.find(f=>f.name===rateFighter)!} profile={profile} base rate={pool.filter(x=>x.name===rateFighter).length/pool.length*(guaranteed?1:characterChance)}/><button onClick={()=>setRateFighter(null)}>Retour aux taux</button></>:<>
       <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque 10e vœu garantit un personnage.</p>
-      <h3>Prochain vœu{guaranteed?" · garanti":""}</h3>
-      <ul>{portalRoster(portal).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
-      <li>Badges psych<b>{percent(guaranteed?0:1-characterChance)}</b></li></ul>
-      <p>Les {pinList.length} badges sont équiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l’éveiller ne modifie pas sa probabilité.</p>
+      <h3>Prochain vœu{guaranteed?" · garanti":""}</h3><p>Touche un personnage pour voir sa fiche.</p>
+      <div className="rates-character-list">{portalRoster(portal).map(f=><button key={f.name} onClick={()=>setRateFighter(f.name)} aria-label={`Fiche de ${f.name}`}><HudPortrait fighter={f}/><span><b>{f.name}</b><small>Stats & psych de départ</small></span><strong>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</strong><span aria-hidden="true">›</span></button>)}</div>
+      <p>Badges psych · <b>{percent(guaranteed?0:1-characterChance)}</b></p>
+      <p>Les {pinList.length} badges sont équiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l’éveiller ne modifie pas sa probabilité.</p></>}
       <button onClick={closeDialog}>Fermer</button></WishDialog>}
     {phase==="confirm" && <WishDialog key="confirm" title="Confirmer l’invocation" close={closeDialog}>
       <p>Invoquer sur {portalName} pour {quantity} {quantity===1?"vœu":"vœux"} ?</p>
@@ -860,8 +935,8 @@ function App() {
       <button onClick={() => awaken(name)}>Éveiller · +20 PV</button>}
     </div>)}
     {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
-  </section></main>;
-  return <main className="game-shell party-lobby"><section><h1>Team</h1>
+  </section></main>);
+  return hub(<main className="game-shell party-lobby"><section><h1>Team</h1>
     <div className="team-slots">{profile.equipped.map((name,index)=>{
       const fighter=characterRoster.find(f=>f.name===name);
       const stats=fighter && trained(fighter,profile.xp[name]||0,profile.awakened.includes(name));
@@ -877,13 +952,13 @@ function App() {
       <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
     </WishDialog>}
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
-    <div className="lobby-tools"><WishHistory key={window.ChibiGameSync?.accountId||"local"} profile={profile}/><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
+    <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     {fighters.map(name=><PsychEquipment key={name} name={name} profile={profile} save={ids=>setProfile(p=>assignBasePsychs({...p,loadout:{...p.loadout,[name]:ids}}))}/>)}
     {fighters.length===2 && !fighters.some(name=>profile.loadout[name]?.some(offensive)) && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={fighters.length!==2 || !fighters.every(name=>profile.loadout[name]?.length) || !fighters.some(name=>profile.loadout[name]?.some(offensive))}
       onClick={() => {setProfile(p=>({...p,hasPlayed:true,bestFloor:Math.max(1,p.bestFloor)}));runSignature.current=combatFingerprint(profile);setBattleLoadout(Object.fromEntries(fighters.map(name=>[name,[...profile.loadout[name]]])));setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }));}}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
-  </section></main>;
+  </section></main>);
 }
 
 function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
@@ -1411,4 +1486,7 @@ function SaveBoundary() {
   return <>{status.kind!=="synced"&&status.kind!=="saving"&&status.message&&<p className="save-sync-notice" role="status">{status.message}</p>}<App/></>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
+
+
+
 

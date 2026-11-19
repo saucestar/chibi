@@ -363,7 +363,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <div class="pn">
       <div class="chip"><i>09</i>YOUTUBE</div><div class="win"><b></b><b></b></div><div class="tape"></div>
       <form class="srch" id="srch">
-        <input class="in" id="q" placeholder="recherche, lien YouTube, Spotify ou Apple Music" autocomplete="off" enterkeyhint="search">
+        <input class="in" id="q" placeholder="recherche, lien YouTube ou playlist Spotify" autocomplete="off" enterkeyhint="search">
         <button type="submit" class="btn pri">▶</button>
       </form>
       <div class="dl" id="lists" style="max-height:30vh"></div>
@@ -458,12 +458,8 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
   </section>
 
   <!-- GACHA: the collectible card game (built together, its own cards and art) -->
-  <section class="page game-page" data-page="gacha" aria-label="Gacha">
-    <iframe class="game-frame" src="gacha/index.html?vue=gacha" title="Gacha personnages" loading="lazy"></iframe>
-  </section>
-
-  <section class="page game-page" data-page="game" aria-label="Jeu Reaper's Run">
-    <iframe class="game-frame" src="gacha/index.html" title="Reaper's Run - jeu de combat" allow="fullscreen" loading="lazy"></iframe>
+<section class="page game-page" data-page="game" aria-label="Jeu Reaper's Run">
+    <iframe class="game-frame" src="gacha/index.html" title="TWEWY · jeu, collection et invocations" allow="fullscreen" loading="lazy"></iframe>
   </section>
 </main>
 
@@ -572,7 +568,13 @@ window.addEventListener('storage', e => { if (e.key === walletKey || e.key === n
 window.addEventListener('pageshow', refreshWallet);
 refreshWallet();
 window.addEventListener("hashchange", () => show(location.hash.slice(1)));
+let gameDestination='home';
+function sendGameDestination(){const frame=document.querySelector('.game-page[data-page="game"] iframe');frame?.contentWindow?.postMessage({type:'chibi:game-navigate',screen:gameDestination},location.protocol==='file:'?'*':location.origin);}
+document.querySelector('.game-page[data-page="game"] iframe')?.addEventListener('load',sendGameDestination);
+window.addEventListener('message',event=>{const frame=document.querySelector('.game-page[data-page="game"] iframe');if(event.source===frame?.contentWindow&&event.data?.type==='chibi:game-ready'&&(event.origin===location.origin||(location.protocol==='file:'&&event.origin==='null')))sendGameDestination();});
 function show(p){
+  const gameRequest=p==='gacha'?'summon':p==='game'?'home':null;
+  if(p==='gacha')p='game';
   if(!PAGE_NAMES[p]) p = 'home';
   if(p!=='board-mobile')stopMobileBoard();
   document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p || (b.dataset.p==='board' && p.startsWith('board-'))));
@@ -580,6 +582,7 @@ function show(p){
   $('moreBtn').classList.toggle('on', p === 'profile' || p === 'friends');
   document.querySelectorAll('#moreSheet [data-go]').forEach(b => b.classList.toggle('on', b.dataset.go === p));
   document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.dataset.page === p));
+  if(gameRequest){gameDestination=gameRequest;sendGameDestination();}
   refreshWallet();
   try{ history.replaceState(null, '', location.pathname + (p === 'home' ? '' : '#' + p)); }catch(e){}
   window.scrollTo(0, 0);
@@ -825,14 +828,7 @@ let queue = [], cur = null, player = null, ready = false, pending = null, paused
 try{ const s = JSON.parse(localStorage.getItem('muState') || '{}'); queue = Array.isArray(s.queue) ? s.queue.slice(0, 300) : []; cur = s.cur || null; }catch(e){}
 function save(){ try{ localStorage.setItem('muState', JSON.stringify({ queue, cur })); }catch(e){} }
 function videoIdOf(t){ const m = /(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/.exec(t || ''); if(m) return m[1]; return /^[A-Za-z0-9_-]{11}$/.test((t || '').trim()) ? t.trim() : null; }
-function spotifyRef(t){
-  const m = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-zA-Z]{2})?\/)?(?:embed\/)?|spotify:)(playlist|album)[\/:]([A-Za-z0-9]{10,40})/.exec(t || '');
-  if(m) return m[1] + '/' + m[2];
-  // Apple Music: music.apple.com/fr/playlist/<name>/pl.xxxx or /album/<name>/1440837096
-  const a = /music\.apple\.com\/([a-z]{2})\/(playlist|album)\/(?:[^\/?#\s]+\/)?((?:pl\.)?[A-Za-z0-9.\-]{4,60})/.exec(t || '');
-  return a ? 'am/' + a[1] + '/' + a[2] + '/' + a[3] : null;
-}
-function sourceName(ref){ return ref && ref.indexOf('am/') === 0 ? 'Apple Music' : 'Spotify'; }
+function spotifyRef(t){ const m = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-zA-Z]{2})?\/)?(?:embed\/)?|spotify:)(playlist|album)[\/:]([A-Za-z0-9]{10,40})/.exec(t || ''); return m ? m[1] + '/' + m[2] : null; }
 
 window.onYouTubeIframeAPIReady = function(){
   player = new YT.Player('yt', { width: '100%', height: '100%', playerVars: { playsinline: 1, rel: 0 }, events: {
@@ -893,7 +889,7 @@ function renderLists(){
     (spJob ? '<div class="it on"><div class="t"><span>⏳ ' + esc(spJob) + '</span></div></div>' : '') +
     (lists.length ? lists.map(l => '<div class="it' + (l.key === openKey ? ' on' : '') + '" data-k="' + esc(l.key) + '"><i class="dot ' + (l.k === 'sp' ? 'acid' : l.k === 'search' ? 'gold' : '') + '"></i><div class="t"><span>' + (l.k === 'sp' ? '♫ ' : '') + esc(l.n) + '</span></div><div class="n">' + l.tracks.length + '</div>' +
       (l.k === 'sp' ? '<button type="button" class="x" data-a="del" title="supprimer">✕</button>' : '') + '</div>').join('')
-      : '<div class="empty">Cherche une musique, colle un lien Spotify ou Apple Music, ou connecte YouTube dans le launcher PC : tes playlists arrivent ici.</div>');
+      : '<div class="empty">Cherche une musique, colle un lien Spotify, ou connecte YouTube dans le launcher PC : tes playlists arrivent ici.</div>');
   $('lists').querySelectorAll('.it[data-k]').forEach(r => r.onclick = async e => {
     const l = allLists().find(x => x.key === r.dataset.k);
     if(e.target.dataset.a === 'del'){
@@ -945,7 +941,7 @@ async function findTrack(t){
 async function importSpotify(ref){
   if(spJob) return;
   try{
-    spJob = sourceName(ref) + ' : lecture de la playlist…'; renderLists();
+    spJob = 'Spotify : lecture de la playlist…'; renderLists();
     const sp = await api('/spotify', { ref });
     const found = new Array(sp.tracks.length); let done = 0, nx = 0;
     const work = async () => { while(nx < sp.tracks.length){ const i = nx++; for(let a = 0; a < 2; a++){ try{ found[i] = await findTrack(sp.tracks[i]); break; }catch(e){ await new Promise(r => setTimeout(r, 1500)); } } done++; spJob = '« ' + sp.name + ' » : recherche sur YouTube ' + done + ' / ' + sp.tracks.length; renderLists(); } };
@@ -953,12 +949,12 @@ async function importSpotify(ref){
     const seen = new Set(), t = []; let lost = 0;
     found.forEach(v => { if(!v){ lost++; return; } if(seen.has(v.id) || t.length >= 500) return; seen.add(v.id); t.push((v.id + '|' + v.title).slice(0, 260)); });
     if(!t.length) throw new Error('aucun titre trouvé sur YouTube');
-    const key = ('sp_' + ref).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80);
+    const key = ('sp_' + ref.replace('/', '_')).slice(0, 80);
     await libRef().update({ ['lists/' + key]: { n: String(sp.name).slice(0, 200), k: 'sp', u: firebase.database.ServerValue.TIMESTAMP, t }, ['gone/' + key]: null });
     const s = await libRef().get(); lib = s.exists() ? s.val() : {};
     openKey = key;
     toast('« ' + sp.name + ' » importée : ' + t.length + ' titres' + (lost ? ' (' + lost + ' introuvables)' : ''));
-  }catch(err){ toast(sourceName(ref) + ' : ' + err.message); }
+  }catch(err){ toast('Spotify : ' + err.message); }
   spJob = null; renderLists();
 }
 
@@ -996,3 +992,4 @@ init();
 </script>
 </body>
 </html>
+
