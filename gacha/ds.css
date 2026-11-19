@@ -342,3 +342,111 @@
 @media(min-width:1000px) { .turn-order ol { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media(prefers-reduced-motion:no-preference) { .round-planner button,.action-menu button { transition:box-shadow .18s ease,border-color .18s ease; } }
 @media(hover:hover) { .round-planner button:enabled:hover,.action-menu button:enabled:hover { border-color:#7b5eb4; box-shadow:0 0 15px #a38bd566; } }
+
+/* Phone battle: viewport-sized stage, with all turn controls in view. */
+@media (max-width:1000px) and (max-height:1000px) {
+ .game-shell:has(> .game-grid) { height:100dvh; min-height:0; display:grid; grid-template-rows:34px minmax(0,1fr); overflow:hidden; }
+ .game-shell:has(> .game-grid) .topbar { height:auto; padding:3px 8px; border-radius:0; }
+ .game-shell:has(> .game-grid) .brand-mark,.game-shell:has(> .game-grid) .brand-lockup span,.game-shell:has(> .game-grid) .run-stats>span:first-child,.game-shell:has(> .game-grid) .sound-button { display:none; }
+ .game-shell:has(> .game-grid) .brand-lockup strong { font-size:13px; }
+ .game-shell:has(> .game-grid) .run-stats { gap:10px; }
+ .game-shell:has(> .game-grid) .run-stats .currency { display:flex; padding:0; border:0; font-size:11px; }
+ .game-shell:has(> .game-grid) .topbar button.currency { padding:5px 9px; min-height:28px; }
+ .game-grid { width:100%; min-height:0; margin:0; padding:5px; display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:64px minmax(0,1fr); gap:5px; }
+ .route-panel,.squad-panel>.section-label,.fighter-card .portrait,.fighter-info>small { display:none; }
+ .squad-panel { display:grid; min-height:0; grid-template-columns:1fr 1fr 70px; gap:5px; }
+ .fighter-card { display:block; margin:0; min-height:0; border-radius:10px; }
+ .fighter-info { padding:4px 7px; }
+ .fighter-info h2 { margin:0; font-size:13px; }
+ .fighter-info .xp-progress { margin:1px 0; font-size:8px; line-height:1.1; }
+ .fighter-info .xp-progress progress { height:2px; margin-top:1px; }
+ .health-readout { gap:3px; line-height:1; }
+ .health-readout b { font-size:12px; }
+ .health-readout em,.health-readout span { font-size:9px; }
+ .fighter-info .bar { height:3px; margin-top:2px; }
+ .groove-card { grid-column:auto; margin:0; padding:7px 5px; border-radius:10px; }
+ .groove-card>div { gap:2px; flex-wrap:wrap; }
+ .groove-card>div span { font-size:8px; }
+ .groove-card>div b { font-size:13px; }
+ .groove-card button { display:none; }
+ .groove-bar { margin-top:5px; height:4px; }
+ .battle-column { display:grid; min-height:0; grid-template-rows:25px 84px minmax(0,1fr) 125px; gap:5px; }
+ .battle-heading { height:auto; }
+ .battle-heading small,.threat span { display:none; }
+ .battle-heading h1 { font-size:20px; }
+ .threat { padding:3px 8px; min-width:0; }
+ .threat b { font-size:10px; }
+ .turn-order { margin:0; padding:5px 7px; border-radius:10px; min-height:0; overflow:auto; }
+ .turn-order-title b { font-size:11px; }
+ .turn-order-title span { font-size:9px; }
+ .turn-order ol { display:flex; overflow-x:auto; gap:5px; margin:4px 0 0; padding:0 0 2px; }
+ .turn-order li { flex:0 0 118px; padding:4px; gap:4px; border-radius:7px; }
+ .turn-order li b { font-size:9px; }
+ .turn-order li small { font-size:8px; }
+ .turn-number { width:17px; height:17px; font-size:9px; }
+ .turn-order p { display:none; }
+ .arena { height:100%; min-height:0; max-height:none; border-radius:12px; }
+ .turn-badge { top:6px; left:6px; padding:4px 6px; font-size:8px; }
+ .message-strip { height:32px; }
+ .message-strip>span { padding:0 8px; font-size:8px; }
+ .message-strip p { padding:4px 6px; font:600 10px/1.2 'Segoe UI',sans-serif; overflow-wrap:anywhere; }
+ .player-line { left:3%; top:24%; bottom:34px; width:30%; display:flex; flex-direction:column; justify-content:space-around; }
+ .arena-hero,.arena-hero:first-child,.arena-hero:last-child { position:relative; top:auto; height:50%; min-height:0; }
+ .arena-hero .hero-sprite,.arena-hero .attack-sprite { transform:scale(-.85,.85); transform-origin:center; flex-shrink:0; }
+ .arena-hero>span { bottom:0; font-size:6px; padding:2px 4px; }
+ .enemy-line { top:24%; bottom:34px; right:3%; width:33%; }
+ .enemy-line .enemy-sprite { transform:scale(.8); }
+ .enemy-line.enemies-count-3 .enemy-sprite { transform:scale(.58); }
+ .enemy-line.enemies-count-4 .enemy-sprite { transform:scale(.45); }
+ .enemy-hp { top:calc(50% + 35px); height:5px; }
+ .enemies-count-3 .enemy-hp { top:calc(50% + 25px); }
+ .enemies-count-4 .enemy-hp { top:calc(50% + 20px); }
+ .round-planner { margin:0; padding:6px; border-radius:12px; min-height:0; display:grid; grid-template-rows:15px minmax(0,1fr) 32px; gap:4px; }
+ .planning-budget b { font-size:11px; }
+ .planning-budget span { font-size:9px; }
+ .planned-actions { margin:0; gap:5px; min-height:0; }
+ .game-shell .round-planner button { padding:4px; border-radius:9px; }
+ .planned-actions button { gap:1px; overflow:auto; }
+ .planned-actions button b { font-size:10px; }
+ .planned-actions button span { font-size:10px; }
+ .planned-actions button small { font-size:8px; }
+ .game-shell button.resolve-round { font-size:12px; }
+ .wish-dialog { max-height:calc(100dvh - 16px); max-width:calc(100vw - 16px); padding:12px; }
+ .overlay { padding:8px; }
+ .overlay .modal { max-height:calc(100dvh - 16px); overflow:auto; }
+ .reward-grid { gap:6px; }
+ .reward-grid button { min-height:64px; padding:8px; }
+}
+@media (orientation:landscape) and (max-height:600px) and (max-width:1000px) {
+ .game-shell:has(> .game-grid) { grid-template-rows:30px minmax(0,1fr); }
+ .game-grid { grid-template-columns:125px minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+ .squad-panel { grid-template-columns:minmax(0,1fr); grid-template-rows:64px 64px 52px; align-content:start; }
+ .battle-column { grid-template-columns:minmax(0,1fr) 180px; grid-template-rows:24px 72px minmax(0,1fr); }
+ .battle-heading { grid-column:1; grid-row:1; }
+ .turn-order { grid-column:1; grid-row:2; }
+ .arena { grid-column:1; grid-row:3; }
+ .round-planner { grid-column:2; grid-row:1 / 4; grid-template-rows:30px minmax(0,1fr) 38px; }
+ .planned-actions { grid-template-columns:minmax(0,1fr); }
+ .planning-budget { align-content:start; }
+ .player-line,.enemy-line { top:15%; }
+ .arena-hero .hero-sprite,.arena-hero .attack-sprite { transform:scale(-.6,.6); }
+ .enemy-line .enemy-sprite { transform:scale(.55); }
+ .enemy-line.enemies-count-3 .enemy-sprite { transform:scale(.4); }
+ .enemy-line.enemies-count-4 .enemy-sprite { transform:scale(.32); }
+ .enemy-hp { top:calc(50% + 22px); }
+ .enemies-count-3 .enemy-hp { top:calc(50% + 17px); }
+ .enemies-count-4 .enemy-hp { top:calc(50% + 13px); }
+ .target-menu { grid-template-columns:repeat(4,minmax(0,1fr)); }
+ .psych-action-menu { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:1000px) and (max-height:1000px) {
+ .turn-order { overflow:hidden; }
+ .turn-order ol { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:3px; overflow:visible; }
+ .turn-order li { min-width:0; padding:3px; gap:3px; }
+ .turn-order li b,.turn-order li small { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:8px; line-height:1.15; margin:0; }
+ .turn-order li small:last-child { display:none; }
+ .turn-number { width:14px; height:14px; font-size:8px; }
+ .planned-actions button { overflow:hidden; }
+ .planned-actions button small:last-child { display:none; }
+ .planned-actions button small,.planned-actions button span { max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+}
