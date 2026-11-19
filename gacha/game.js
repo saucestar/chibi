@@ -560,13 +560,13 @@ function App() {
     key: n,
     disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
     onClick: () => openWish(id, n)
-  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
+  }, React.createElement("strong", null, n, " ", n === 1 ? "vœu" : "vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     title: `Taux · ${portalName}`,
     close: closeDialog
-  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque dixi\xE8me v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, characterRoster.filter(f => portal !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name)).map(f => React.createElement("li", {
+  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, characterRoster.filter(f => portal !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name)).map(f => React.createElement("li", {
     key: f.name
   }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les personnages manquants ont priorit\xE9. Les taux sont recalcul\xE9s apr\xE8s chaque v\u0153u du lot."), React.createElement("button", {
     onClick: closeDialog
@@ -574,7 +574,7 @@ function App() {
     key: "confirm",
     title: "Confirmer l\u2019invocation",
     close: closeDialog
-  }, React.createElement("p", null, "Invoquer sur ", portalName, " pour ", quantity === 1 ? "un vœu" : "dix vœux", " ?"), React.createElement("dl", null, React.createElement("dt", null, "Solde actuel"), React.createElement("dd", null, profile.coins, " pi\xE8ces"), React.createElement("dt", null, "Co\xFBt"), React.createElement("dd", null, price, " pi\xE8ces"), React.createElement("dt", null, "Solde apr\xE8s invocation"), React.createElement("dd", null, price <= profile.coins ? `${profile.coins - price} pièces` : "Solde insuffisant")), React.createElement("div", {
+  }, React.createElement("p", null, "Invoquer sur ", portalName, " pour ", quantity, " ", quantity === 1 ? "vœu" : "vœux", " ?"), React.createElement("dl", null, React.createElement("dt", null, "Solde actuel"), React.createElement("dd", null, profile.coins, " pi\xE8ces"), React.createElement("dt", null, "Co\xFBt"), React.createElement("dd", null, price, " pi\xE8ces"), React.createElement("dt", null, "Solde apr\xE8s invocation"), React.createElement("dd", null, price <= profile.coins ? `${profile.coins - price} pièces` : "Solde insuffisant")), React.createElement("div", {
     className: "dialog-actions"
   }, React.createElement("button", {
     onClick: closeDialog
@@ -640,7 +640,7 @@ function App() {
   }, "Sauvegarde locale indisponible.")));
   return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h1", null, "Pr\xE9parer le duo"), profile.owned.length < 2 && React.createElement("p", null, "D\xE9bloque deux personnages dans ", React.createElement("a", {
+  }, React.createElement("section", null, React.createElement("h1", null, "Pr\xE9parer le duo"), profile.owned.length < 2 && React.createElement("p", null, "D\xE9bloque 2 personnages dans ", React.createElement("a", {
     href: "../app.html#gacha",
     target: "_top"
   }, "l\u2019onglet Gacha"), "."), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {

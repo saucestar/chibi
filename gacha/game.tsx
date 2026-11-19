@@ -337,20 +337,20 @@ function App() {
           <span className="bingo-crank" aria-hidden="true"/>
         </div>
         <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}>
-          <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+          <strong>{n} {n===1?"vœu":"vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
 
     </article>)}</div>
     {phase==="rates" && <WishDialog key="rates" title={`Taux · ${portalName}`} close={closeDialog}>
-      <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque dixième vœu garantit un personnage.</p>
+      <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque 10e vœu garantit un personnage.</p>
       <h3>Prochain vœu{guaranteed?" · garanti":""}</h3>
       <ul>{characterRoster.filter(f=>portal!=="shibuya" || ["NEKU","SHIKI"].includes(f.name)).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
       <li>Badges psych<b>{percent(guaranteed?0:1-characterChance)}</b></li></ul>
       <p>Les {pinList.length} badges sont équiprobables. Les personnages manquants ont priorité. Les taux sont recalculés après chaque vœu du lot.</p>
       <button onClick={closeDialog}>Fermer</button></WishDialog>}
     {phase==="confirm" && <WishDialog key="confirm" title="Confirmer l’invocation" close={closeDialog}>
-      <p>Invoquer sur {portalName} pour {quantity===1?"un vœu":"dix vœux"} ?</p>
+      <p>Invoquer sur {portalName} pour {quantity} {quantity===1?"vœu":"vœux"} ?</p>
       <dl><dt>Solde actuel</dt><dd>{profile.coins} pièces</dd><dt>Coût</dt><dd>{price} pièces</dd><dt>Solde après invocation</dt><dd>{price<=profile.coins?`${profile.coins-price} pièces`:"Solde insuffisant"}</dd></dl>
       <div className="dialog-actions"><button onClick={closeDialog}>Annuler</button><button disabled={profile.coins<price} onClick={()=>recruit(portal,quantity)}>Confirmer</button></div>
     </WishDialog>}
@@ -370,7 +370,7 @@ function App() {
     {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
   </section></main>;
   return <main className="game-shell party-lobby"><section><h1>Préparer le duo</h1>
-    {profile.owned.length < 2 && <p>Débloque deux personnages dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
+    {profile.owned.length < 2 && <p>Débloque 2 personnages dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
     <h2>Ton duo · {profile.equipped.length} / 2</h2>
     <div className="party-list">{characterRoster.map(f => {
       const stats=trained(f,profile.wins[f.name]||0,profile.awakened.includes(f.name));

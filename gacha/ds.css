@@ -184,3 +184,15 @@
 .topbar button.currency { padding:5px 12px; background:var(--pearl); box-shadow:var(--edge); }
 .route > div > span { border-radius:9px; }
 .arena-hero > span { color:#fffaf1; }
+
+.game-shell button { text-align:center; }
+.party-lobby .wish-commands button { place-content:center; justify-items:center; }
+.actions button {
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:28px auto auto;
+  align-content:center;
+  padding:4px 6px;
+}
+.actions button .action-icon {
+  grid-row:auto; justify-self:center; margin:0; width:28px; height:28px;
+}
