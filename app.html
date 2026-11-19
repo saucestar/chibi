@@ -66,6 +66,22 @@ button{ font-family:inherit; }
 .tabs button.pin.on svg{ animation:pinGlow 1.6s ease-in-out infinite; }
 @keyframes pinGlow{ 50%{ filter:drop-shadow(0 0 7px var(--ac)); } }
 @media (min-width:900px){ .tabs button.pin{ flex:0 0 46px; height:46px; margin:0 6px; } }
+/* menu of the pin: three round stickers fanning out above it */
+.pinmenu{ position:fixed; inset:0; z-index:55; background:rgba(10,8,14,.55); backdrop-filter:blur(2px); }
+.pinmenu[hidden]{ display:none; }
+.pm-items{ position:absolute; left:50%; bottom:calc(112px + var(--safe-b)); width:0; height:0; }
+.pm-it{ position:absolute; left:0; top:0; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; border:3px solid var(--ink); background:var(--paper); color:var(--ink);
+  box-shadow:4px 4px 0 var(--ink); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0;
+  transform:translate(calc((var(--i) - 1) * 104px), calc(var(--lift, 0px))) scale(.3); opacity:0; animation:pmIn .28s cubic-bezier(.2,1.4,.4,1) forwards; animation-delay:calc(var(--i) * 45ms); }
+.pm-it:nth-child(2){ --lift:-34px; }
+.pm-it b{ font:900 26px/1 'Montserrat',sans-serif; color:var(--ac); -webkit-text-stroke:1px var(--ink); }
+.pm-it span{ font:900 italic 11px 'Montserrat',sans-serif; text-transform:uppercase; }
+.pm-it:active{ box-shadow:1px 1px 0 var(--ink); }
+.pm-it.soon{ background:#d8d2c4; color:#7a7484; box-shadow:2px 2px 0 rgba(0,0,0,.4); cursor:default; }
+.pm-it.soon b{ color:#8a8494; -webkit-text-stroke:0; }
+@keyframes pmIn{ to{ transform:translate(calc((var(--i) - 1) * 104px), calc(var(--lift, 0px))) scale(1); opacity:1; } }
+.tabs button.pin[aria-expanded="true"]{ transform:rotate(25deg) scale(1.08); }
+@media (min-width:900px){ .pm-items{ bottom:auto; top:150px; } }
 
 /* ---------- pages + sticker panels ---------- */
 main{ max-width:1180px; margin:0 auto; padding:22px 12px 10px; }
@@ -228,7 +244,7 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
 <nav class="tabs" id="tabs">
   <button type="button" data-p="home" class="on"><b>🏠</b>Accueil</button>
   <button type="button" data-p="music"><b>🎵</b>Musique</button>
-  <button type="button" data-p="game" class="pin" aria-label="Jeu" title="Jeu">
+  <button type="button" data-menu="pin" class="pin" id="pinBtn" aria-label="Jeux" title="Jeux" aria-expanded="false">
     <svg viewBox="0 0 100 100" aria-hidden="true">
       <defs>
         <radialGradient id="pinMetal" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#d9d6de"/><stop offset="1" stop-color="#8d8996"/></radialGradient>
@@ -354,10 +370,22 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
     </div>
   </section>
 
+  <section class="page game-page" data-page="gacha" aria-label="Gacha">
+    <iframe class="game-frame" id="gachaFrame" title="Gacha" allow="fullscreen" loading="lazy"></iframe>
+  </section>
+
   <section class="page game-page" data-page="game" aria-label="Jeu Reaper's Run">
     <iframe class="game-frame" src="gacha/index.html" title="Reaper's Run - jeu de combat" allow="fullscreen" loading="lazy"></iframe>
   </section>
 </main>
+
+<div class="pinmenu" id="pinMenu" hidden>
+  <div class="pm-items">
+    <button type="button" class="pm-it" data-go="game" style="--i:0"><b>⚔</b><span>Le jeu</span></button>
+    <button type="button" class="pm-it" data-go="gacha" style="--i:1"><b>✦</b><span>Le gacha</span></button>
+    <button type="button" class="pm-it soon" style="--i:2" disabled><b>?</b><span>Bientôt</span></button>
+  </div>
+</div>
 
 <div class="ov" id="rules" hidden>
   <div class="pn">
@@ -425,18 +453,28 @@ let savedAc = null; try{ savedAc = localStorage.getItem('appAccent'); }catch(e){
 setAccent(SWATCHES.includes(savedAc) ? savedAc : SWATCHES[0]);
 
 // ---------------- tabs
-const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', friends: 'AMIS', profile: 'PROFIL', game: 'JEU' };
+const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
 const loaded = {};
 function show(p){
   if(!PAGE_NAMES[p]) p = 'home';
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  $('pinBtn').classList.toggle('on', p === 'game' || p === 'gacha');
   document.querySelectorAll('.page').forEach(s => s.classList.toggle('on', s.dataset.page === p));
   $('addr').textContent = 'UG.SHIBUYA / TWEWY-COOP / ' + PAGE_NAMES[p];
   try{ history.replaceState(null, '', location.pathname + (p === 'home' ? '' : '#' + p)); }catch(e){}
   window.scrollTo(0, 0);
   if(me && !loaded[p]){ loaded[p] = true; LOADERS[p](); }
 }
-document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => show(b.dataset.p));
+document.querySelectorAll('#tabs button[data-p]').forEach(b => b.onclick = () => show(b.dataset.p));
+// the pin: a small menu (the game, the gacha, a third one later)
+function pinMenu(open){
+  $('pinMenu').hidden = !open;
+  $('pinBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+$('pinBtn').onclick = () => pinMenu($('pinMenu').hidden);
+$('pinMenu').onclick = e => { if(e.target === $('pinMenu')) pinMenu(false); };
+document.querySelectorAll('.pm-it[data-go]').forEach(b => b.onclick = () => { pinMenu(false); show(b.dataset.go); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') pinMenu(false); });
 
 // ---------------- shared data
 let me = null, data = null, coopAll = null, chibiOf = {}, assign = {}, custom = {};
@@ -735,7 +773,7 @@ async function importSpotify(ref){
 }
 
 // ---------------- start
-const LOADERS = { home: loadHome, music: loadMusic, board: loadBoard, friends: loadFriends, profile: loadProfile, game: () => {} };
+const LOADERS = { home: loadHome, music: loadMusic, board: loadBoard, friends: loadFriends, profile: loadProfile, game: () => {}, gacha: () => { $('gachaFrame').src = 'gacha/index.html#gacha'; } };
 $('loginBtn').onclick = () => ChibiAuth.login();
 async function init(){
   await ChibiAuth.handleRedirect();
