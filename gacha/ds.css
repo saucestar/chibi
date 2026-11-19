@@ -694,3 +694,44 @@
  .combat-hud .energy-card { height:27px; }
  .combat-hud .round-planner:not(.choosing-action) { grid-template-rows:58px 36px; }
 }
+
+/* Rule-of-thirds composition: combat fills the field above the HUD. */
+@media(orientation:landscape) {
+ .combat-hud { --enemy-height:clamp(92px,20dvh,172px); --fighter-scale:1.65; }
+ .combat-hud .player-line { left:19%; width:24%; top:19%; bottom:28%; }
+ .combat-hud .enemy-line { right:19%; width:24%; top:18%; bottom:28%; }
+ .combat-hud .arena-hero .hero-sprite,.combat-hud .arena-hero .attack-sprite { transform:scale(calc(-1 * var(--fighter-scale)),var(--fighter-scale)); }
+ .combat-hud .enemy-line .enemy-sprite { height:var(--enemy-height) !important; width:auto !important; max-width:none; transform:none; }
+ .combat-hud .enemy-line.enemies-count-3 { --enemy-height:clamp(76px,15dvh,140px); }
+ .combat-hud .enemy-line.enemies-count-4 { --enemy-height:clamp(62px,12dvh,112px); }
+ .combat-hud .enemy-hp,.combat-hud .enemies-count-3 .enemy-hp,.combat-hud .enemies-count-4 .enemy-hp { top:calc(50% + var(--enemy-height) / 2 - 2px); width:clamp(64px,9vw,112px); }
+ .combat-hud .squad-panel { width:calc(61% - 24px); }
+ .combat-hud .round-planner:not(.choosing-action) { width:30%; height:clamp(126px,22dvh,164px); grid-template-rows:minmax(0,1fr) 34px; }
+ .combat-hud .round-planner.choosing-action { width:30%; }
+ .combat-hud .arena-hero>span { bottom:8%; }
+}
+@media(orientation:landscape) and (max-height:500px) {
+ .combat-hud { --enemy-height:clamp(64px,21dvh,100px); --fighter-scale:.95; }
+ .combat-hud .enemy-line.enemies-count-3 { --enemy-height:clamp(55px,16dvh,80px); }
+ .combat-hud .enemy-line.enemies-count-4 { --enemy-height:clamp(44px,13dvh,65px); }
+ .combat-hud .player-line,.combat-hud .enemy-line { top:19%; bottom:34%; }
+ .combat-hud .arena-hero>span { bottom:0; }
+}
+@media(orientation:portrait) {
+ .combat-hud { --enemy-height:clamp(76px,15dvh,116px); }
+ .combat-hud .player-line { left:12%; width:29%; top:26%; bottom:43%; }
+ .combat-hud .enemy-line { right:11%; width:29%; top:25%; bottom:43%; }
+ .combat-hud .enemy-line .enemy-sprite { height:var(--enemy-height) !important; width:auto !important; max-width:none; transform:none; }
+ .combat-hud .enemy-line.enemies-count-3 { --enemy-height:clamp(65px,11dvh,92px); }
+ .combat-hud .enemy-line.enemies-count-4 { --enemy-height:clamp(52px,9dvh,74px); }
+ .combat-hud .enemy-hp,.combat-hud .enemies-count-3 .enemy-hp,.combat-hud .enemies-count-4 .enemy-hp { top:calc(50% + var(--enemy-height) / 2 - 2px); }
+ .combat-hud:has(.choosing-action) .player-line { bottom:47%; }
+ .combat-hud:has(.choosing-action) .enemy-line { bottom:47%; }
+}
+@media(orientation:landscape) and (max-height:500px) { .combat-hud .enemy-line { right:22%; bottom:39%; } }
+.combat-hud .enemy-line .enemy-sprite { transform:none !important; }
+@media(orientation:landscape) and (max-height:500px) { .combat-hud .enemy-line { top:18%; bottom:44%; } }
+.combat-hud .planned-actions button { padding:4px 9px; gap:1px; }
+.combat-hud .planned-actions button b { font-size:10px; line-height:1.1; }
+.combat-hud .planned-actions button span { flex-shrink:0; font-size:11px; line-height:1.1; }
+@media(orientation:landscape) and (max-height:500px) { .combat-hud .planned-actions button small { display:none; } }
