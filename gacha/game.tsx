@@ -27,7 +27,7 @@ type Enemy = {
 };
 
 type Fighter = {
-  xp?:number; level?:number; atk?:number; mag?:number; speed?:number;
+  xp?:number; level?:number; atk?:number; mag?:number; speed?:number; portraitCenter?:number;
   name: string;
   role: string;
   hp: number;
@@ -42,6 +42,9 @@ type Fighter = {
 };
 
 const characterRoster: Fighter[] = [
+  {name:"CLOUD",portraitCenter:64,role:"EX-SOLDAT",hp:138,maxHp:138,sprite:"./assets/game/cloud-idle.png",accent:"#88b9ff",frames:20,frameWidth:128,frameHeight:116},
+  {name:"AERITH",portraitCenter:40,role:"CETRA",hp:104,maxHp:104,sprite:"./assets/game/aerith-idle.png",accent:"#ffb1c5",frames:4,frameWidth:80,frameHeight:116},
+
   { name: "NEKU", role: "PSYCH USER", hp: 118, maxHp: 118, sprite: nekuSprite, accent: "#ff5f29", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: nekuAttackSprite, attackFrames: 7 },
   { name: "BEAT", role: "BRAWLER", hp: 142, maxHp: 142, sprite: beatSprite, accent: "#f8d742", frames: 6, frameWidth: 80, frameHeight: 116, attackSprite: beatAttackSprite, attackFrames: 5 },
   { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 80, frameHeight: 116, attackSprite: shikiAttackSprite, attackFrames: 7 },
@@ -176,8 +179,11 @@ function Sprite({
 
 type Pin = { grade?:string; id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
 declare const pinList: Pin[];
-const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone"};
+const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind"};
 const partnerPsychs:Pin[] = [
+  {id:"buster-sword",name:"Buster Sword",psych:"Braver",kind:"physical",power:30},
+  {id:"healing-wind",name:"Healing Wind",psych:"Vent guérisseur",kind:"heal",power:45},
+
   {id:"groove-pawn",name:"Groove Pawn",psych:"Mr. Mew",kind:"special",power:22},
   {id:"sk8-combo",name:"Beat Partner Pin",psych:"SK8 Combo",kind:"physical",power:22},
   {id:"joshua-phone",name:"Joshua Partner Pin",psych:"Chute d’objets",kind:"special",power:22},
@@ -186,11 +192,11 @@ const psychs: Record<string, Pin> = Object.fromEntries([...pinList,...partnerPsy
 type Psych = string;
 const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
 function PinIcon({ pin }: {pin:Pin}) {
-  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎"}[pin.id]}</i>;
+  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿"}[pin.id]}</i>;
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
-const portals = { shibuya:"Shibuya", partners:"Partenaires" };
-const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16] };
+const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality" };
+const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18] };
 const maxLevel=99;
 function xpAtLevel(level:number) {
   const n=level-1;
@@ -272,8 +278,12 @@ function loadProfile(): Profile {
 }
 
 const characterChance = 0.10;
+function portalRoster(id:string):Fighter[] {
+  const names=id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
+  return characterRoster.filter(f=>names.includes(f.name));
+}
 function portalPool(id:string, profile:Profile) {
-  const roster=characterRoster.filter(f=>id!=="shibuya" || ["NEKU","SHIKI"].includes(f.name));
+  const roster=portalRoster(id);
   const missing=roster.filter(f=>!profile.owned.includes(f.name));
   const available=roster.filter(f=>(profile.copies[f.name]||0)<5);
   const pool=missing.length ? missing : available.length ? available : roster;
@@ -439,7 +449,7 @@ function App() {
   const pool=portalPool(portal,profile);
   const guaranteed=profile.wishStep===9;
   const percent=(v:number)=>v.toLocaleString("fr-FR",{style:"percent",maximumFractionDigits:3});
-  const portalName=portal==="shibuya"?"First Week #1":"Partenaires";
+  const portalName=portal==="shibuya"?"First Week #1":portals[portal];
   const closeDialog=()=>setPhase("ready");
   const recruit = (id:string,count:number) => {
     if (turning.current) return;
@@ -491,6 +501,9 @@ function App() {
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
           <video className="portal-art" src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp" autoPlay muted playsInline aria-hidden="true"/>}
+        {id==="reality" && <>
+          {!matchMedia("(prefers-reduced-motion: reduce)").matches && <video className="portal-art" src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp" autoPlay muted loop playsInline aria-hidden="true"/>}
+        </>}
         {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
@@ -500,14 +513,14 @@ function App() {
         </div>
         <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}>
           <strong>{n} {n===1?"vœu":"vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
 
     </article>)}</div>
     {phase==="rates" && <WishDialog key="rates" title={`Taux · ${portalName}`} close={closeDialog}>
       <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque 10e vœu garantit un personnage.</p>
       <h3>Prochain vœu{guaranteed?" · garanti":""}</h3>
-      <ul>{characterRoster.filter(f=>portal!=="shibuya" || ["NEKU","SHIKI"].includes(f.name)).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
+      <ul>{portalRoster(portal).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
       <li>Badges psych<b>{percent(guaranteed?0:1-characterChance)}</b></li></ul>
       <p>Les {pinList.length} badges sont équiprobables. Les personnages manquants ont priorité. Les taux sont recalculés après chaque vœu du lot.</p>
       <button onClick={closeDialog}>Fermer</button></WishDialog>}
@@ -567,7 +580,7 @@ function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
       const scan=sample.getContext("2d")!;scan.drawImage(image,0,0,width,height,0,0,width,height);
       let left=width,right=0,top=height,bottom=0;
       try{const pixels=scan.getImageData(0,0,width,height).data;for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>64){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}}catch{left=0;right=width;top=0;bottom=height;}
-      const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(left+right-crop)/2));
+      const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(fighter?.portraitCenter??(left+right)/2)-crop/2));
       context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,x,top,crop,crop,0,0,64,64);
     };
     image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;

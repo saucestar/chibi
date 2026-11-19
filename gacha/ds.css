@@ -735,3 +735,31 @@
 .combat-hud .planned-actions button b { font-size:10px; line-height:1.1; }
 .combat-hud .planned-actions button span { flex-shrink:0; font-size:11px; line-height:1.1; }
 @media(orientation:landscape) and (max-height:500px) { .combat-hud .planned-actions button small { display:none; } }
+
+.scene-reality { background:#211d32 url(./assets/bingo/from-another-reality.webp) center / cover; }
+.scene-reality h3 { max-width:65%; font-size:clamp(22px,5.8vw,42px); text-wrap:balance; }
+@keyframes cloud-idle {
+0.00000% { background-position:0.000000% 0; }
+5.00000% { background-position:5.263158% 0; }
+10.00000% { background-position:10.526316% 0; }
+15.00000% { background-position:15.789474% 0; }
+20.00000% { background-position:21.052632% 0; }
+25.00000% { background-position:26.315789% 0; }
+30.00000% { background-position:31.578947% 0; }
+35.00000% { background-position:36.842105% 0; }
+40.00000% { background-position:42.105263% 0; }
+45.00000% { background-position:47.368421% 0; }
+50.00000% { background-position:52.631579% 0; }
+55.00000% { background-position:57.894737% 0; }
+60.00000% { background-position:63.157895% 0; }
+65.00000% { background-position:68.421053% 0; }
+70.00000% { background-position:73.684211% 0; }
+75.00000% { background-position:78.947368% 0; }
+80.00000% { background-position:84.210526% 0; }
+85.00000% { background-position:89.473684% 0; }
+90.00000% { background-position:94.736842% 0; }
+95.00000% { background-position:100.000000% 0; }
+100% { background-position:100% 0; }
+}
+.sprite-frames-20 { animation:cloud-idle 2.5s steps(1,end) infinite; }
+@media(prefers-reduced-motion:reduce) { .sprite-frames-20 { animation:none; } }

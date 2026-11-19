@@ -15,6 +15,28 @@ const masamunePin = "./assets/game/pin-masamune.png";
 const konohanaPin = "./assets/game/pin-konohana.png";
 const battleBackground = "./assets/game/battle-bg.jpg";
 const characterRoster = [{
+  name: "CLOUD",
+  portraitCenter: 64,
+  role: "EX-SOLDAT",
+  hp: 138,
+  maxHp: 138,
+  sprite: "./assets/game/cloud-idle.png",
+  accent: "#88b9ff",
+  frames: 20,
+  frameWidth: 128,
+  frameHeight: 116
+}, {
+  name: "AERITH",
+  portraitCenter: 40,
+  role: "CETRA",
+  hp: 104,
+  maxHp: 104,
+  sprite: "./assets/game/aerith-idle.png",
+  accent: "#ffb1c5",
+  frames: 4,
+  frameWidth: 80,
+  frameHeight: 116
+}, {
   name: "NEKU",
   role: "PSYCH USER",
   hp: 118,
@@ -259,9 +281,23 @@ const basePsych = {
   NEKU: "pin266",
   SHIKI: "groove-pawn",
   BEAT: "sk8-combo",
-  JOSHUA: "joshua-phone"
+  JOSHUA: "joshua-phone",
+  CLOUD: "buster-sword",
+  AERITH: "healing-wind"
 };
 const partnerPsychs = [{
+  id: "buster-sword",
+  name: "Buster Sword",
+  psych: "Braver",
+  kind: "physical",
+  power: 30
+}, {
+  id: "healing-wind",
+  name: "Healing Wind",
+  psych: "Vent guérisseur",
+  kind: "heal",
+  power: 45
+}, {
   id: "groove-pawn",
   name: "Groove Pawn",
   psych: "Mr. Mew",
@@ -313,7 +349,9 @@ function PinIcon({
   }, {
     "groove-pawn": "♟",
     "sk8-combo": "★",
-    "joshua-phone": "☎"
+    "joshua-phone": "☎",
+    "buster-sword": "⚔",
+    "healing-wind": "✿"
   }[pin.id]);
   return React.createElement("i", {
     "aria-hidden": "true",
@@ -330,13 +368,16 @@ function PinIcon({
 }
 const portals = {
   shibuya: "Shibuya",
-  partners: "Partenaires"
+  partners: "Partenaires",
+  reality: "From another reality"
 };
 const bases = {
   NEKU: [24, 32, 14],
   SHIKI: [22, 26, 20],
   BEAT: [34, 18, 12],
-  JOSHUA: [19, 36, 16]
+  JOSHUA: [19, 36, 16],
+  CLOUD: [36, 21, 15],
+  AERITH: [16, 38, 18]
 };
 const maxLevel = 99;
 function xpAtLevel(level) {
@@ -479,8 +520,12 @@ function loadProfile() {
   };
 }
 const characterChance = 0.10;
+function portalRoster(id) {
+  const names = id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
+  return characterRoster.filter(f => names.includes(f.name));
+}
 function portalPool(id, profile) {
-  const roster = characterRoster.filter(f => id !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name));
+  const roster = portalRoster(id);
   const missing = roster.filter(f => !profile.owned.includes(f.name));
   const available = roster.filter(f => (profile.copies[f.name] || 0) < 5);
   const pool = missing.length ? missing : available.length ? available : roster;
@@ -811,7 +856,7 @@ function App() {
     style: "percent",
     maximumFractionDigits: 3
   });
-  const portalName = portal === "shibuya" ? "First Week #1" : "Partenaires";
+  const portalName = portal === "shibuya" ? "First Week #1" : portals[portal];
   const closeDialog = () => setPhase("ready");
   const recruit = (id, count) => {
     if (turning.current) return;
@@ -926,7 +971,16 @@ function App() {
     muted: true,
     playsInline: true,
     "aria-hidden": "true"
-  }), id === "partners" && React.createElement("div", {
+  }), id === "reality" && React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
+    className: "portal-art",
+    src: "./assets/bingo/from-another-reality.mp4",
+    poster: "./assets/bingo/from-another-reality.webp",
+    autoPlay: true,
+    muted: true,
+    loop: true,
+    playsInline: true,
+    "aria-hidden": "true"
+  })), id === "partners" && React.createElement("div", {
     className: "portal-duo"
   }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
     key: f.name,
@@ -955,11 +1009,11 @@ function App() {
     onClick: () => openWish(id, n)
   }, React.createElement("strong", null, n, " ", n === 1 ? "vœu" : "vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     title: `Taux · ${portalName}`,
     close: closeDialog
-  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, characterRoster.filter(f => portal !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name)).map(f => React.createElement("li", {
+  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, portalRoster(portal).map(f => React.createElement("li", {
     key: f.name
   }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les personnages manquants ont priorit\xE9. Les taux sont recalcul\xE9s apr\xE8s chaque v\u0153u du lot."), React.createElement("button", {
     onClick: closeDialog
@@ -1123,7 +1177,7 @@ function HudPortrait({
         bottom = height;
       }
       const crop = Math.max(1, Math.min(width, (bottom - top + 1) * .45)),
-        x = Math.max(0, Math.min(width - crop, (left + right - crop) / 2));
+        x = Math.max(0, Math.min(width - crop, (fighter?.portraitCenter ?? (left + right) / 2) - crop / 2));
       context.imageSmoothingEnabled = false;
       context.clearRect(0, 0, 64, 64);
       context.drawImage(image, x, top, crop, crop, 0, 0, 64, 64);
