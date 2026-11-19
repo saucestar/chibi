@@ -58,10 +58,10 @@ button{ font-family:inherit; }
 /* the big round pin in the middle of the bar: opens the game */
 .tabs button.pin{ flex:0 0 74px; height:74px; margin:-30px 4px 0; padding:0; border-radius:50%; background:none; position:relative; z-index:2;
   filter:drop-shadow(3px 3px 0 var(--ink)); transition:transform .15s ease; }
-.tabs button.pin svg{ width:100%; height:100%; display:block; }
+.tabs button.pin img{ width:100%; height:100%; display:block; }
 .tabs button.pin:active{ transform:scale(.92); }
 .tabs button.pin.on{ background:none; transform:rotate(-12deg) scale(1.06); }
-.tabs button.pin.on svg{ animation:pinGlow 1.6s ease-in-out infinite; }
+.tabs button.pin.on img{ animation:pinGlow 1.6s ease-in-out infinite; }
 @keyframes pinGlow{ 50%{ filter:drop-shadow(0 0 7px var(--ac)); } }
 @media (min-width:900px){ .tabs button.pin{ flex:0 0 46px; height:46px; margin:0 6px; } }
 /* "Autre": a sheet above the bar with Profil and Amis */
@@ -75,22 +75,9 @@ button{ font-family:inherit; }
 .sheet-box button:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
 @keyframes shIn{ from{ opacity:0; transform:translateY(14px) scale(.95); } }
 /* .sheet-box is placed next to the Autre button by moreSheet() (above it when the bar is at the bottom, below it when at the top) */
-/* menu of the pin: three round stickers fanning out above it */
-.pinmenu{ position:fixed; inset:0; z-index:65; background:rgba(10,8,14,.55); backdrop-filter:blur(2px); }
-.pinmenu[hidden]{ display:none; }
-.pm-items{ position:absolute; left:var(--pm-x, 50%); top:var(--pm-y, calc(100% - 112px)); width:0; height:0; }
-.pm-it{ position:absolute; left:0; top:0; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; border:3px solid var(--ink); background:var(--paper); color:var(--ink);
-  box-shadow:4px 4px 0 var(--ink); cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:0;
-  transform:translate(calc((var(--i) - 1) * 104px), calc(var(--lift, 0px))) scale(.3); opacity:0; animation:pmIn .28s cubic-bezier(.2,1.4,.4,1) forwards; animation-delay:calc(var(--i) * 45ms); }
-.pm-it:nth-child(2){ --lift:calc(var(--pm-dir, -1) * 34px); }
-.pm-it b{ font:900 26px/1 'Montserrat',sans-serif; color:var(--ac); -webkit-text-stroke:1px var(--ink); }
-.pm-it span{ font:900 italic 11px 'Montserrat',sans-serif; text-transform:uppercase; }
-.pm-it:active{ box-shadow:1px 1px 0 var(--ink); }
-.pm-it.soon{ background:#d8d2c4; color:#7a7484; box-shadow:2px 2px 0 rgba(0,0,0,.4); cursor:default; }
-.pm-it.soon b{ color:#8a8494; -webkit-text-stroke:0; }
-@keyframes pmIn{ to{ transform:translate(calc((var(--i) - 1) * 104px), calc(var(--lift, 0px))) scale(1); opacity:1; } }
-.tabs button.pin[aria-expanded="true"]{ transform:rotate(25deg) scale(1.08); }
-/* .pm-items is placed around the pin by pinMenu(): above it on phones, below it when the tabs are at the top */
+/* Original Player Pin, circular mask keeps the supplied white corners outside the badge. */
+.tabs button.pin {overflow:hidden;border-radius:50%;background:#141414;}
+.tabs button.pin img {display:block;width:100%;height:100%;object-fit:cover;border-radius:50%;transform:scale(1.12);pointer-events:none;}
 
 /* ---------- pages + sticker panels ---------- */
 main{ max-width:1180px; margin:0 auto; padding:22px 12px 10px; }
@@ -311,21 +298,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
 <nav class="tabs" id="tabs">
   <button type="button" data-p="home" class="on"><b>🏠</b>Accueil</button>
   <button type="button" data-p="music"><b>🎵</b>Musique</button>
-  <button type="button" data-menu="pin" class="pin" id="pinBtn" aria-label="Jeux" title="Jeux" aria-expanded="false">
-    <svg viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <radialGradient id="pinMetal" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#d9d6de"/><stop offset="1" stop-color="#8d8996"/></radialGradient>
-      </defs>
-      <circle cx="50" cy="50" r="47" fill="#0e0c12"/>
-      <circle cx="50" cy="50" r="42" fill="url(#pinMetal)"/>
-      <circle cx="50" cy="50" r="34" fill="var(--ac)" stroke="#0e0c12" stroke-width="3"/>
-      <path d="M50 26c-11.5 0-20 8-20 18.5 0 6.2 3 10.6 7.5 13.2V64a3 3 0 0 0 3 3h19a3 3 0 0 0 3-3v-6.3c4.5-2.6 7.5-7 7.5-13.2C70 34 61.5 26 50 26z" fill="#fff" stroke="#0e0c12" stroke-width="3" stroke-linejoin="round"/>
-      <ellipse cx="42" cy="46" rx="5.2" ry="6" fill="#0e0c12"/><ellipse cx="58" cy="46" rx="5.2" ry="6" fill="#0e0c12"/>
-      <path d="M50 52.5l-3 5h6z" fill="#0e0c12"/>
-      <path d="M44 61v6M50 61v6M56 61v6" stroke="#0e0c12" stroke-width="2.4"/>
-      <path d="M24 31a30 30 0 0 1 14-10" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7" fill="none"/>
-    </svg>
-  </button>
+  <button type="button" class="pin" id="pinBtn" aria-label="Ouvrir le jeu" title="Ouvrir le jeu"><img src="icons/player-pin.webp" alt="Badge Joueur" width="100" height="100"></button>
   <button type="button" data-p="board"><b>🏆</b>Classement</button>
   <button type="button" id="moreBtn" aria-expanded="false"><b>☰</b>Autre</button>
 </nav>
@@ -463,14 +436,6 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
   </section>
 </main>
 
-<div class="pinmenu" id="pinMenu" hidden>
-  <div class="pm-items">
-    <button type="button" class="pm-it" data-go="game" style="--i:0"><b>⚔</b><span>Le jeu</span></button>
-    <button type="button" class="pm-it" data-go="gacha" style="--i:1"><b>✦</b><span>Le gacha</span></button>
-    <button type="button" class="pm-it soon" style="--i:2" disabled><b>?</b><span>Bientôt</span></button>
-  </div>
-</div>
-
 <div class="sheet" id="moreSheet" hidden>
   <div class="sheet-box">
     <button type="button" data-go="profile"><b>🌸</b>Profil</button>
@@ -592,7 +557,6 @@ function show(p){
 document.querySelectorAll('#tabs button[data-p]').forEach(b => b.onclick = () => show(b.dataset.p));
 // "Autre": Profil and Amis
 function moreSheet(open){
-  if(open) pinMenu(false);
   if(open){
     const r = $('moreBtn').getBoundingClientRect(), bar = $('tabs').getBoundingClientRect(), box = document.querySelector('#moreSheet .sheet-box');
     const up = r.top > innerHeight / 2;                      // bar at the bottom: open upwards
@@ -606,24 +570,9 @@ function moreSheet(open){
 $('moreBtn').onclick = () => moreSheet($('moreSheet').hidden);
 $('moreSheet').onclick = e => { if(e.target === $('moreSheet')) moreSheet(false); };
 document.querySelectorAll('#moreSheet [data-go]').forEach(b => b.onclick = () => { moreSheet(false); show(b.dataset.go); });
-// the pin: a small menu (the game, the gacha, a third one later)
-function pinMenu(open){
-  if(open && !$('moreSheet').hidden) moreSheet(false);
-  if(open){
-    const r = $('pinBtn').getBoundingClientRect(), it = document.querySelector('#pinMenu .pm-items');
-    const up = r.top > innerHeight / 2;                      // bar at the bottom: fan out above the pin, else below it
-    const x = Math.min(innerWidth - 150, Math.max(150, r.left + r.width / 2));
-    it.style.setProperty('--pm-x', x + 'px');
-    it.style.setProperty('--pm-y', (up ? r.top - 66 : r.bottom + 70) + 'px');
-    it.style.setProperty('--pm-dir', up ? '-1' : '1');
-  }
-  $('pinMenu').hidden = !open;
-  $('pinBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-$('pinBtn').onclick = () => pinMenu($('pinMenu').hidden);
-$('pinMenu').onclick = e => { if(e.target === $('pinMenu')) pinMenu(false); };
-document.querySelectorAll('.pm-it[data-go]').forEach(b => b.onclick = () => { pinMenu(false); show(b.dataset.go); });
-document.addEventListener('keydown', e => { if(e.key === 'Escape'){ pinMenu(false); moreSheet(false); } });
+// The Player Pin opens the unified game directly.
+$('pinBtn').onclick = () => { moreSheet(false); show('game'); };
+document.addEventListener('keydown', e => { if(e.key === 'Escape')moreSheet(false); });
 
 // ---------------- shared data
 let me = null, data = null, coopAll = null, chibiOf = {}, assign = {}, custom = {};
@@ -992,4 +941,5 @@ init();
 </script>
 </body>
 </html>
+
 
