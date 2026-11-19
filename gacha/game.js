@@ -446,7 +446,7 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("div", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -493,7 +493,9 @@ function App() {
     key: n,
     disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
     onClick: () => recruit(id, n)
-  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces"))))), id === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), id === portal && React.createElement("div", {
+  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
+    className: "portal-caption"
+  }, id === "shibuya" ? "Tous les personnages disponibles ont la même chance d’être recrutés." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles.")), id === portal && React.createElement("div", {
     "aria-live": "polite"
   }, phase === "ready" && result.map((draw, i) => "pin" in draw ? React.createElement("div", {
     className: "recruit-reveal",

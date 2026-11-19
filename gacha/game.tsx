@@ -281,9 +281,7 @@ function App() {
     leave={() => { setParty(null); setResult([]); }} />;
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Bingo Kai</h2>
-    <p>10 % de chance de tirer un personnage. Chaque dixième vœu garantit un personnage, tous portails confondus. Garantie dans {10-profile.wishStep} vœu(x).</p>
-    {starter(profile) && <p>Les vœux simples sont gratuits jusqu’à obtenir deux personnages et un psych offensif.</p>}
-    <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
+    <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
@@ -299,8 +297,8 @@ function App() {
         </div>
         <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>recruit(id,n)}>
           <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
+        <p className="portal-caption">{id==="shibuya" ? "Tous les personnages disponibles ont la même chance d’être recrutés." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
-      {id==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
       {id===portal && <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>}
     </article>)}</div>
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
