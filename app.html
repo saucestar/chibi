@@ -289,6 +289,9 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
 .tabs {overflow:visible;}
 @media(min-width:900px){.tabs button.pin{--player-pin-size:56px;margin:0 6px!important;}}
 @media(orientation:landscape) and (max-height:500px){.tabs button.pin{--player-pin-size:64px;margin:-22px 6px 0!important;}}
+/* Icon-only mobile leaderboard controls. */
+.page[data-page="board-mobile"] .board-icon-button {display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;min-width:44px;max-width:44px;padding:8px;}
+.board-icon-button svg {display:block;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
 </style>
 </head>
 <body>
@@ -375,7 +378,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
   </section>
   <section class="page" data-page="board-mobile">
     <div class="pn wide"><div class="chip"><i>✦</i>CLASSEMENT MOBILE</div>
-      <div class="ctl"><button type="button" class="btn sm" id="mobileBoardBack">Retour</button><button type="button" class="btn sm" id="mobileBoardRefresh">Actualiser</button></div>
+      <div class="ctl"><button type="button" class="btn sm board-icon-button" id="mobileBoardBack" aria-label="Retour aux classements" title="Retour"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m14 6-6 6 6 6M8 12h13"/></svg></button><button type="button" class="btn sm board-icon-button" id="mobileBoardRefresh" aria-label="Actualiser le classement" title="Actualiser"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 18 17"/></svg></button></div>
       <p class="txt">Le plus haut étage atteint · 100 étages maximum</p>
       <p class="note">Seuls les joueurs ayant lancé le roguelike ou effectué une invocation apparaissent. Les joueurs à égalité d’étage partagent le même rang.</p>
       <p id="mobileBoardCount" class="txt"></p>
