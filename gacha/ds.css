@@ -1013,3 +1013,14 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
  .game-hub .hub-home-stage {grid-column:3;}
 }
 .run-resume {display:grid;gap:12px;margin:18px 0;padding:16px;border:1px solid #a99abf;border-radius:20px;background:linear-gradient(135deg,#fff,#e9ddf6);}.run-resume p{margin:0;}.run-resume button{width:100%;min-width:0;}
+
+.monster-filters {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+.monster-filters button {font-size:clamp(9px,2.3vw,12px);padding:10px 3px;}
+.monster-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0;}
+.monster-grid button {display:grid;place-items:center;gap:8px;min-width:0;padding:10px 5px;overflow:hidden;}
+.monster-grid .enemy-sprite {height:78px!important;width:auto!important;max-width:100%;object-fit:contain;transform:none!important;}
+.monster-grid b {font-size:11px;overflow-wrap:anywhere;}
+.monster-grid small {font-size:9px;}
+.monster-preview {display:grid;place-items:center;min-height:160px;margin:10px 0;}
+.monster-preview .enemy-sprite {height:150px!important;width:auto!important;max-width:100%;object-fit:contain;transform:none!important;}
+@media(min-width:760px){.monster-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}

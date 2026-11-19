@@ -71,7 +71,7 @@ function badgeElement(pin:Pin):ElementType {
 }
 function TypeChips({elements}:{elements:ElementType[]}) {return <span className="type-chips">{elements.map(t=><span key={t} className={`element element-${t}`}>{elementNames[t]}</span>)}</span>;}
 
-type EnemyKind = "frog" | "wolf" | "shinigami" | "jey-pengi" | "electro-pengi" | "psyche-fox";
+type EnemyKind = string;
 
 type Enemy = {
   id: number;
@@ -84,6 +84,7 @@ type Enemy = {
   level: number;
   xp: number;
   boss: boolean;
+  trait?:string;
 };
 
 type Fighter = {
@@ -148,7 +149,36 @@ const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" |
   );
 };
 
-const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number }> = {
+type FfbeEnemySpec={id:string;sourceId:string;name:string|null;enabled:boolean;frameWidth:number;frameHeight:number;frames:number[][];fps:number;elements:ElementType[];role:string;tier:number;boss:boolean;trait:string;hp:number;attack:number;speed:number};
+declare const ffbeEnemyList:FfbeEnemySpec[];
+const ffbeBestiary:FfbeEnemySpec[]=typeof ffbeEnemyList==="undefined"?[]:ffbeEnemyList;
+const ffbePageCache=new Map<number,Promise<HTMLImageElement>>();
+function ffbePage(index:number):Promise<HTMLImageElement> {
+ const existing=ffbePageCache.get(index);if(existing){ffbePageCache.delete(index);ffbePageCache.set(index,existing);return existing;}
+ const promise=new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>{ffbePageCache.delete(index);reject(Error("Image du bestiaire indisponible"));};image.src=`./assets/game/ffbe/idle-${String(index).padStart(3,"0")}.webp`;});
+ ffbePageCache.set(index,promise);while(ffbePageCache.size>6)ffbePageCache.delete(ffbePageCache.keys().next().value!);return promise;
+}
+const enemyTraitNames:Record<string,string>={none:"Attaque standard",armored:"Cuirassé · −15 % de dégâts reçus",hunter:"Chasseur · vise le personnage au plus faible ratio de PV",vampire:"Absorption · récupère 15 % des dégâts infligés",berserk:"Rage · +35 % d’ATK sous 40 % de PV"};
+function enemyDamageTaken(enemy:Enemy,amount:number):number {return amount===0?0:Math.max(1,Math.round(amount*(enemy.trait==="armored"?.85:1)));}
+function enemyAttackPower(enemy:Enemy):number {return enemy.attack*(enemy.trait==="berserk"&&enemy.hp/enemy.maxHp<=.4?1.35:1);}
+function encounterHash(seed:string):number {let h=2166136261;for(const c of seed)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0;}
+function ffbeWaveKinds(wave:number,count:number,seed:string):EnemyKind[] {
+ const tier=difficultyAt(wave).tier-1,boss=isBossWave(wave);
+ const regular=ffbeBestiary.filter(m=>m.enabled&&!m.boss&&m.tier<=tier&&m.tier>=Math.max(0,tier-4));
+ const bosses=ffbeBestiary.filter(m=>m.enabled&&m.boss&&m.tier<=tier+2&&m.tier>=Math.max(0,tier-2));
+ const pool=regular.length?regular:ffbeBestiary.filter(m=>m.enabled&&!m.boss&&m.tier<=tier);
+ if(!pool.length)return [];
+ const result:string[]=[];
+ for(let i=0;i<count;i++){
+  const source=boss&&i===0&&bosses.length?bosses:pool;
+  let choice=source[encounterHash(`${seed}:${wave}:${i}`)%source.length];
+  for(let n=1;n<source.length&&result.includes(choice.id);n++)choice=source[(encounterHash(`${seed}:${wave}:${i}`)+n)%source.length];
+  result.push(choice.id);
+ }
+ return result;
+}
+
+const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number; speed?:number; atlasFrames?:number[][]; fps?:number; trait?:string }> = {
   frog: { name: "BIG BANG FROG", frames: 2, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
   wolf: { name: "GARAGE WOLF", frames: 6, frameWidth: 102, frameHeight: 78, hp: 72, attack: 15 },
   shinigami: { name: "SHINIGAMI", frames: 5, frameWidth: 52, frameHeight: 76, hp: 92, attack: 17 },
@@ -156,32 +186,29 @@ const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth
   "electro-pengi": { name: "ELECTRO PENGI", frames: 14, frameWidth: 42, frameHeight: 65, hp: 82, attack: 16 },
   "psyche-fox": { name: "PSYCHE FOX", frames: 6, frameWidth: 169, frameHeight: 205, hp: 126, attack: 21 },
 };
+function registerFfbeEntries(){for(const entry of ffbeBestiary){enemyCatalog[entry.id]={...entry,name:entry.name||`FFBE #${entry.sourceId}`,frames:entry.frames.length,atlasFrames:entry.frames};enemyElements[entry.id]=entry.elements;}}
+registerFfbeEntries();
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
 
-function EnemySprite({kind,boss}:{kind:EnemyKind;boss:boolean}) {
+function EnemySprite({kind,boss,combat=false}:{kind:EnemyKind;boss:boolean;combat?:boolean}) {
   const spec=enemyCatalog[kind];
   const canvas=React.useRef<HTMLCanvasElement>(null);
   useEffect(()=>{
     const context=canvas.current?.getContext("2d");
     if(!context) return;
-    const atlas=new Image();
-    let timer:number|undefined, disposed=false, frame=0;
+    let timer:number|undefined,disposed=false,frame=0;
     context.imageSmoothingEnabled=false;
-    const draw=()=>{
-      context.clearRect(0,0,spec.frameWidth,spec.frameHeight);
-      context.drawImage(atlas,frame*spec.frameWidth,0,spec.frameWidth,spec.frameHeight,0,0,spec.frameWidth,spec.frameHeight);
-    };
-    atlas.onload=()=>{
-      if(disposed) return;
-      draw();
-      if(!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/Math.min(spec.frames,8));
-      }
-    };
-    atlas.src=`./assets/game/enemy-atlases/${kind}.png`;
+    if(spec.atlasFrames){
+      const pages=new Map<number,HTMLImageElement>();
+      const draw=()=>{if(disposed||document.hidden)return;const [page,x,y]=spec.atlasFrames![frame],atlas=pages.get(page);if(!atlas)return;context.clearRect(0,0,spec.frameWidth,spec.frameHeight);context.save();if(combat){context.translate(spec.frameWidth,0);context.scale(-1,1);}context.drawImage(atlas,x,y,spec.frameWidth,spec.frameHeight,0,0,spec.frameWidth,spec.frameHeight);context.restore();};
+      Promise.all([...new Set(spec.atlasFrames.map(f=>f[0]))].map(async page=>pages.set(page,await ffbePage(page)))).then(()=>{if(disposed)return;draw();if(spec.frames>1&&!matchMedia("(prefers-reduced-motion: reduce)").matches)timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/(spec.fps||4));}).catch(()=>{});
+    }else{
+      const atlas=new Image(),draw=()=>{if(disposed||document.hidden)return;context.clearRect(0,0,spec.frameWidth,spec.frameHeight);context.drawImage(atlas,frame*spec.frameWidth,0,spec.frameWidth,spec.frameHeight,0,0,spec.frameWidth,spec.frameHeight);};
+      atlas.onload=()=>{if(disposed)return;draw();if(!matchMedia("(prefers-reduced-motion: reduce)").matches)timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/Math.min(spec.frames,8));};atlas.src=`./assets/game/enemy-atlases/${kind}.png`;
+    }
     return ()=>{disposed=true;window.clearInterval(timer);};
-  },[kind,spec]);
+  },[kind,spec,combat]);
   return <canvas ref={canvas} width={spec.frameWidth} height={spec.frameHeight} aria-hidden="true"
     className={`pixel-sprite enemy-sprite ${boss?"boss-noise":""}`}
     style={{width:`${92*spec.frameWidth/spec.frameHeight}px`,height:"92px"}}/>;
@@ -195,25 +222,27 @@ function difficultyAt(floor:number) {
     xp:1+tier*.48+tier*tier*.025+step*.04,speed:tier*3+Math.floor(step/3),
     bossHp:wave%10===0?2.8:2.1,bossAttack:wave%10===0?1.7:1.45};
 }
-const makeWave = (wave: number): Enemy[] => {
+const makeWave = (wave: number,seed:string="legacy"): Enemy[] => {
   const bossWave = isBossWave(wave);
-  const count = bossWave ? (wave>=40?3:2) : wave<=2?2:wave<=9?3:4;
+  const count = bossWave ? (wave>=40?4:wave>=10?3:2) : wave<=2?2:wave<=9?3:4;
   const scale=difficultyAt(wave);
+  const ffbeKinds=ffbeWaveKinds(wave,count,seed);
   return Array.from({ length: count }, (_, index) => {
     const boss = bossWave && index === 0;
-    const kind: EnemyKind = boss
+    const kind: EnemyKind = (ffbeKinds[index]&&encounterHash(`${seed}:${wave}:${index}:noise`)%13!==0?ffbeKinds[index]:null) || (boss
       ? Math.floor(wave / 5) % 2 === 0 ? "psyche-fox" : "shinigami"
-      : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length];
+      : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length]);
     const template = enemyCatalog[kind];
     const maxHp = Math.round(template.hp * scale.hp * (boss ? scale.bossHp : 1));
     return {
       id: wave * 10 + index,
       name: boss ? `${template.name} // BOSS` : template.name,
       kind,
+      trait:boss?"berserk":template.trait||"none",
       hp: maxHp,
       maxHp,
       level: wave,
-      speed: ({frog:9,wolf:23,shinigami:19,"jey-pengi":13,"electro-pengi":17,"psyche-fox":21}[kind])+scale.speed,
+      speed: (template.speed ?? ({frog:9,wolf:23,shinigami:19,"jey-pengi":13,"electro-pengi":17,"psyche-fox":21}[kind]))+scale.speed,
       xp: Math.round((10+template.hp*.15)*scale.xp*(boss?3:1)),
       attack: Math.round(template.attack * scale.attack * (boss ? scale.bossAttack : 1)),
       boss,
@@ -412,8 +441,8 @@ function validRun(raw:any,owned:string[]):RunSave|null {
  }catch{return null;}
 }
 function newRun(profile:Profile):RunSave {
- const names=profile.equipped.filter(Boolean);
- return {version:1,id:`run-${Date.now()}-${crypto.randomUUID()}`,seq:0,status:"active",updatedAt:Date.now(),wave:1,turn:1,team:names.map(name=>trained(characterRoster.find(f=>f.name===name)!,profile.xp[name]||0,profile.awakened.includes(name))),enemies:makeWave(1),loadout:Object.fromEntries(names.map(name=>[name,[...profile.loadout[name]]])),energy:3,groove:28,reward:false,earnedXp:0,loot:[],awarded:[],pending:null};
+ const names=profile.equipped.filter(Boolean),id=`run-${Date.now()}-${crypto.randomUUID()}`;
+ return {version:1,id,seq:0,status:"active",updatedAt:Date.now(),wave:1,turn:1,team:names.map(name=>trained(characterRoster.find(f=>f.name===name)!,profile.xp[name]||0,profile.awakened.includes(name))),enemies:makeWave(1,id),loadout:Object.fromEntries(names.map(name=>[name,[...profile.loadout[name]]])),energy:3,groove:28,reward:false,earnedXp:0,loot:[],awarded:[],pending:null};
 }
 function applyRunCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profile {
  if(!p.run||p.run.id!==snapshot.id||p.run.status!=="active"||snapshot.seq<=p.run.seq)return p;
@@ -725,11 +754,11 @@ function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profil
  if(!identity||!/^\d{1,25}$/.test(identity.id)||identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR")!=="cetruc")return p;
  const flag=`cetruc-floor-5-v1-${identity.id}`;
  if(p.specialRunRecoveries.includes(flag)||!p.hasPlayed||p.equipped.filter(Boolean).length!==2||!p.equipped.every(name=>p.loadout[name]?.length))return p;
- const run={...newRun(p),wave:5,enemies:makeWave(5)};
+ const base=newRun(p),run={...base,wave:5,enemies:makeWave(5,base.id)};
  return {...p,run,bestFloor:Math.max(p.bestFloor,5),specialRunRecoveries:[...p.specialRunRecoveries,flag]};
 }
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null]);}
-type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"menu";
+type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
 function gameFullscreen(){
  if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
@@ -778,7 +807,19 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
  </section>;
 }
 function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+}
+
+function BestiaryMenu(){
+ const [filter,setFilter]=useState("known"),[page,setPage]=useState(0),[selected,setSelected]=useState<FfbeEnemySpec|null>(null);
+ const entries=ffbeBestiary.filter(m=>filter==="reserve"?!m.enabled:m.enabled&&(filter==="boss"?m.boss:filter==="regular"?!m.boss:true));
+ const pages=Math.max(1,Math.ceil(entries.length/12));
+ return <section className="hub-panel monster-book"><h1>Bestiaire</h1><p>{ffbeBestiary.filter(m=>m.enabled).length} entrées identifiées · {ffbeBestiary.filter(m=>!m.enabled).length} en réserve · Animations idle uniquement</p>
+  <div className="hub-tabs monster-filters">{[["known","Tous"],["regular","Créatures"],["boss","Boss"],["reserve","À identifier"]].map(([id,label])=><button key={id} aria-pressed={filter===id} onClick={()=>{setFilter(id);setPage(0);}}>{label}</button>)}</div>
+  <div className="monster-grid">{entries.slice(page*12,page*12+12).map(m=><button key={m.id} onClick={()=>setSelected(m)}><EnemySprite kind={m.id} boss={false}/><b>{m.name||`FFBE #${m.sourceId}`}</b><small>{m.enabled?m.boss?"Boss":"Créature":"Nom à identifier"}</small></button>)}</div>
+  <nav className="hub-tabs" aria-label="Pages du bestiaire"><button disabled={!page} onClick={()=>setPage(page-1)} aria-label="Page précédente">‹</button><span>{page+1} / {pages}</span><button disabled={page+1>=pages} onClick={()=>setPage(page+1)} aria-label="Page suivante">›</button></nav>
+  {selected&&<WishDialog title={selected.name||`FFBE #${selected.sourceId}`} close={()=>setSelected(null)}><div className="monster-preview"><EnemySprite kind={selected.id} boss={selected.boss}/></div><TypeChips elements={selected.elements}/><p>PV de base {selected.hp} · ATK {selected.attack} · SPE {selected.speed}</p><p>{enemyTraitNames[selected.trait]}</p><p>{selected.enabled?`Apparaît à partir du palier ${Math.max(1,selected.tier+1-(selected.boss?2:0))}. Ses stats augmentent avec l’étage.`:"Cette silhouette reste hors des rencontres tant que son nom n’est pas identifié."}</p><small>Identifiant source · {selected.sourceId}</small><button onClick={()=>setSelected(null)}>Fermer</button></WishDialog>}
+ </section>;
 }
 
 function App() {
@@ -801,7 +842,7 @@ function App() {
   const navigationRef=React.useRef({party,navigate});navigationRef.current={party,navigate};
   useEffect(()=>{
    const receive=(event:MessageEvent)=>{if(event.source!==window.parent||(event.origin!==location.origin&&!(location.protocol==="file:"&&event.origin==="null"))||event.data?.type!=="chibi:game-navigate"||navigationRef.current.party)return;
-    if(["home","team","summon","collection","quests","journal","menu"].includes(event.data.screen))navigationRef.current.navigate(event.data.screen);
+    if(["home","team","summon","collection","quests","journal","bestiary","menu"].includes(event.data.screen))navigationRef.current.navigate(event.data.screen);
    };
    window.addEventListener("message",receive);
    if(window.parent!==window)window.parent.postMessage({type:"chibi:game-ready"},location.protocol==="file:"?"*":location.origin);
@@ -922,6 +963,7 @@ function App() {
   const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
   if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
+  if(screen==="bestiary")return hub(<BestiaryMenu/>);
   if(screen==="quests")return hub(<QuestMenu embedded profile={profile} save={setProfile}/>);
   if(screen==="journal")return hub(<WishHistory embedded key={window.ChibiGameSync?.accountId||"local"} profile={profile}/>);
   if(screen==="collection")return hub(<><CharacterCollection profile={profile}/><BadgeCatalogue embedded owned={profile.pins}/></>);
@@ -1016,16 +1058,16 @@ function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
     const context=ref.current?.getContext("2d"),image=new Image();let disposed=false;
     const spec=enemy?enemyCatalog[enemy.kind]:null;
     const width=spec?.frameWidth||fighter?.frameWidth||80,height=spec?.frameHeight||fighter?.frameHeight||116;
-    image.onload=()=>{
+    const ready=(image:HTMLImageElement,sx=0,sy=0)=>{
       if(disposed||!context)return;
       const sample=document.createElement("canvas");sample.width=width;sample.height=height;
-      const scan=sample.getContext("2d")!;scan.drawImage(image,0,0,width,height,0,0,width,height);
+      const scan=sample.getContext("2d")!;scan.drawImage(image,sx,sy,width,height,0,0,width,height);
       let left=width,right=0,top=height,bottom=0;
       try{const pixels=scan.getImageData(0,0,width,height).data;for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>64){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}}catch{left=0;right=width;top=0;bottom=height;}
       const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(fighter?.portraitCenter??(left+right)/2)-crop/2));
-      context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,x,fighter?.portraitTop??top,crop,crop,0,0,64,64);
+      context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,sx+x,sy+(fighter?.portraitTop??top),crop,crop,0,0,64,64);
     };
-    image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;
+    if(spec?.atlasFrames){const [page,x,y]=spec.atlasFrames[0];ffbePage(page).then(image=>ready(image,x,y)).catch(()=>{});}else{image.onload=()=>ready(image);image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;}
     return ()=>{disposed=true;};
   },[fighter?.sprite,enemy?.kind]);
   return <canvas ref={ref} width={64} height={64} aria-hidden="true"/>;
@@ -1036,7 +1078,7 @@ function turnOrder(team:Fighter[],enemies:Enemy[],turn:number):TurnEntry[] {
   const living=team.filter(f=>f.hp>0);
   return [
     ...living.map(f=>({key:f.name,side:"ally" as const,name:f.name,speed:f.speed||0})),
-    ...enemies.filter(e=>e.hp>0).map((e,i)=>({key:`enemy-${e.id}`,side:"enemy" as const,name:e.name,id:e.id,speed:e.speed,target:living[(turn-1+i)%living.length]?.name}))
+    ...enemies.filter(e=>e.hp>0).map((e,i)=>({key:`enemy-${e.id}`,side:"enemy" as const,name:e.name,id:e.id,speed:e.speed,target:(e.trait==="hunter"?[...living].sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0]:living[(turn-1+i)%living.length])?.name}))
   ].sort((a,b)=>b.speed-a.speed || (a.side===b.side?0:a.side==="ally"?-1:1));
 }
 const planCost=(plan?:PlannedAction)=>plan?.kind==="psych"?psychs[plan.pin!]?.cost||0:0;
@@ -1156,9 +1198,10 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
         if(attacker.hp<=0)continue;
         const target=fighters.find(f=>f.name===step.target&&f.hp>0)||fighters.find(f=>f.hp>0)!;
         const attackType=enemyElements[attacker.kind][0],scale=effectiveness(attackType,characterElements[target.name]);
-        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:typedDamage(Math.max(3,Math.round(attacker.attack*(1-(shields.get(target.name)||0)))),attackType,characterElements[target.name]);
+        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:typedDamage(Math.max(3,Math.round(enemyAttackPower(attacker)*(1-(shields.get(target.name)||0)))),attackType,characterElements[target.name]);
         setHitFeedback({side:"ally",target:target.name,label:scale===0?"Sans effet":`${damage} PV · ${affinityText(scale)}`});
         fighters=fighters.map(f=>f.name===target.name?{...f,hp:Math.max(0,f.hp-damage)}:f);
+        if(attacker.trait==="vampire"&&damage>0)monsters=monsters.map(e=>e.id===attacker.id?{...e,hp:Math.min(e.maxHp,e.hp+Math.ceil(damage*.15))}:e);
         sync=Math.min(100,sync+12);
         setMessage(damage?`${attacker.name} attaque ${target.name} · −${damage} PV`:`${target.name} esquive ${attacker.name}.`);
       }else{
@@ -1171,7 +1214,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
           shields.set(fighter.name,Math.max(shields.get(fighter.name)||0,.55));en=Math.min(3,en+1);setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         }else if(plan.kind==="burst"){
-          sync=0;monsters=monsters.map(e=>({...e,hp:Math.max(0,e.hp-typedDamage(58,"normal",enemyElements[e.kind]))}));setActiveAction("burst");
+          sync=0;monsters=monsters.map(e=>({...e,hp:Math.max(0,e.hp-enemyDamageTaken(e,typedDamage(58,"normal",enemyElements[e.kind])))}));setActiveAction("burst");
           setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
         }else{
           const pin=psychs[plan.pin!];
@@ -1191,7 +1234,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
             const physical=pin.kind==="physical";
             const amount=scaledPinEffect(pin,(physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100));
             const scale=effectiveness(pin.element!,enemyElements[target.kind]);
-            const damage=typedDamage(Math.max(1,Math.round(amount*(1+passiveBonus(/^Resonance/,.15)))+Math.floor(Math.random()*7)-3),pin.element!,enemyElements[target.kind]);
+            const damage=enemyDamageTaken(target,typedDamage(Math.max(1,Math.round(amount*(1+passiveBonus(/^Resonance/,.15)))+Math.floor(Math.random()*7)-3),pin.element!,enemyElements[target.kind]));
             setHitFeedback({side:"enemy",target:String(target.id),label:scale===0?"Sans effet":`${damage} dégâts · ${affinityText(scale)}`});
             monsters=monsters.map(e=>e.id===target.id?{...e,hp:Math.max(0,e.hp-damage)}:e);
             if(pin.drain)healParty(Math.ceil(damage/4));
@@ -1228,7 +1271,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
   const nextWave = () => {
     if(wave>=maxFloor||busy||!reward)return;
     const next=wave+1,heal=difficultyAt(next).tier>difficultyAt(wave).tier;
-    const nextTeam=team.map(f=>({...f,hp:heal?f.maxHp:f.hp})),nextEnemies=makeWave(next);
+    const nextTeam=team.map(f=>({...f,hp:heal?f.maxHp:f.hp})),nextEnemies=makeWave(next,initialRun.id);
     saveCheckpoint({status:"active",wave:next,turn:1,team:nextTeam,enemies:nextEnemies,energy,groove,reward:false,earnedXp:0,loot:[],awarded:[],pending:null});
     setTeam(nextTeam);
     resetPlanning();
@@ -1361,7 +1404,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
                   aria-label={`${enemy.name} · ${enemy.hp} / ${enemy.maxHp} PV. Deux appuis pour les statistiques.`}
                   title="Deux appuis pour les statistiques"
                 >
-                  <EnemySprite kind={enemy.kind} boss={enemy.boss} />
+                  <EnemySprite kind={enemy.kind} boss={enemy.boss} combat />
                   {hitFeedback?.side==="enemy"&&hitFeedback.target===String(enemy.id)&&<span className="hit-feedback" key={queueIndex}>{hitFeedback.label}</span>}
                   <span className="enemy-hp" aria-hidden="true"><i style={{width:`${100*enemy.hp/enemy.maxHp}%`}}/></span>
 
@@ -1450,7 +1493,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
         <dl><dt>Niveau</dt><dd>{inspected.level}</dd><dt>PV</dt><dd>{inspected.hp} / {inspected.maxHp}</dd>
           <dt>ATK</dt><dd>{inspected.attack}</dd><dt>SPE</dt><dd>{inspected.speed}</dd><dt>XP par personnage</dt><dd>{inspected.xp}</dd><dt>Éléments</dt><dd><TypeChips elements={enemyElements[inspected.kind]}/></dd><dt>Type</dt><dd>{inspected.boss?"Boss":"Noise"}</dd></dl>
         <button className="pull-button" onClick={()=>setInspectedId(null)}>Fermer</button>
-      </WishDialog>}
+      <p>{enemyTraitNames[inspected.trait||"none"]}</p></WishDialog>}
       {dropReveal.length>0 && <WishDialog title="Butin de combat" close={()=>setDropReveal([])}>
         <RewardReveal draws={dropReveal} close={()=>setDropReveal([])}/>
       </WishDialog>}
@@ -1489,12 +1532,22 @@ document.addEventListener("click",event=>{
   button.animate([{filter:"brightness(1.23)"},{filter:"brightness(1)"}],{duration:240,easing:"ease-out"});
 },true);
 function SaveBoundary() {
+  const [catalogReady,setCatalogReady]=useState(ffbeBestiary.length>0),[catalogError,setCatalogError]=useState(false);
+  useEffect(()=>{
+    if(catalogReady)return;
+    let disposed=false;const script=document.createElement("script");script.src="./bestiary.js?v=ffbe1";
+    script.onload=()=>{if(disposed)return;if(typeof ffbeEnemyList!=="undefined"&&ffbeEnemyList.length){ffbeBestiary.push(...ffbeEnemyList);registerFfbeEntries();setCatalogReady(true);}else setCatalogError(true);};
+    script.onerror=()=>{if(!disposed)setCatalogError(true);};document.head.appendChild(script);
+    return()=>{disposed=true;script.remove();};
+  },[catalogReady]);
   const [status,setStatus]=useState(()=>window.ChibiGameSync?.state||{ready:true,kind:"local",message:""});
   useEffect(()=>{const update=()=>setStatus({...window.ChibiGameSync.state});window.addEventListener("chibi:save-state",update);return()=>window.removeEventListener("chibi:save-state",update);},[]);
+  if(!catalogReady)return <main className="game-shell party-lobby"><section><h1>Bestiaire</h1><p role="status">{catalogError?"Chargement des données indisponible. Ta sauvegarde reste intacte.":"Chargement du bestiaire…"}</p>{catalogError&&<button onClick={()=>location.reload()}>Réessayer</button>}</section></main>;
   if(!status.ready)return <main className="game-shell party-lobby"><section><h1>Progression</h1><p role="status">{status.message}</p><p>La progression du téléphone est prioritaire. Aucune sauvegarde locale n’a été supprimée.</p><button onClick={()=>location.reload()}>Réessayer</button><a href="../app.html" target="_top">Retour à l’application</a></section></main>;
   return <>{status.kind!=="synced"&&status.kind!=="saving"&&status.message&&<p className="save-sync-notice" role="status">{status.message}</p>}<App/></>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
+
 
 
 

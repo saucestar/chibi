@@ -276,6 +276,62 @@ const Icon = ({
     "aria-hidden": "true"
   }, paths[name]);
 };
+const ffbeBestiary = typeof ffbeEnemyList === "undefined" ? [] : ffbeEnemyList;
+const ffbePageCache = new Map();
+function ffbePage(index) {
+  const existing = ffbePageCache.get(index);
+  if (existing) {
+    ffbePageCache.delete(index);
+    ffbePageCache.set(index, existing);
+    return existing;
+  }
+  const promise = new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => {
+      ffbePageCache.delete(index);
+      reject(Error("Image du bestiaire indisponible"));
+    };
+    image.src = `./assets/game/ffbe/idle-${String(index).padStart(3, "0")}.webp`;
+  });
+  ffbePageCache.set(index, promise);
+  while (ffbePageCache.size > 6) ffbePageCache.delete(ffbePageCache.keys().next().value);
+  return promise;
+}
+const enemyTraitNames = {
+  none: "Attaque standard",
+  armored: "Cuirassé · −15 % de dégâts reçus",
+  hunter: "Chasseur · vise le personnage au plus faible ratio de PV",
+  vampire: "Absorption · récupère 15 % des dégâts infligés",
+  berserk: "Rage · +35 % d’ATK sous 40 % de PV"
+};
+function enemyDamageTaken(enemy, amount) {
+  return amount === 0 ? 0 : Math.max(1, Math.round(amount * (enemy.trait === "armored" ? .85 : 1)));
+}
+function enemyAttackPower(enemy) {
+  return enemy.attack * (enemy.trait === "berserk" && enemy.hp / enemy.maxHp <= .4 ? 1.35 : 1);
+}
+function encounterHash(seed) {
+  let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  return h >>> 0;
+}
+function ffbeWaveKinds(wave, count, seed) {
+  const tier = difficultyAt(wave).tier - 1,
+    boss = isBossWave(wave);
+  const regular = ffbeBestiary.filter(m => m.enabled && !m.boss && m.tier <= tier && m.tier >= Math.max(0, tier - 4));
+  const bosses = ffbeBestiary.filter(m => m.enabled && m.boss && m.tier <= tier + 2 && m.tier >= Math.max(0, tier - 2));
+  const pool = regular.length ? regular : ffbeBestiary.filter(m => m.enabled && !m.boss && m.tier <= tier);
+  if (!pool.length) return [];
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    const source = boss && i === 0 && bosses.length ? bosses : pool;
+    let choice = source[encounterHash(`${seed}:${wave}:${i}`) % source.length];
+    for (let n = 1; n < source.length && result.includes(choice.id); n++) choice = source[(encounterHash(`${seed}:${wave}:${i}`) + n) % source.length];
+    result.push(choice.id);
+  }
+  return result;
+}
 const enemyCatalog = {
   frog: {
     name: "BIG BANG FROG",
@@ -326,42 +382,80 @@ const enemyCatalog = {
     attack: 21
   }
 };
+function registerFfbeEntries() {
+  for (const entry of ffbeBestiary) {
+    enemyCatalog[entry.id] = {
+      ...entry,
+      name: entry.name || `FFBE #${entry.sourceId}`,
+      frames: entry.frames.length,
+      atlasFrames: entry.frames
+    };
+    enemyElements[entry.id] = entry.elements;
+  }
+}
+registerFfbeEntries();
 const enemyKinds = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = wave => wave % 5 === 0;
 function EnemySprite({
   kind,
-  boss
+  boss,
+  combat = false
 }) {
   const spec = enemyCatalog[kind];
   const canvas = React.useRef(null);
   useEffect(() => {
     const context = canvas.current?.getContext("2d");
     if (!context) return;
-    const atlas = new Image();
     let timer,
       disposed = false,
       frame = 0;
     context.imageSmoothingEnabled = false;
-    const draw = () => {
-      context.clearRect(0, 0, spec.frameWidth, spec.frameHeight);
-      context.drawImage(atlas, frame * spec.frameWidth, 0, spec.frameWidth, spec.frameHeight, 0, 0, spec.frameWidth, spec.frameHeight);
-    };
-    atlas.onload = () => {
-      if (disposed) return;
-      draw();
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        timer = window.setInterval(() => {
+    if (spec.atlasFrames) {
+      const pages = new Map();
+      const draw = () => {
+        if (disposed || document.hidden) return;
+        const [page, x, y] = spec.atlasFrames[frame],
+          atlas = pages.get(page);
+        if (!atlas) return;
+        context.clearRect(0, 0, spec.frameWidth, spec.frameHeight);
+        context.save();
+        if (combat) {
+          context.translate(spec.frameWidth, 0);
+          context.scale(-1, 1);
+        }
+        context.drawImage(atlas, x, y, spec.frameWidth, spec.frameHeight, 0, 0, spec.frameWidth, spec.frameHeight);
+        context.restore();
+      };
+      Promise.all([...new Set(spec.atlasFrames.map(f => f[0]))].map(async page => pages.set(page, await ffbePage(page)))).then(() => {
+        if (disposed) return;
+        draw();
+        if (spec.frames > 1 && !matchMedia("(prefers-reduced-motion: reduce)").matches) timer = window.setInterval(() => {
+          frame = (frame + 1) % spec.frames;
+          draw();
+        }, 1000 / (spec.fps || 4));
+      }).catch(() => {});
+    } else {
+      const atlas = new Image(),
+        draw = () => {
+          if (disposed || document.hidden) return;
+          context.clearRect(0, 0, spec.frameWidth, spec.frameHeight);
+          context.drawImage(atlas, frame * spec.frameWidth, 0, spec.frameWidth, spec.frameHeight, 0, 0, spec.frameWidth, spec.frameHeight);
+        };
+      atlas.onload = () => {
+        if (disposed) return;
+        draw();
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) timer = window.setInterval(() => {
           frame = (frame + 1) % spec.frames;
           draw();
         }, 1000 / Math.min(spec.frames, 8));
-      }
-    };
-    atlas.src = `./assets/game/enemy-atlases/${kind}.png`;
+      };
+      atlas.src = `./assets/game/enemy-atlases/${kind}.png`;
+    }
     return () => {
       disposed = true;
       window.clearInterval(timer);
     };
-  }, [kind, spec]);
+  }, [kind, spec, combat]);
   return React.createElement("canvas", {
     ref: canvas,
     width: spec.frameWidth,
@@ -388,32 +482,34 @@ function difficultyAt(floor) {
     bossAttack: wave % 10 === 0 ? 1.7 : 1.45
   };
 }
-const makeWave = wave => {
+const makeWave = (wave, seed = "legacy") => {
   const bossWave = isBossWave(wave);
-  const count = bossWave ? wave >= 40 ? 3 : 2 : wave <= 2 ? 2 : wave <= 9 ? 3 : 4;
+  const count = bossWave ? wave >= 40 ? 4 : wave >= 10 ? 3 : 2 : wave <= 2 ? 2 : wave <= 9 ? 3 : 4;
   const scale = difficultyAt(wave);
+  const ffbeKinds = ffbeWaveKinds(wave, count, seed);
   return Array.from({
     length: count
   }, (_, index) => {
     const boss = bossWave && index === 0;
-    const kind = boss ? Math.floor(wave / 5) % 2 === 0 ? "psyche-fox" : "shinigami" : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length];
+    const kind = (ffbeKinds[index] && encounterHash(`${seed}:${wave}:${index}:noise`) % 13 !== 0 ? ffbeKinds[index] : null) || (boss ? Math.floor(wave / 5) % 2 === 0 ? "psyche-fox" : "shinigami" : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length]);
     const template = enemyCatalog[kind];
     const maxHp = Math.round(template.hp * scale.hp * (boss ? scale.bossHp : 1));
     return {
       id: wave * 10 + index,
       name: boss ? `${template.name} // BOSS` : template.name,
       kind,
+      trait: boss ? "berserk" : template.trait || "none",
       hp: maxHp,
       maxHp,
       level: wave,
-      speed: {
+      speed: (template.speed ?? {
         frog: 9,
         wolf: 23,
         shinigami: 19,
         "jey-pengi": 13,
         "electro-pengi": 17,
         "psyche-fox": 21
-      }[kind] + scale.speed,
+      }[kind]) + scale.speed,
       xp: Math.round((10 + template.hp * .15) * scale.xp * (boss ? 3 : 1)),
       attack: Math.round(template.attack * scale.attack * (boss ? scale.bossAttack : 1)),
       boss
@@ -877,17 +973,18 @@ function validRun(raw, owned) {
   }
 }
 function newRun(profile) {
-  const names = profile.equipped.filter(Boolean);
+  const names = profile.equipped.filter(Boolean),
+    id = `run-${Date.now()}-${crypto.randomUUID()}`;
   return {
     version: 1,
-    id: `run-${Date.now()}-${crypto.randomUUID()}`,
+    id,
     seq: 0,
     status: "active",
     updatedAt: Date.now(),
     wave: 1,
     turn: 1,
     team: names.map(name => trained(characterRoster.find(f => f.name === name), profile.xp[name] || 0, profile.awakened.includes(name))),
-    enemies: makeWave(1),
+    enemies: makeWave(1, id),
     loadout: Object.fromEntries(names.map(name => [name, [...profile.loadout[name]]])),
     energy: 3,
     groove: 28,
@@ -1613,11 +1710,12 @@ function applyCetrucRecovery(p, identity) {
   if (!identity || !/^\d{1,25}$/.test(identity.id) || identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR") !== "cetruc") return p;
   const flag = `cetruc-floor-5-v1-${identity.id}`;
   if (p.specialRunRecoveries.includes(flag) || !p.hasPlayed || p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
-  const run = {
-    ...newRun(p),
-    wave: 5,
-    enemies: makeWave(5)
-  };
+  const base = newRun(p),
+    run = {
+      ...base,
+      wave: 5,
+      enemies: makeWave(5, base.id)
+    };
   return {
     ...p,
     run,
@@ -1816,7 +1914,7 @@ function HubMenu({
     className: "hub-panel"
   }, React.createElement("h1", null, "Menu"), React.createElement("div", {
     className: "hub-menu-links"
-  }, [["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
+  }, [["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
@@ -1824,6 +1922,56 @@ function HubMenu({
   }, "\u203A")))), React.createElement("section", {
     className: "hub-help"
   }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Chaque vague vaincue rapporte 5 pi\xE8ces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e v\u0153u en garantit un. Les taux d\xE9taill\xE9s et les fiches sont accessibles sur chaque portail."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
+}
+function BestiaryMenu() {
+  const [filter, setFilter] = useState("known"),
+    [page, setPage] = useState(0),
+    [selected, setSelected] = useState(null);
+  const entries = ffbeBestiary.filter(m => filter === "reserve" ? !m.enabled : m.enabled && (filter === "boss" ? m.boss : filter === "regular" ? !m.boss : true));
+  const pages = Math.max(1, Math.ceil(entries.length / 12));
+  return React.createElement("section", {
+    className: "hub-panel monster-book"
+  }, React.createElement("h1", null, "Bestiaire"), React.createElement("p", null, ffbeBestiary.filter(m => m.enabled).length, " entr\xE9es identifi\xE9es \xB7 ", ffbeBestiary.filter(m => !m.enabled).length, " en r\xE9serve \xB7 Animations idle uniquement"), React.createElement("div", {
+    className: "hub-tabs monster-filters"
+  }, [["known", "Tous"], ["regular", "Créatures"], ["boss", "Boss"], ["reserve", "À identifier"]].map(([id, label]) => React.createElement("button", {
+    key: id,
+    "aria-pressed": filter === id,
+    onClick: () => {
+      setFilter(id);
+      setPage(0);
+    }
+  }, label))), React.createElement("div", {
+    className: "monster-grid"
+  }, entries.slice(page * 12, page * 12 + 12).map(m => React.createElement("button", {
+    key: m.id,
+    onClick: () => setSelected(m)
+  }, React.createElement(EnemySprite, {
+    kind: m.id,
+    boss: false
+  }), React.createElement("b", null, m.name || `FFBE #${m.sourceId}`), React.createElement("small", null, m.enabled ? m.boss ? "Boss" : "Créature" : "Nom à identifier")))), React.createElement("nav", {
+    className: "hub-tabs",
+    "aria-label": "Pages du bestiaire"
+  }, React.createElement("button", {
+    disabled: !page,
+    onClick: () => setPage(page - 1),
+    "aria-label": "Page pr\xE9c\xE9dente"
+  }, "\u2039"), React.createElement("span", null, page + 1, " / ", pages), React.createElement("button", {
+    disabled: page + 1 >= pages,
+    onClick: () => setPage(page + 1),
+    "aria-label": "Page suivante"
+  }, "\u203A")), selected && React.createElement(WishDialog, {
+    title: selected.name || `FFBE #${selected.sourceId}`,
+    close: () => setSelected(null)
+  }, React.createElement("div", {
+    className: "monster-preview"
+  }, React.createElement(EnemySprite, {
+    kind: selected.id,
+    boss: selected.boss
+  })), React.createElement(TypeChips, {
+    elements: selected.elements
+  }), React.createElement("p", null, "PV de base ", selected.hp, " \xB7 ATK ", selected.attack, " \xB7 SPE ", selected.speed), React.createElement("p", null, enemyTraitNames[selected.trait]), React.createElement("p", null, selected.enabled ? `Apparaît à partir du palier ${Math.max(1, selected.tier + 1 - (selected.boss ? 2 : 0))}. Ses stats augmentent avec l’étage.` : "Cette silhouette reste hors des rencontres tant que son nom n’est pas identifié."), React.createElement("small", null, "Identifiant source \xB7 ", selected.sourceId), React.createElement("button", {
+    onClick: () => setSelected(null)
+  }, "Fermer")));
 }
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
@@ -1859,7 +2007,7 @@ function App() {
   useEffect(() => {
     const receive = event => {
       if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
-      if (["home", "team", "summon", "collection", "quests", "journal", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+      if (["home", "team", "summon", "collection", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
     };
     window.addEventListener("message", receive);
     if (window.parent !== window) window.parent.postMessage({
@@ -2093,6 +2241,7 @@ function App() {
     profile: profile,
     navigate: navigate
   }));
+  if (screen === "bestiary") return hub(React.createElement(BestiaryMenu, null));
   if (screen === "quests") return hub(React.createElement(QuestMenu, {
     embedded: true,
     profile: profile,
@@ -2369,13 +2518,13 @@ function HudPortrait({
     const spec = enemy ? enemyCatalog[enemy.kind] : null;
     const width = spec?.frameWidth || fighter?.frameWidth || 80,
       height = spec?.frameHeight || fighter?.frameHeight || 116;
-    image.onload = () => {
+    const ready = (image, sx = 0, sy = 0) => {
       if (disposed || !context) return;
       const sample = document.createElement("canvas");
       sample.width = width;
       sample.height = height;
       const scan = sample.getContext("2d");
-      scan.drawImage(image, 0, 0, width, height, 0, 0, width, height);
+      scan.drawImage(image, sx, sy, width, height, 0, 0, width, height);
       let left = width,
         right = 0,
         top = height,
@@ -2398,9 +2547,15 @@ function HudPortrait({
         x = Math.max(0, Math.min(width - crop, (fighter?.portraitCenter ?? (left + right) / 2) - crop / 2));
       context.imageSmoothingEnabled = false;
       context.clearRect(0, 0, 64, 64);
-      context.drawImage(image, x, fighter?.portraitTop ?? top, crop, crop, 0, 0, 64, 64);
+      context.drawImage(image, sx + x, sy + (fighter?.portraitTop ?? top), crop, crop, 0, 0, 64, 64);
     };
-    image.src = enemy ? `./assets/game/enemy-atlases/${enemy.kind}.png` : fighter.sprite;
+    if (spec?.atlasFrames) {
+      const [page, x, y] = spec.atlasFrames[0];
+      ffbePage(page).then(image => ready(image, x, y)).catch(() => {});
+    } else {
+      image.onload = () => ready(image);
+      image.src = enemy ? `./assets/game/enemy-atlases/${enemy.kind}.png` : fighter.sprite;
+    }
     return () => {
       disposed = true;
     };
@@ -2425,7 +2580,7 @@ function turnOrder(team, enemies, turn) {
     name: e.name,
     id: e.id,
     speed: e.speed,
-    target: living[(turn - 1 + i) % living.length]?.name
+    target: (e.trait === "hunter" ? [...living].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0] : living[(turn - 1 + i) % living.length])?.name
   }))].sort((a, b) => b.speed - a.speed || (a.side === b.side ? 0 : a.side === "ally" ? -1 : 1));
 }
 const planCost = plan => plan?.kind === "psych" ? psychs[plan.pin]?.cost || 0 : 0;
@@ -2651,7 +2806,7 @@ function Battle({
         const target = fighters.find(f => f.name === step.target && f.hp > 0) || fighters.find(f => f.hp > 0);
         const attackType = enemyElements[attacker.kind][0],
           scale = effectiveness(attackType, characterElements[target.name]);
-        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(attacker.attack * (1 - (shields.get(target.name) || 0)))), attackType, characterElements[target.name]);
+        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(enemyAttackPower(attacker) * (1 - (shields.get(target.name) || 0)))), attackType, characterElements[target.name]);
         setHitFeedback({
           side: "ally",
           target: target.name,
@@ -2661,6 +2816,10 @@ function Battle({
           ...f,
           hp: Math.max(0, f.hp - damage)
         } : f);
+        if (attacker.trait === "vampire" && damage > 0) monsters = monsters.map(e => e.id === attacker.id ? {
+          ...e,
+          hp: Math.min(e.maxHp, e.hp + Math.ceil(damage * .15))
+        } : e);
         sync = Math.min(100, sync + 12);
         setMessage(damage ? `${attacker.name} attaque ${target.name} · −${damage} PV` : `${target.name} esquive ${attacker.name}.`);
       } else {
@@ -2678,7 +2837,7 @@ function Battle({
           sync = 0;
           monsters = monsters.map(e => ({
             ...e,
-            hp: Math.max(0, e.hp - typedDamage(58, "normal", enemyElements[e.kind]))
+            hp: Math.max(0, e.hp - enemyDamageTaken(e, typedDamage(58, "normal", enemyElements[e.kind])))
           }));
           setActiveAction("burst");
           setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
@@ -2701,7 +2860,7 @@ function Battle({
             const physical = pin.kind === "physical";
             const amount = scaledPinEffect(pin, (physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
             const scale = effectiveness(pin.element, enemyElements[target.kind]);
-            const damage = typedDamage(Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]);
+            const damage = enemyDamageTaken(target, typedDamage(Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]));
             setHitFeedback({
               side: "enemy",
               target: String(target.id),
@@ -2784,7 +2943,7 @@ function Battle({
         ...f,
         hp: heal ? f.maxHp : f.hp
       })),
-      nextEnemies = makeWave(next);
+      nextEnemies = makeWave(next, initialRun.id);
     saveCheckpoint({
       status: "active",
       wave: next,
@@ -2953,7 +3112,8 @@ function Battle({
     title: "Deux appuis pour les statistiques"
   }, React.createElement(EnemySprite, {
     kind: enemy.kind,
-    boss: enemy.boss
+    boss: enemy.boss,
+    combat: true
   }), hitFeedback?.side === "enemy" && hitFeedback.target === String(enemy.id) && React.createElement("span", {
     className: "hit-feedback",
     key: queueIndex
@@ -3083,7 +3243,7 @@ function Battle({
   })), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
     className: "pull-button",
     onClick: () => setInspectedId(null)
-  }, "Fermer")), dropReveal.length > 0 && React.createElement(WishDialog, {
+  }, "Fermer"), React.createElement("p", null, enemyTraitNames[inspected.trait || "none"])), dropReveal.length > 0 && React.createElement(WishDialog, {
     title: "Butin de combat",
     close: () => setDropReveal([])
   }, React.createElement(RewardReveal, {
@@ -3122,6 +3282,30 @@ document.addEventListener("click", event => {
   });
 }, true);
 function SaveBoundary() {
+  const [catalogReady, setCatalogReady] = useState(ffbeBestiary.length > 0),
+    [catalogError, setCatalogError] = useState(false);
+  useEffect(() => {
+    if (catalogReady) return;
+    let disposed = false;
+    const script = document.createElement("script");
+    script.src = "./bestiary.js?v=ffbe1";
+    script.onload = () => {
+      if (disposed) return;
+      if (typeof ffbeEnemyList !== "undefined" && ffbeEnemyList.length) {
+        ffbeBestiary.push(...ffbeEnemyList);
+        registerFfbeEntries();
+        setCatalogReady(true);
+      } else setCatalogError(true);
+    };
+    script.onerror = () => {
+      if (!disposed) setCatalogError(true);
+    };
+    document.head.appendChild(script);
+    return () => {
+      disposed = true;
+      script.remove();
+    };
+  }, [catalogReady]);
   const [status, setStatus] = useState(() => window.ChibiGameSync?.state || {
     ready: true,
     kind: "local",
@@ -3134,6 +3318,13 @@ function SaveBoundary() {
     window.addEventListener("chibi:save-state", update);
     return () => window.removeEventListener("chibi:save-state", update);
   }, []);
+  if (!catalogReady) return React.createElement("main", {
+    className: "game-shell party-lobby"
+  }, React.createElement("section", null, React.createElement("h1", null, "Bestiaire"), React.createElement("p", {
+    role: "status"
+  }, catalogError ? "Chargement des données indisponible. Ta sauvegarde reste intacte." : "Chargement du bestiaire…"), catalogError && React.createElement("button", {
+    onClick: () => location.reload()
+  }, "R\xE9essayer")));
   if (!status.ready) return React.createElement("main", {
     className: "game-shell party-lobby"
   }, React.createElement("section", null, React.createElement("h1", null, "Progression"), React.createElement("p", {
