@@ -323,6 +323,68 @@ function loadProfile() {
     coins: 180
   };
 }
+const characterChance = 0.10;
+function portalPool(id, profile) {
+  const roster = characterRoster.filter(f => id !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name));
+  const missing = roster.filter(f => !profile.owned.includes(f.name));
+  const available = roster.filter(f => (profile.copies[f.name] || 0) < 5);
+  const pool = missing.length ? missing : available.length ? available : roster;
+  return id === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
+}
+function Capsule() {
+  const canvas = React.useRef(null);
+  useEffect(() => {
+    const ctx = canvas.current?.getContext("2d");
+    if (!ctx) return;
+    const size = 96,
+      pixels = ctx.createImageData(size, size);
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const nx = (x + .5 - size / 2) / (size / 2),
+        ny = (size / 2 - y - .5) / (size / 2);
+      const radius = nx * nx + ny * ny;
+      if (radius >= 1) continue;
+      const nz = Math.sqrt(1 - radius);
+      const latitude = ny * .95 - nx * .24 + nz * .16;
+      const band = Math.abs(latitude) < .09;
+      const base = band ? [181, 164, 143] : latitude > 0 ? [233, 75, 49] : [235, 224, 199];
+      const light = Math.max(0, -nx * .42 + ny * .64 + nz * .64);
+      const gloss = Math.pow(Math.max(0, -nx * .24 + ny * .36 + nz * .90), band ? 18 : 65);
+      const i = (y * size + x) * 4;
+      for (let c = 0; c < 3; c++) pixels.data[i + c] = base[c] * (.31 + .7 * light) + 210 * gloss;
+      pixels.data[i + 3] = Math.min(255, (1 - Math.sqrt(radius)) * size * 255);
+    }
+    ctx.putImageData(pixels, 0, 0);
+  }, []);
+  return React.createElement("canvas", {
+    width: 96,
+    height: 96,
+    ref: canvas,
+    "aria-hidden": "true"
+  });
+}
+function WishDialog({
+  title,
+  close,
+  children
+}) {
+  const ref = React.useRef(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    dialog.showModal();
+    return () => dialog.close();
+  }, []);
+  return React.createElement("dialog", {
+    className: "wish-dialog",
+    ref: ref,
+    "aria-labelledby": "wish-title",
+    onCancel: e => {
+      e.preventDefault();
+      close?.();
+    }
+  }, React.createElement("h2", {
+    id: "wish-title"
+  }, title), children);
+}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState(null);
@@ -356,11 +418,24 @@ function App() {
   const starter = p => p.owned.length < 2 || !p.pins.some(offensive);
   const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
+  const openWish = (id, count) => {
+    setQuantity(count);
+    setPortal(id);
+    setPhase("confirm");
+  };
+  const pool = portalPool(portal, profile);
+  const guaranteed = profile.wishStep === 9;
+  const percent = v => v.toLocaleString("fr-FR", {
+    style: "percent",
+    maximumFractionDigits: 3
+  });
+  const portalName = portal === "shibuya" ? "First Week #1" : "Partenaires";
+  const closeDialog = () => setPhase("ready");
   const recruit = (id, count) => {
     if (turning.current) return;
     const draws = [];
     setProfile(p => {
-      if (p.coins < wishCost(p, count)) return p;
+      if (p.coins !== profile.coins || wishCost(p, count) !== price || p.coins < price) return p;
       const next = {
         ...p,
         pins: [...p.pins],
@@ -375,7 +450,7 @@ function App() {
       };
       for (let i = 0; i < count; i++) {
         next.wishStep = (next.wishStep + 1) % 10;
-        if (next.wishStep !== 0 && Math.random() >= 0.10) {
+        if (next.wishStep !== 0 && Math.random() >= characterChance) {
           const pin = pick(pinList);
           if (!next.pins.includes(pin.id)) next.pins.push(pin.id);
           draws.push({
@@ -383,11 +458,7 @@ function App() {
           });
           continue;
         }
-        const missing = characterRoster.filter(f => !next.owned.includes(f.name));
-        const available = characterRoster.filter(f => (next.copies[f.name] || 0) < 5);
-        const pool = missing.length ? missing : available.length ? available : characterRoster;
-        const weighted = id === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
-        const name = weighted[Math.floor(Math.random() * weighted.length)].name;
+        const name = pick(portalPool(id, next)).name;
         const roll = Math.random(),
           rank = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
         if (next.owned.includes(name)) next.copies[name] = Math.min(5, (next.copies[name] || 0) + 1);else {
@@ -408,7 +479,7 @@ function App() {
       setPortal(id);
       setQuantity(count);
       setResult(draws);
-      setPhase("spin");
+      setPhase("crank");
     }
   };
   const awaken = name => setProfile(p => p.copies[name] === 5 && !p.awakened.includes(name) ? {
@@ -467,37 +538,56 @@ function App() {
   }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
     key: f.name,
     fighter: f
-  }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("div", {
+  }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("button", {
+    className: "portal-rates",
+    onClick: () => {
+      setPortal(id);
+      setPhase("rates");
+    },
+    "aria-label": `Taux de ${id === "shibuya" ? "First Week #1" : title}`
+  }, "Taux"), React.createElement("div", {
     className: "bingo-machine"
   }, React.createElement("img", {
     className: "bingo-body",
     src: "./assets/bingo/machine.webp",
     alt: "Bingo Kai"
-  }), React.createElement("button", {
-    className: "bingo-crank " + (id === portal && phase === "spin" ? "turning" : ""),
-    disabled: phase !== "ready" || profile.coins < price,
-    "aria-label": `Faire ${quantity} vœu(x) sur ${title} pour ${price} pièces`,
-    onClick: () => recruit(id, quantity),
-    onAnimationEnd: e => {
-      if (e.animationName === "bingo-turn") setPhase("drop");
-    }
-  }), id === portal && phase === "drop" && React.createElement("span", {
-    className: "bingo-ball",
-    onAnimationEnd: () => {
-      turning.current = false;
-      setPhase("ready");
-    }
+  }), React.createElement("span", {
+    className: "bingo-crank",
+    "aria-hidden": "true"
   })), React.createElement("div", {
     className: "wish-commands"
   }, [1, 10].map(n => React.createElement("button", {
     key: n,
     disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
-    onClick: () => recruit(id, n)
+    onClick: () => openWish(id, n)
   }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Tous les personnages disponibles ont la même chance d’être recrutés." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles.")), id === portal && React.createElement("div", {
-    "aria-live": "polite"
-  }, phase === "ready" && result.map((draw, i) => "pin" in draw ? React.createElement("div", {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
+    key: "rates",
+    title: `Taux · ${portalName}`,
+    close: closeDialog
+  }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque dixi\xE8me v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, characterRoster.filter(f => portal !== "shibuya" || ["NEKU", "SHIKI"].includes(f.name)).map(f => React.createElement("li", {
+    key: f.name
+  }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les personnages manquants ont priorit\xE9. Les taux sont recalcul\xE9s apr\xE8s chaque v\u0153u du lot."), React.createElement("button", {
+    onClick: closeDialog
+  }, "Fermer")), phase === "confirm" && React.createElement(WishDialog, {
+    key: "confirm",
+    title: "Confirmer l\u2019invocation",
+    close: closeDialog
+  }, React.createElement("p", null, "Invoquer sur ", portalName, " pour ", quantity === 1 ? "un vœu" : "dix vœux", " ?"), React.createElement("dl", null, React.createElement("dt", null, "Solde actuel"), React.createElement("dd", null, profile.coins, " pi\xE8ces"), React.createElement("dt", null, "Co\xFBt"), React.createElement("dd", null, price, " pi\xE8ces"), React.createElement("dt", null, "Solde apr\xE8s invocation"), React.createElement("dd", null, price <= profile.coins ? `${profile.coins - price} pièces` : "Solde insuffisant")), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    onClick: closeDialog
+  }, "Annuler"), React.createElement("button", {
+    disabled: profile.coins < price,
+    onClick: () => recruit(portal, quantity)
+  }, "Confirmer"))), ["crank", "spin", "drop", "reveal"].includes(phase) && React.createElement(WishDialog, {
+    key: "invocation",
+    title: phase === "reveal" ? "Résultat de l’invocation" : portalName,
+    close: phase === "reveal" ? closeDialog : undefined
+  }, phase === "reveal" ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "wish-rewards"
+  }, result.map((draw, i) => "pin" in draw ? React.createElement("div", {
     className: "recruit-reveal",
     key: i
   }, React.createElement(PinIcon, {
@@ -509,7 +599,36 @@ function App() {
     fighter: characterRoster.find(f => f.name === draw.name)
   }), React.createElement("strong", null, draw.name), React.createElement(RankBadge, {
     level: draw.rank
-  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"))))))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
+  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue")))), React.createElement("button", {
+    onClick: closeDialog
+  }, "Fermer")) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "invocation-stage"
+  }, React.createElement("div", {
+    className: "bingo-machine"
+  }, React.createElement("img", {
+    className: "bingo-body",
+    src: "./assets/bingo/machine.webp",
+    alt: "Bingo Kai"
+  }), React.createElement("button", {
+    autoFocus: true,
+    "aria-label": "Tourner la manivelle",
+    className: "bingo-crank " + (phase === "spin" ? "turning" : ""),
+    disabled: phase !== "crank",
+    onClick: () => setPhase("spin"),
+    onAnimationEnd: e => {
+      if (e.animationName === "bingo-turn") setPhase("drop");
+    }
+  }), phase === "drop" && React.createElement("span", {
+    className: "bingo-ball capsule",
+    onAnimationEnd: e => {
+      if (e.animationName === "bingo-drop") {
+        turning.current = false;
+        setPhase("reveal");
+      }
+    }
+  }, React.createElement(Capsule, null)))), React.createElement("p", {
+    "aria-live": "polite"
+  }, phase === "crank" ? "Appuie sur la manivelle." : phase === "spin" ? "La manivelle tourne…" : "La capsule tombe…"))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
     className: "bingo-member",
     key: name
   }, React.createElement(RankBadge, {

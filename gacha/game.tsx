@@ -211,13 +211,52 @@ function loadProfile(): Profile {
   return { pins:[], wishStep:0, copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
 }
 
+const characterChance = 0.10;
+function portalPool(id:string, profile:Profile) {
+  const roster=characterRoster.filter(f=>id!=="shibuya" || ["NEKU","SHIKI"].includes(f.name));
+  const missing=roster.filter(f=>!profile.owned.includes(f.name));
+  const available=roster.filter(f=>(profile.copies[f.name]||0)<5);
+  const pool=missing.length ? missing : available.length ? available : roster;
+  return id==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
+}
+function Capsule() {
+  const canvas=React.useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    const ctx=canvas.current?.getContext("2d");
+    if(!ctx) return;
+    const size=96, pixels=ctx.createImageData(size,size);
+    for(let y=0;y<size;y++) for(let x=0;x<size;x++){
+      const nx=(x+.5-size/2)/(size/2), ny=(size/2-y-.5)/(size/2);
+      const radius=nx*nx+ny*ny;
+      if(radius>=1) continue;
+      const nz=Math.sqrt(1-radius);
+      const latitude=ny*.95-nx*.24+nz*.16;
+      const band=Math.abs(latitude)<.09;
+      const base=band ? [181,164,143] : latitude>0 ? [233,75,49] : [235,224,199];
+      const light=Math.max(0,-nx*.42+ny*.64+nz*.64);
+      const gloss=Math.pow(Math.max(0,-nx*.24+ny*.36+nz*.90),band?18:65);
+      const i=(y*size+x)*4;
+      for(let c=0;c<3;c++) pixels.data[i+c]=base[c]*(.31+.7*light)+210*gloss;
+      pixels.data[i+3]=Math.min(255,(1-Math.sqrt(radius))*size*255);
+    }
+    ctx.putImageData(pixels,0,0);
+  },[]);
+  return <canvas width={96} height={96} ref={canvas} aria-hidden="true"/>;
+}
+function WishDialog({title,close,children}:{title:string;close?:()=>void;children:React.ReactNode}) {
+  const ref=React.useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const dialog=ref.current!; dialog.showModal(); return ()=>dialog.close();},[]);
+  return <dialog className="wish-dialog" ref={ref} aria-labelledby="wish-title" onCancel={e=>{e.preventDefault();close?.();}}>
+    <h2 id="wish-title">{title}</h2>{children}
+  </dialog>;
+}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
   const [portal,setPortal]=useState("shibuya");
-  const [phase, setPhase] = useState<"ready" | "spin" | "drop">("ready");
+  const [phase, setPhase] = useState<"ready" | "rates" | "confirm" | "crank" | "spin" | "drop" | "reveal">("ready");
   const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
@@ -239,25 +278,29 @@ function App() {
   const starter = (p:Profile) => p.owned.length < 2 || !p.pins.some(offensive);
   const wishCost = (p:Profile,n=quantity) => n === 1 && starter(p) ? 0 : 100 * n;
   const price = wishCost(profile);
+  const openWish=(id:string,count:number)=>{
+    setQuantity(count); setPortal(id); setPhase("confirm");
+  };
+  const pool=portalPool(portal,profile);
+  const guaranteed=profile.wishStep===9;
+  const percent=(v:number)=>v.toLocaleString("fr-FR",{style:"percent",maximumFractionDigits:3});
+  const portalName=portal==="shibuya"?"First Week #1":"Partenaires";
+  const closeDialog=()=>setPhase("ready");
   const recruit = (id:string,count:number) => {
     if (turning.current) return;
     const draws:Wish[] = [];
     setProfile(p => {
-      if (p.coins<wishCost(p,count)) return p;
+      if (p.coins!==profile.coins || wishCost(p,count)!==price || p.coins<price) return p;
       const next={...p,pins:[...p.pins],coins:p.coins-wishCost(p,count),owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<count;i++){
         next.wishStep=(next.wishStep+1)%10;
-        if(next.wishStep!==0 && Math.random()>=0.10){
+        if(next.wishStep!==0 && Math.random()>=characterChance){
           const pin=pick(pinList);
           if(!next.pins.includes(pin.id)) next.pins.push(pin.id);
           draws.push({pin});
           continue;
         }
-        const missing=characterRoster.filter(f=>!next.owned.includes(f.name));
-        const available=characterRoster.filter(f=>(next.copies[f.name]||0)<5);
-        const pool=missing.length ? missing : available.length ? available : characterRoster;
-        const weighted=id==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
-        const name=weighted[Math.floor(Math.random()*weighted.length)].name;
+        const name=pick(portalPool(id,next)).name;
         const roll=Math.random(), rank=roll<.5?0:roll<.78?1:roll<.92?2:roll<.98?3:4;
         if(next.owned.includes(name)) next.copies[name]=Math.min(5,(next.copies[name]||0)+1);
         else { next.owned.push(name); next.copies[name]=0; }
@@ -266,7 +309,7 @@ function App() {
       }
       return next;
     });
-    if(draws.length){turning.current=true;setPortal(id);setQuantity(count);setResult(draws);setPhase("spin");}
+    if(draws.length){turning.current=true;setPortal(id);setQuantity(count);setResult(draws);setPhase("crank");}
   };
   const awaken = (name:string) => setProfile(p=>p.copies[name]===5 && !p.awakened.includes(name)
     ? {...p,awakened:[...p.awakened,name]} : p);
@@ -288,19 +331,37 @@ function App() {
           <video className="portal-art" src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp" autoPlay muted playsInline aria-hidden="true"/>}
         {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
+        <button className="portal-rates" onClick={()=>{setPortal(id);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
           <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
-          <button className={"bingo-crank "+(id===portal && phase==="spin"?"turning":"")} disabled={phase!=="ready" || profile.coins<price}
-            aria-label={`Faire ${quantity} vœu(x) sur ${title} pour ${price} pièces`} onClick={()=>recruit(id,quantity)}
-            onAnimationEnd={e=>{if(e.animationName==="bingo-turn")setPhase("drop");}}/>
-          {id===portal && phase==="drop" && <span className="bingo-ball" onAnimationEnd={()=>{turning.current=false;setPhase("ready");}}/>}
+          <span className="bingo-crank" aria-hidden="true"/>
         </div>
-        <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>recruit(id,n)}>
+        <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}>
           <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Tous les personnages disponibles ont la même chance d’être recrutés." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : "Beat et Joshua ont deux fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
-      {id===portal && <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>}
+
     </article>)}</div>
+    {phase==="rates" && <WishDialog key="rates" title={`Taux · ${portalName}`} close={closeDialog}>
+      <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque dixième vœu garantit un personnage.</p>
+      <h3>Prochain vœu{guaranteed?" · garanti":""}</h3>
+      <ul>{characterRoster.filter(f=>portal!=="shibuya" || ["NEKU","SHIKI"].includes(f.name)).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
+      <li>Badges psych<b>{percent(guaranteed?0:1-characterChance)}</b></li></ul>
+      <p>Les {pinList.length} badges sont équiprobables. Les personnages manquants ont priorité. Les taux sont recalculés après chaque vœu du lot.</p>
+      <button onClick={closeDialog}>Fermer</button></WishDialog>}
+    {phase==="confirm" && <WishDialog key="confirm" title="Confirmer l’invocation" close={closeDialog}>
+      <p>Invoquer sur {portalName} pour {quantity===1?"un vœu":"dix vœux"} ?</p>
+      <dl><dt>Solde actuel</dt><dd>{profile.coins} pièces</dd><dt>Coût</dt><dd>{price} pièces</dd><dt>Solde après invocation</dt><dd>{price<=profile.coins?`${profile.coins-price} pièces`:"Solde insuffisant"}</dd></dl>
+      <div className="dialog-actions"><button onClick={closeDialog}>Annuler</button><button disabled={profile.coins<price} onClick={()=>recruit(portal,quantity)}>Confirmer</button></div>
+    </WishDialog>}
+    {["crank","spin","drop","reveal"].includes(phase) && <WishDialog key="invocation" title={phase==="reveal"?"Résultat de l’invocation":portalName} close={phase==="reveal"?closeDialog:undefined}>
+      {phase==="reveal"?<><div className="wish-rewards">{result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div><button onClick={closeDialog}>Fermer</button></>:<>
+        <div className="invocation-stage"><div className="bingo-machine"><img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
+          <button autoFocus aria-label="Tourner la manivelle" className={"bingo-crank "+(phase==="spin"?"turning":"")} disabled={phase!=="crank"} onClick={()=>setPhase("spin")}
+            onAnimationEnd={e=>{if(e.animationName==="bingo-turn")setPhase("drop");}}/>
+          {phase==="drop" && <span className="bingo-ball capsule" onAnimationEnd={e=>{if(e.animationName==="bingo-drop"){turning.current=false;setPhase("reveal");}}}><Capsule/></span>}
+        </div></div><p aria-live="polite">{phase==="crank"?"Appuie sur la manivelle.":phase==="spin"?"La manivelle tourne…":"La capsule tombe…"}</p></>}
+    </WishDialog>}
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
       <RankBadge level={profile.levels[name]}/><b>{name}</b><span>{profile.copies[name]||0}/5 doublons</span>
       {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&
