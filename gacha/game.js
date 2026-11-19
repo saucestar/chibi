@@ -695,6 +695,115 @@ function pick(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 const offensive = id => ["physical", "special"].includes(psychs[id]?.kind);
+function validWishEvent(e) {
+  try {
+    return e && typeof e.id === "string" && /^[a-zA-Z0-9-]+$/.test(e.id) && typeof e.portal === "string" && Number.isFinite(e.at) && [1, 10].includes(e.count) && [e.freeUsed, e.coinsPaid, e.coinsBefore, e.coinsAfter, e.freeBefore, e.freeAfter, e.first, e.last].every(n => Number.isSafeInteger(n) && n >= 0) && typeof e.drawsJson === "string" && Array.isArray(JSON.parse(e.drawsJson)) && JSON.parse(e.drawsJson).length === e.count;
+  } catch {
+    return false;
+  }
+}
+function historyFull(p) {
+  return p.wishEvents.length >= 50 || JSON.stringify(p.wishEvents).length > 28000;
+}
+function makeWishEvent(p, next, id, count, free, cost, draws) {
+  const at = Date.now();
+  return {
+    id: `${at}-${next.wishesMade}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`,
+    at,
+    portal: id,
+    count,
+    freeUsed: free,
+    coinsPaid: cost,
+    coinsBefore: p.coins,
+    coinsAfter: next.coins,
+    freeBefore: p.freeWishes,
+    freeAfter: next.freeWishes,
+    first: p.wishesMade + 1,
+    last: next.wishesMade,
+    drawsJson: JSON.stringify(draws.map(draw => "pin" in draw ? {
+      pinId: draw.pin.id
+    } : {
+      name: draw.name,
+      rank: draw.rank,
+      copies: draw.copies
+    }))
+  };
+}
+function WishHistory({
+  profile
+}) {
+  const [open, setOpen] = useState(false),
+    [items, setItems] = useState([]),
+    [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false),
+    [error, setError] = useState(""),
+    [cursor, setCursor] = useState(null),
+    [more, setMore] = useState(false);
+  const load = async (reset = false) => {
+    if (loading) return;
+    setLoading(true);
+    setError("");
+    try {
+      if (!window.ChibiGameSync?.historyPage) throw Error("L’historique distant est indisponible. Les invocations en attente restent conservées ici.");
+      const result = await window.ChibiGameSync.historyPage(reset ? null : cursor);
+      setItems(old => reset ? result.items.filter(validWishEvent) : [...old, ...result.items.filter(validWishEvent)]);
+      setCursor(result.cursor);
+      setMore(result.more);
+    } catch (e) {
+      setError(String(e.message || "Historique indisponible"));
+    } finally {
+      setLoading(false);
+    }
+  };
+  const events = [...new Map([...items, ...profile.wishEvents].map(event => [event.id, event])).values()].sort((a, b) => b.id.localeCompare(a.id));
+  const pending = new Set(profile.wishEvents.map(e => e.id));
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    onClick: () => {
+      setOpen(true);
+      setSelected(null);
+      load(true);
+    }
+  }, "Historique des v\u0153ux"), open && React.createElement(WishDialog, {
+    className: "wish-history",
+    title: "Historique des v\u0153ux",
+    close: () => setOpen(false)
+  }, React.createElement("div", {
+    key: selected?.id || "list",
+    className: "wish-history-view"
+  }, selected ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, portals[selected.portal] || selected.portal), " \xB7 ", new Date(selected.at).toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris"
+  })), React.createElement("p", null, "V\u0153ux ", selected.first, "\u2013", selected.last, " \xB7 ", selected.freeUsed, " gratuits \xB7 ", selected.coinsPaid, " pi\xE8ces"), React.createElement("p", null, "Solde : ", selected.coinsBefore, " \u2192 ", selected.coinsAfter, " pi\xE8ces \xB7 Gratuits : ", selected.freeBefore, " \u2192 ", selected.freeAfter), React.createElement("div", {
+    className: "wish-history-list"
+  }, JSON.parse(selected.drawsJson).map((draw, i) => {
+    const pin = psychs[draw.pinId];
+    return React.createElement("article", {
+      key: i
+    }, pin ? React.createElement(PinIcon, {
+      pin: pin
+    }) : React.createElement("span", null, "\u2605"), React.createElement("div", null, React.createElement("b", null, pin?.name || draw.name || "Récompense"), React.createElement("small", null, pin ? "Badge" : `Personnage · Rang ${draw.rank === 5 ? "étoile" : ranks[draw.rank]} · ${draw.copies} doublon(s)`)));
+  })), React.createElement("button", {
+    onClick: () => setSelected(null)
+  }, "Retour \xE0 l\u2019historique")) : React.createElement(React.Fragment, null, React.createElement("p", null, profile.wishesMade, " invocations comptabilis\xE9es \xB7 ", profile.freeWishSpent, " v\u0153ux gratuits consomm\xE9s"), profile.wishHistoryBaseline > 0 && React.createElement("p", null, profile.wishHistoryBaseline, " invocations ant\xE9rieures : total connu, d\xE9tails non enregistr\xE9s \xE0 l\u2019\xE9poque."), error && React.createElement("p", {
+    role: "status"
+  }, error), React.createElement("div", {
+    className: "wish-history-list"
+  }, events.map(event => React.createElement("button", {
+    key: event.id,
+    onClick: () => setSelected(event)
+  }, React.createElement("b", null, event.count, " v\u0153u", event.count > 1 ? "x" : "", " \xB7 ", portals[event.portal] || event.portal), React.createElement("small", null, new Date(event.at).toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris"
+  }), " \xB7 ", event.freeUsed, " gratuits \xB7 ", event.coinsPaid, " pi\xE8ces"), pending.has(event.id) && React.createElement("small", null, "En attente de synchronisation"))), !events.length && !loading && React.createElement("p", null, "Aucune invocation d\xE9taill\xE9e enregistr\xE9e pour le moment.")), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    disabled: loading,
+    onClick: () => load(true)
+  }, "Actualiser"), more && React.createElement("button", {
+    disabled: loading,
+    onClick: () => load()
+  }, "Charger plus")))), React.createElement("button", {
+    onClick: () => setOpen(false)
+  }, "Fermer")));
+}
 const profileKey = "chibi.reapers-run.party.v1";
 function equippedBy(profile, name, id) {
   return profile.equipped.find(partner => partner && partner !== name && profile.loadout[partner]?.includes(id));
@@ -782,7 +891,13 @@ function loadProfile() {
       return [name, count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({
+      wishEvents: Array.isArray(saved.wishEvents) ? saved.wishEvents.filter(validWishEvent) : [],
+      wishHistoryStartedAt: Number(saved.wishHistoryStartedAt) || 0,
+      wishHistoryBaseline: Number(saved.wishHistoryBaseline) || 0,
+      freeWishVersion: saved.freeWishVersion === 1 ? 1 : 0,
+      freeWishSpent: Number.isSafeInteger(saved.freeWishSpent) && saved.freeWishSpent >= 0 ? saved.freeWishSpent : 0,
+      freeWishDaySpent: Number.isSafeInteger(saved.freeWishDaySpent) && saved.freeWishDaySpent >= 0 ? saved.freeWishDaySpent : 0,
       pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
       starterNekuGranted: saved.starterNekuGranted === true,
       starterWishesGranted: saved.starterWishesGranted === true,
@@ -805,9 +920,15 @@ function loadProfile() {
       awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
       loadout: saved.loadout || {},
       coins: saved.coins
-    });
+    }));
   } catch {}
-  return assignBasePsychs({
+  return accrueDailyWishes(assignBasePsychs({
+    wishEvents: [],
+    wishHistoryStartedAt: 0,
+    wishHistoryBaseline: 0,
+    freeWishVersion: 0,
+    freeWishSpent: 0,
+    freeWishDaySpent: 0,
     pcMissionCoins: {},
     starterNekuGranted: false,
     starterWishesGranted: false,
@@ -828,7 +949,7 @@ function loadProfile() {
     equipped: ["", ""],
     loadout: {},
     coins: 180
-  });
+  }));
 }
 const freeWishStartDay = "2026-11-18";
 function parisDay(now = new Date()) {
@@ -847,31 +968,31 @@ const freeWishNoStackDay = "2026-11-25";
 function accrueDailyWishes(p, now = new Date()) {
   const today = parisDay(now),
     end = dayIndex(today),
-    start = dayIndex(freeWishStartDay);
-  if (end < start) return p;
-  const previous = dayIndex(p.lastFreeWishDay);
-  if (Number.isFinite(previous) && previous > end) return p;
-  if (today >= freeWishNoStackDay) {
-    if (p.lastFreeWishDay !== today) return {
-      ...p,
-      freeWishes: 3,
-      lastFreeWishDay: today,
-      starterWishesGranted: true
-    };
-    return p.starterWishesGranted ? p : {
-      ...p,
-      freeWishes: Math.min(3, p.freeWishes),
-      starterWishesGranted: true
-    };
+    start = dayIndex(freeWishStartDay),
+    previous = dayIndex(p.lastFreeWishDay);
+  if (end < start || Number.isFinite(previous) && previous > end) return p;
+  const active = p.wishesMade > 0 || p.wishStep > 0 || Object.values(p.copies).some(n => n > 0) || p.owned.some(n => n !== "NEKU") || p.pins.some(id => id !== basePsych.NEKU);
+  let spent = p.freeWishSpent,
+    daySpent = p.lastFreeWishDay === today ? p.freeWishDaySpent : 0;
+  if (p.freeWishVersion !== 1) {
+    if (today < freeWishNoStackDay) {
+      const knownDay = Number.isFinite(previous) ? Math.max(start, previous) : end;
+      const earned = 10 + (knownDay - start + 1) * 3;
+      spent = active && (!Number.isFinite(previous) || p.freeWishes >= earned) ? earned : Number.isFinite(previous) ? Math.max(0, earned - p.freeWishes) : 0;
+    } else daySpent = p.lastFreeWishDay === today ? Math.max(0, 3 - Math.min(3, p.freeWishes)) : 0;
   }
-  const days = Number.isFinite(previous) ? Math.max(0, end - Math.max(previous, start - 1)) : end - start + 1;
-  const starter = p.starterWishesGranted ? 0 : 10;
-  return days > 0 || starter > 0 ? {
+  const balance = today >= freeWishNoStackDay ? Math.max(0, 3 - daySpent) : Math.max(0, 10 + (end - start + 1) * 3 - spent);
+  return {
     ...p,
-    freeWishes: p.freeWishes + days * 3 + starter,
+    wishHistoryStartedAt: p.wishHistoryStartedAt || now.getTime(),
+    wishHistoryBaseline: p.wishHistoryStartedAt ? p.wishHistoryBaseline : p.wishesMade,
+    freeWishVersion: 1,
+    freeWishSpent: spent,
+    freeWishDaySpent: daySpent,
+    freeWishes: balance,
     lastFreeWishDay: today,
     starterWishesGranted: true
-  } : p;
+  };
 }
 function wishQuote(p, count) {
   const free = Math.min(count, p.freeWishes),
@@ -1451,6 +1572,18 @@ function App() {
     return () => window.removeEventListener("chibi:mission-scores", credit);
   }, []);
   const wishCost = (p, n = quantity) => wishQuote(p, n).cost;
+  useEffect(() => {
+    const prune = event => {
+      const ids = new Set(event?.detail?.ids || window.ChibiGameSync?.archivedWishIds || []);
+      if (ids.size) setProfile(p => ({
+        ...p,
+        wishEvents: p.wishEvents.filter(e => !ids.has(e.id))
+      }));
+    };
+    window.addEventListener("chibi:wish-archived", prune);
+    prune();
+    return () => window.removeEventListener("chibi:wish-archived", prune);
+  }, []);
   const price = wishCost(profile);
   const openWish = (id, count) => {
     setQuantity(count);
@@ -1466,15 +1599,17 @@ function App() {
   const portalName = portal === "shibuya" ? "First Week #1" : portals[portal];
   const closeDialog = () => setPhase("ready");
   const recruit = (id, count) => {
-    if (turning.current) return;
+    if (turning.current || historyFull(profile)) return;
     const draws = [];
     setProfile(p => {
-      if (p.coins !== profile.coins || wishCost(p, count) !== price || p.coins < price) return p;
+      if (historyFull(p) || p.coins !== profile.coins || wishCost(p, count) !== price || p.coins < price) return p;
       const quote = wishQuote(p, count);
       const next = {
         ...p,
         wishesMade: p.wishesMade + count,
         freeWishes: p.freeWishes - quote.free,
+        freeWishSpent: p.freeWishSpent + quote.free,
+        freeWishDaySpent: p.freeWishDaySpent + quote.free,
         pins: [...p.pins],
         coins: p.coins - quote.cost,
         owned: [...p.owned],
@@ -1507,6 +1642,7 @@ function App() {
           copies: next.copies[name]
         });
       }
+      next.wishEvents = [...p.wishEvents, makeWishEvent(p, next, id, count, quote.free, quote.cost, draws)];
       return assignBasePsychs(next);
     });
     if (draws.length) {
@@ -1570,9 +1706,14 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement("div", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), historyFull(profile) && React.createElement("p", {
+    role: "status"
+  }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
     className: "lobby-tools"
-  }, React.createElement(BadgeCatalogue, {
+  }, React.createElement(WishHistory, {
+    key: window.ChibiGameSync?.accountId || "local",
+    profile: profile
+  }), React.createElement(BadgeCatalogue, {
     owned: profile.pins
   }), React.createElement(QuestMenu, {
     profile: profile,
@@ -1622,7 +1763,7 @@ function App() {
     className: "wish-option"
   }, React.createElement("button", {
     "aria-describedby": `wish-price-${id}-${n}`,
-    disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
+    disabled: historyFull(profile) || phase !== "ready" || profile.coins < wishCost(profile, n),
     onClick: () => openWish(id, n)
   }, React.createElement("strong", null, n, " ", n === 1 ? "vœu" : "vœux")), React.createElement("span", {
     className: "wish-price",
@@ -1739,9 +1880,14 @@ function App() {
     onClick: () => chooseFighter("")
   }, "Retirer"), React.createElement("button", {
     onClick: () => setEditingSlot(null)
-  }, "Fermer"))), React.createElement("div", {
+  }, "Fermer"))), historyFull(profile) && React.createElement("p", {
+    role: "status"
+  }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
     className: "lobby-tools"
-  }, React.createElement(BadgeCatalogue, {
+  }, React.createElement(WishHistory, {
+    key: window.ChibiGameSync?.accountId || "local",
+    profile: profile
+  }), React.createElement(BadgeCatalogue, {
     owned: profile.pins
   }), React.createElement(QuestMenu, {
     profile: profile,

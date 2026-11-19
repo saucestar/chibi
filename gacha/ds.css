@@ -834,3 +834,16 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .scene-apocalyptic h3,.scene-destiny h3 { max-width:70%; font-size:clamp(18px,4.5vw,30px); text-wrap:balance; }
 .scene-apocalyptic::before,.scene-destiny::before { content:""; position:absolute; inset:15% 8% 25%; border-radius:50%; background:radial-gradient(ellipse,#f0eaff44,transparent 65%); pointer-events:none; }
 @media(prefers-reduced-motion:no-preference) { .scene-apocalyptic::before,.scene-destiny::before { animation:portal-ambient 4s ease-in-out infinite alternate; } @keyframes portal-ambient { from{opacity:.35}to{opacity:1} } }
+
+/* Private wish journal: readable touch targets and scrollable entries. */
+@keyframes wish-journal-enter {from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.wish-history {width:min(94vw,680px);max-height:90dvh;color:#fff;}
+.wish-history-view {min-width:0;animation:wish-journal-enter .2s ease-out;}
+.wish-history-view p {line-height:1.5;overflow-wrap:anywhere;}
+.wish-history-list {display:grid;gap:10px;max-height:45dvh;overflow-y:auto;padding:5px;overscroll-behavior:contain;}
+.wish-history-list>button,.wish-history-list>article {display:flex;flex-direction:column;gap:6px;min-height:64px;padding:14px;text-align:left;border:1px solid #cab9ed;border-radius:16px;background:linear-gradient(150deg,#605193,#221b3b);color:#fff;box-shadow:inset 0 1px 2px #ffffff66,0 3px 8px #0005;}
+.wish-history-list small {display:block;color:#eee4ff;line-height:1.4;}
+.wish-history-list>article {flex-direction:row;align-items:center;gap:14px;}
+.wish-history .dialog-actions {display:flex;gap:10px;margin:12px 0;}
+.wish-history button {min-height:44px;}
+@media(prefers-reduced-motion:reduce){.wish-history-view{animation:none;}}

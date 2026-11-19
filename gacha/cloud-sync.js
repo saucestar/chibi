@@ -24,11 +24,30 @@
     if (value && !localStorage.getItem(key + '.before-cloud.' + (mobile ? 'mobile' : 'browser')))
       localStorage.setItem(key + '.before-cloud.' + (mobile ? 'mobile' : 'browser'), value);
   }
+  function protectFreeWishes(profile,uid) {
+    const receipt=read(key+'.free-receipt.'+uid);
+    if(!receipt||receipt.version!==1)return profile;
+    return {...profile,freeWishVersion:1,starterWishesGranted:true,
+      freeWishSpent:Math.max(Number(profile.freeWishSpent)||0,receipt.spent||0),
+      lastFreeWishDay:receipt.day>String(profile.lastFreeWishDay||"")?receipt.day:profile.lastFreeWishDay,
+      freeWishDaySpent:receipt.day>String(profile.lastFreeWishDay||"")?receipt.daySpent:profile.lastFreeWishDay===receipt.day?Math.max(Number(profile.freeWishDaySpent)||0,receipt.daySpent||0):Number(profile.freeWishDaySpent)||0};
+  }
+  function rememberFreeWishes(profile,uid) {
+    if(profile.freeWishVersion!==1)return;
+    const old=read(key+'.free-receipt.'+uid);
+    const newer=old&&old.day>profile.lastFreeWishDay;
+    localStorage.setItem(key+'.free-receipt.'+uid,JSON.stringify({version:1,
+      spent:Math.max(Number(profile.freeWishSpent)||0,old?.spent||0),
+      day:newer?old.day:profile.lastFreeWishDay,
+      daySpent:newer?old.daySpent:old?.day===profile.lastFreeWishDay?Math.max(old.daySpent||0,profile.freeWishDaySpent||0):profile.freeWishDaySpent||0}));
+  }
+
   function install(record, uid) {
     if (!record || !Number.isSafeInteger(record.rev)) throw Error('Sauvegarde distante invalide');
-    const profile = JSON.parse(record.profileJson);
+    const profile = protectFreeWishes(JSON.parse(record.profileJson),uid);
     if (!valid(profile)) throw Error('Progression distante invalide');
     backup();
+    rememberFreeWishes(profile,uid);
     localStorage.setItem(key, JSON.stringify(profile));
     localStorage.setItem(ownerKey, uid);
     revision = record.rev;
@@ -37,7 +56,7 @@
     window.dispatchEvent(new StorageEvent('storage', { key }));
   }
   function record(profile, rev, initialSource) {
-    return { version: 1, rev, initialSource, profileJson: JSON.stringify(profile), client,
+    return { version: 1, rev, initialSource, profileJson: JSON.stringify(protectFreeWishes(profile,activeUid)), client,
       updatedAt: firebase.database.ServerValue.TIMESTAMP };
   }
   let missionScores={}, missionRefs=[], missionTimer=null, missionNotify=null, missionUser=null;
@@ -103,6 +122,40 @@
   function project(profile) {
     publishLeaderboard(profile).catch(()=>window.dispatchEvent(new CustomEvent('chibi:leaderboard-state',{detail:{kind:'error',message:'Classement indisponible : vérifie les règles Firebase.'}})));
   }
+  const archiving=new Set(),archived=new Set();
+  let historyState='idle';
+  async function archiveHistory(events,uid,token){
+    const done=[];historyState='saving';
+    for(const event of events||[]){
+      if(token!==generation)return;
+      if(archiving.has(event.id))continue;
+      archiving.add(event.id);
+      try{
+        const target=firebase.database().ref('wishHistory/'+uid+'/'+event.id);
+        const result=await target.transaction(current=>current?undefined:event,undefined,false);
+        if(result.committed||result.snapshot.val())done.push(event.id);
+      }catch(_){historyState='error';}finally{archiving.delete(event.id);}
+    }
+    if(token!==generation)return;
+    done.forEach(id=>archived.add(id));
+    if(done.length)window.dispatchEvent(new CustomEvent('chibi:wish-archived',{detail:{ids:done}}));
+    if(historyState!=='error')historyState='ready';
+  }
+  async function historyPage(before){
+    if(!activeUid||!ref)throw Error('Connecte-toi au même compte Discord pour consulter les archives.');
+    const token=generation;
+    // Refresh also retries receipts retained after a connection or rules failure.
+    const saved=(await ref.get()).val();
+    if(token!==generation)throw Error('Le compte a changé. Rouvre l’historique.');
+    if(saved)await archiveHistory(JSON.parse(saved.profileJson).wishEvents,activeUid,token);
+    let query=firebase.database().ref('wishHistory/'+activeUid).orderByKey();
+    if(before)query=query.endBefore(before);
+    const snapshot=await query.limitToLast(20).get();
+    if(token!==generation)throw Error('Le compte a changé. Rouvre l’historique.');
+    const items=Object.values(snapshot.val()||{}).sort((a,b)=>b.id.localeCompare(a.id));
+    return {items,cursor:items.length?items[items.length-1].id:null,more:items.length===20};
+  }
+
   async function flush(uid, token) {
     if (writing || !ref || !queue.length) return;
     writing = true;
@@ -127,6 +180,8 @@
           break;
         }
         revision = result.snapshot.val().rev;
+        rememberFreeWishes(JSON.parse(result.snapshot.val().profileJson),uid);
+        archiveHistory(JSON.parse(result.snapshot.val().profileJson).wishEvents,uid,token);
         project(profile);
         localStorage.setItem(ownerKey, uid);
         if(queue.length) localStorage.setItem(pendingKey, JSON.stringify({uid,baseRev:revision,client,profile:queue[queue.length-1]}));
@@ -142,6 +197,9 @@
     if (queue.length && ref) flush(activeUid, generation);
   }
   window.ChibiGameSync = {
+    historyPage,
+    get accountId(){return activeUid;},
+    get archivedWishIds(){return [...archived];},
     get state() { return state; },
     get missionScores(){return {...missionScores};},
     get missionState(){return missionState;},
@@ -154,9 +212,10 @@
   };
   async function connect(user) {
     const token = ++generation;
+    archived.clear();
     stopMissions();
     if (ref && listener) ref.off('value', listener);
-    ref = null; queue = []; revision = 0;
+    ref = null; queue = []; revision = 0; activeUid=null;
     if (!user) {
       announce({ ready: true, kind: 'local', message: 'Progression locale · connecte-toi au même compte Discord sur les 2 appareils pour synchroniser.' });
       return;
@@ -186,6 +245,7 @@
       if (remote) {
         const pending = read(pendingKey);
         install(remote, String(uid));
+        archiveHistory(JSON.parse(remote.profileJson).wishEvents,String(uid),token);
         project(JSON.parse(remote.profileJson));
         announce({ ready: true, kind: 'synced', message: 'Progression synchronisée' });
         if (pending && pending.uid === String(uid) && (pending.baseRev === revision || (pending.client === remote.client && pending.baseRev + 1 === revision)) && valid(pending.profile)) {
@@ -207,6 +267,7 @@
         if (writing) return;
         try {
           install(next, String(uid));
+          archiveHistory(JSON.parse(next.profileJson).wishEvents,String(uid),token);
           announce({ ready: true, kind: 'synced', message: 'Progression synchronisée' });
         } catch (_) { announce({ ready: false, kind: 'error', message: 'Sauvegarde distante illisible. Progression locale conservée.' }); }
       };

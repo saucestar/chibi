@@ -328,7 +328,56 @@ function RankBadge({ level }: { level: number }) {
 type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
 function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
 const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
-type Profile = { pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
+type WishEvent = {id:string;at:number;portal:string;count:number;freeUsed:number;coinsPaid:number;coinsBefore:number;coinsAfter:number;freeBefore:number;freeAfter:number;first:number;last:number;drawsJson:string};
+function validWishEvent(e:any):e is WishEvent {
+ try{return e&&typeof e.id==="string"&&/^[a-zA-Z0-9-]+$/.test(e.id)&&typeof e.portal==="string"&&Number.isFinite(e.at)&&[1,10].includes(e.count)&&[e.freeUsed,e.coinsPaid,e.coinsBefore,e.coinsAfter,e.freeBefore,e.freeAfter,e.first,e.last].every(n=>Number.isSafeInteger(n)&&n>=0)&&typeof e.drawsJson==="string"&&Array.isArray(JSON.parse(e.drawsJson))&&JSON.parse(e.drawsJson).length===e.count;}catch{return false;}
+}
+function historyFull(p:Profile):boolean {return p.wishEvents.length>=50||JSON.stringify(p.wishEvents).length>28000;}
+function makeWishEvent(p:Profile,next:Profile,id:string,count:number,free:number,cost:number,draws:Wish[]):WishEvent {
+ const at=Date.now();return {id:`${at}-${next.wishesMade}-${crypto.randomUUID?.()||Math.random().toString(36).slice(2)}`,at,portal:id,count,freeUsed:free,coinsPaid:cost,coinsBefore:p.coins,coinsAfter:next.coins,freeBefore:p.freeWishes,freeAfter:next.freeWishes,first:p.wishesMade+1,last:next.wishesMade,
+ drawsJson:JSON.stringify(draws.map(draw=>"pin" in draw?{pinId:draw.pin.id}:{name:draw.name,rank:draw.rank,copies:draw.copies}))};
+}
+function WishHistory({profile}:{profile:Profile}) {
+ const [open,setOpen]=useState(false),[items,setItems]=useState<WishEvent[]>([]),[selected,setSelected]=useState<WishEvent|null>(null);
+ const [loading,setLoading]=useState(false),[error,setError]=useState(""),[cursor,setCursor]=useState<string|null>(null),[more,setMore]=useState(false);
+ const load=async(reset=false)=>{
+  if(loading)return;setLoading(true);setError("");
+  try{
+   if(!window.ChibiGameSync?.historyPage)throw Error("L’historique distant est indisponible. Les invocations en attente restent conservées ici.");
+   const result=await window.ChibiGameSync.historyPage(reset?null:cursor);
+   setItems(old=>reset?result.items.filter(validWishEvent):[...old,...result.items.filter(validWishEvent)]);setCursor(result.cursor);setMore(result.more);
+  }catch(e){setError(String((e as Error).message||"Historique indisponible"));}finally{setLoading(false);}
+ };
+ const events=[...new Map([...items,...profile.wishEvents].map(event=>[event.id,event])).values()].sort((a,b)=>b.id.localeCompare(a.id));
+ const pending=new Set(profile.wishEvents.map(e=>e.id));
+ return <><button onClick={()=>{setOpen(true);setSelected(null);load(true);}}>Historique des vœux</button>
+ {open&&<WishDialog className="wish-history" title="Historique des vœux" close={()=>setOpen(false)}>
+  <div key={selected?.id||"list"} className="wish-history-view">
+  {selected?<>
+   <p><b>{portals[selected.portal]||selected.portal}</b> · {new Date(selected.at).toLocaleString("fr-FR",{timeZone:"Europe/Paris"})}</p>
+   <p>Vœux {selected.first}–{selected.last} · {selected.freeUsed} gratuits · {selected.coinsPaid} pièces</p>
+   <p>Solde : {selected.coinsBefore} → {selected.coinsAfter} pièces · Gratuits : {selected.freeBefore} → {selected.freeAfter}</p>
+   <div className="wish-history-list">{JSON.parse(selected.drawsJson).map((draw:any,i:number)=>{
+    const pin=psychs[draw.pinId];return <article key={i}>{pin?<PinIcon pin={pin}/>:<span>★</span>}<div><b>{pin?.name||draw.name||"Récompense"}</b><small>{pin?"Badge":`Personnage · Rang ${draw.rank===5?"étoile":ranks[draw.rank]} · ${draw.copies} doublon(s)`}</small></div></article>;
+   })}</div>
+   <button onClick={()=>setSelected(null)}>Retour à l’historique</button>
+  </>:<>
+   <p>{profile.wishesMade} invocations comptabilisées · {profile.freeWishSpent} vœux gratuits consommés</p>
+   {profile.wishHistoryBaseline>0&&<p>{profile.wishHistoryBaseline} invocations antérieures : total connu, détails non enregistrés à l’époque.</p>}
+   {error&&<p role="status">{error}</p>}
+   <div className="wish-history-list">{events.map(event=><button key={event.id} onClick={()=>setSelected(event)}>
+    <b>{event.count} vœu{event.count>1?"x":""} · {portals[event.portal]||event.portal}</b>
+    <small>{new Date(event.at).toLocaleString("fr-FR",{timeZone:"Europe/Paris"})} · {event.freeUsed} gratuits · {event.coinsPaid} pièces</small>
+    {pending.has(event.id)&&<small>En attente de synchronisation</small>}
+   </button>)}{!events.length&&!loading&&<p>Aucune invocation détaillée enregistrée pour le moment.</p>}</div>
+   <div className="dialog-actions"><button disabled={loading} onClick={()=>load(true)}>Actualiser</button>{more&&<button disabled={loading} onClick={()=>load()}>Charger plus</button>}</div>
+  </>}
+  </div><button onClick={()=>setOpen(false)}>Fermer</button>
+ </WishDialog>}
+ </>;
+}
+
+type Profile = { wishEvents:WishEvent[]; wishHistoryStartedAt:number; wishHistoryBaseline:number; freeWishVersion:number; freeWishSpent:number; freeWishDaySpent:number; pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function equippedBy(profile:Profile,name:string,id:string):string|undefined {
@@ -380,14 +429,14 @@ function loadProfile(): Profile {
       return [name,count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies,
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: {...copies},
-      awakened: owned.filter(name => copies[name]===5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
+      awakened: owned.filter(name => copies[name]===5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins }));
   } catch {}
-  return assignBasePsychs({pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 });
+  return accrueDailyWishes(assignBasePsychs({wishEvents:[],wishHistoryStartedAt:0,wishHistoryBaseline:0,freeWishVersion:0,freeWishSpent:0,freeWishDaySpent:0,pcMissionCoins:{},starterNekuGranted:false,starterWishesGranted:false,hasPlayed:false,wishesMade:0,freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 }));
 }
 
 // First mobile game integration: 2026-11-18 (repository history).
@@ -399,17 +448,21 @@ function parisDay(now:Date=new Date()):string {
 function dayIndex(day:string):number {return /^\d{4}-\d{2}-\d{2}$/.test(day)?Date.parse(day+"T00:00:00Z")/86400000:NaN;}
 const freeWishNoStackDay="2026-11-25";
 function accrueDailyWishes(p:Profile,now:Date=new Date()):Profile {
- const today=parisDay(now),end=dayIndex(today),start=dayIndex(freeWishStartDay);
- if(end<start)return p;
- const previous=dayIndex(p.lastFreeWishDay);
- if(Number.isFinite(previous)&&previous>end)return p;
- if(today>=freeWishNoStackDay){
-  if(p.lastFreeWishDay!==today)return {...p,freeWishes:3,lastFreeWishDay:today,starterWishesGranted:true};
-  return p.starterWishesGranted?p:{...p,freeWishes:Math.min(3,p.freeWishes),starterWishesGranted:true};
+ const today=parisDay(now),end=dayIndex(today),start=dayIndex(freeWishStartDay),previous=dayIndex(p.lastFreeWishDay);
+ if(end<start || (Number.isFinite(previous)&&previous>end))return p;
+ const active=p.wishesMade>0||p.wishStep>0||Object.values(p.copies).some(n=>n>0)||p.owned.some(n=>n!=="NEKU")||p.pins.some(id=>id!==basePsych.NEKU);
+ let spent=p.freeWishSpent,daySpent=p.lastFreeWishDay===today?p.freeWishDaySpent:0;
+ if(p.freeWishVersion!==1){
+   if(today<freeWishNoStackDay){
+     const knownDay=Number.isFinite(previous)?Math.max(start,previous):end;
+     const earned=10+(knownDay-start+1)*3;
+     // A full pack on an already active legacy account is a replay, not a new player gift.
+     spent=active&&(!Number.isFinite(previous)||p.freeWishes>=earned)?earned:
+       Number.isFinite(previous)?Math.max(0,earned-p.freeWishes):0;
+   }else daySpent=p.lastFreeWishDay===today?Math.max(0,3-Math.min(3,p.freeWishes)):0;
  }
- const days=Number.isFinite(previous)?Math.max(0,end-Math.max(previous,start-1)):end-start+1;
- const starter=p.starterWishesGranted?0:10;
- return days>0||starter>0?{...p,freeWishes:p.freeWishes+days*3+starter,lastFreeWishDay:today,starterWishesGranted:true}:p;
+ const balance=today>=freeWishNoStackDay?Math.max(0,3-daySpent):Math.max(0,10+(end-start+1)*3-spent);
+ return {...p,wishHistoryStartedAt:p.wishHistoryStartedAt||now.getTime(),wishHistoryBaseline:p.wishHistoryStartedAt?p.wishHistoryBaseline:p.wishesMade,freeWishVersion:1,freeWishSpent:spent,freeWishDaySpent:daySpent,freeWishes:balance,lastFreeWishDay:today,starterWishesGranted:true};
 }
 function wishQuote(p:Profile,count:number) {
  const free=Math.min(count,p.freeWishes),paid=count-free;
@@ -682,6 +735,14 @@ function App() {
     return ()=>window.removeEventListener("chibi:mission-scores",credit);
   },[]);
   const wishCost = (p:Profile,n=quantity) => wishQuote(p,n).cost;
+  useEffect(()=>{
+    const prune=(event?:Event)=>{
+      const ids=new Set((event as CustomEvent)?.detail?.ids||window.ChibiGameSync?.archivedWishIds||[]);
+      if(ids.size)setProfile(p=>({...p,wishEvents:p.wishEvents.filter(e=>!ids.has(e.id))}));
+    };
+    window.addEventListener("chibi:wish-archived",prune);prune();
+    return()=>window.removeEventListener("chibi:wish-archived",prune);
+  },[]);
   const price = wishCost(profile);
   const openWish=(id:string,count:number)=>{
     setQuantity(count); setPortal(id); setPhase("confirm");
@@ -692,12 +753,12 @@ function App() {
   const portalName=portal==="shibuya"?"First Week #1":portals[portal];
   const closeDialog=()=>setPhase("ready");
   const recruit = (id:string,count:number) => {
-    if (turning.current) return;
+    if (turning.current || historyFull(profile)) return;
     const draws:Wish[] = [];
     setProfile(p => {
-      if (p.coins!==profile.coins || wishCost(p,count)!==price || p.coins<price) return p;
+      if (historyFull(p) || p.coins!==profile.coins || wishCost(p,count)!==price || p.coins<price) return p;
       const quote=wishQuote(p,count);
-      const next={...p,wishesMade:p.wishesMade+count,freeWishes:p.freeWishes-quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
+      const next={...p,wishesMade:p.wishesMade+count,freeWishes:p.freeWishes-quote.free,freeWishSpent:p.freeWishSpent+quote.free,freeWishDaySpent:p.freeWishDaySpent+quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<count;i++){
         next.wishStep=(next.wishStep+1)%10;
         if(next.wishStep!==0 && Math.random()>=characterChance){
@@ -712,6 +773,7 @@ function App() {
         next.levels[name]=next.copies[name];
         draws.push({name,rank:next.levels[name],copies:next.copies[name]});
       }
+      next.wishEvents=[...p.wishEvents,makeWishEvent(p,next,id,count,quote.free,quote.cost,draws)];
       return assignBasePsychs(next);
     });
     if(draws.length){turning.current=true;setPortal(id);setQuantity(count);setResult(draws);setPhase("crank");}
@@ -737,7 +799,8 @@ function App() {
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Bingo Kai</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
-    <div className="lobby-tools"><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
+    {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
+    <div className="lobby-tools"><WishHistory key={window.ChibiGameSync?.accountId||"local"} profile={profile}/><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
@@ -754,7 +817,7 @@ function App() {
           <span className="bingo-crank" aria-hidden="true"/>
         </div>
         <div className="wish-commands">{[1,10].map(n=><div key={n} className="wish-option">
-          <button aria-describedby={`wish-price-${id}-${n}`} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
+          <button aria-describedby={`wish-price-${id}-${n}`} disabled={historyFull(profile) || phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString("fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} gratuit{wishQuote(profile,n).free>1?"s":""} inclus</small>}
         </div>)}</div>
@@ -804,7 +867,8 @@ function App() {
       </button>)}</div>
       <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
     </WishDialog>}
-    <div className="lobby-tools"><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
+    {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
+    <div className="lobby-tools"><WishHistory key={window.ChibiGameSync?.accountId||"local"} profile={profile}/><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
     {fighters.map(name=><PsychEquipment key={name} name={name} profile={profile} save={ids=>setProfile(p=>assignBasePsychs({...p,loadout:{...p.loadout,[name]:ids}}))}/>)}
     {fighters.length===2 && !fighters.some(name=>profile.loadout[name]?.some(offensive)) && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={fighters.length!==2 || !fighters.every(name=>profile.loadout[name]?.length) || !fighters.some(name=>profile.loadout[name]?.some(offensive))}
@@ -1338,3 +1402,4 @@ function SaveBoundary() {
   return <>{status.kind!=="synced"&&status.kind!=="saving"&&status.message&&<p className="save-sync-notice" role="status">{status.message}</p>}<App/></>;
 }
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
+
