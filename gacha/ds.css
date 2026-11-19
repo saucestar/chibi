@@ -6,6 +6,11 @@
   --pearl:linear-gradient(176deg,#fff 0%,#f5f4fa 46%,#e5e3ef 100%);
   --silver:linear-gradient(#fff,#f1f0f8 42%,#d4d1e3 52%,#e8e7f1 93%,#9e99b1);
   --indigo:linear-gradient(110deg,#211653,#42349b 65%,#302579);
+  --panel-radius:clamp(16px,3vw,26px);
+  --control-radius:12px;
+  --halo:0 0 0 1px #bdb0ff91,0 0 16px #9980e35e,0 5px 14px #30214636;
+  --depth:inset 0 1px 0 #ffffffc9,0 3px 8px #33284512,0 12px 32px #57418221;
+  --ease:cubic-bezier(.22,.78,.22,1);
   --edge:inset 0 1px #fff,inset 0 -1px #ada9bc,0 2px 4px #211b481a;
   --title:Georgia,'Times New Roman',serif;
   color:var(--ink);
@@ -33,7 +38,7 @@
 .party-lobby summary { cursor:pointer; padding:8px 0; }
 .party-lobby button:not(.bingo-crank),.party-lobby select,.actions button,.reward-grid button,.game-over button {
   color:var(--ink); border:1px solid var(--line); background:var(--silver);
-  box-shadow:var(--edge); border-radius:2px; font-family:inherit;
+  box-shadow:var(--edge); border-radius:var(--control-radius); font-family:inherit;
 }
 .party-lobby button:not(.bingo-crank),.party-lobby select { padding:7px 12px; }
 .party-lobby button[aria-pressed],.party-lobby .pull-button { padding-inline:18px; }
@@ -89,7 +94,7 @@
 
 
 .wish-commands { display:flex; gap:8px; margin-top:10px; }
-.party-lobby .wish-commands button { flex:1; display:grid; text-align:center; gap:2px; padding:8px; border-block:3px double #a7a2b7; clip-path:polygon(0 50%,6% 0,94% 0,100% 50%,94% 100%,6% 100%); }
+.party-lobby .wish-commands button { flex:1; display:grid; text-align:center; gap:2px; padding:8px; border:1px solid #b6aaca; border-radius:999px; }
 .wish-commands strong { font:600 18px var(--title); }
 .wish-commands small { font-size:12px; }
 .wish-commands button:disabled { color:#646071; background:#e2dfe8; }
@@ -129,3 +134,53 @@
 .invocation-stage .bingo-machine { width:min(42vw,155px); }
 .invocation-stage .capsule { overflow:hidden; border:1px solid #473441; background:radial-gradient(ellipse at 29% 19%,#fff 0%,#fff9 6%,transparent 18%),radial-gradient(circle at 32% 27%,transparent 24%,#291a3973 75%,#140c20c9),linear-gradient(160deg,#ff9867,#bd403d 47%,#53404b 48%,#f1ddc7 51%,#a997a5 55%,#ffefd8 58%,#d0bbad); box-shadow:inset -2px -3px 4px #29142988,inset 1px 1px 2px #ffead5,1px 3px 4px #30253970; }
 .capsule canvas { display:block; width:100%; height:100%; }
+
+/* Pearl surfaces, with soft violet light reserved for interactive states. */
+.party-lobby section,.portal-scene,.arena,.modal,.wish-dialog {
+  border-radius:var(--panel-radius);
+  border:1px solid #ada5bd;
+  box-shadow:var(--depth);
+}
+.party-lobby section { background:linear-gradient(135deg,#fffffff5,#fbf9ffeb 52%,#eeeaf6f5); }
+.portal-scene { box-shadow:0 0 0 1px #e9e3ff,0 5px 22px #54427e40; }
+.wish-dialog,.modal { box-shadow:0 0 0 1px #e7defb,0 0 32px #b7a1f84a,0 20px 65px #1f123d55; }
+.invocation-stage,.fighter-card,.action-dock,.groove-card,.tip-card,.bingo-member,.recruit-reveal,.pin-catalog {
+  border-radius:16px;
+}
+.fighter-card,.action-dock,.bingo-member { box-shadow:var(--depth); }
+.topbar { border-radius:0 0 18px 18px; }
+.action-dock { padding:5px; }
+.energy-readout,.action-icon,.enemy-tag,.section-label { border-radius:9px; }
+.bar,.bar i,.groove-bar,.groove-bar i,.energy-readout i,.threat b,.turn-badge,.arena-hero > span { border-radius:999px; }
+.energy-readout i.full { box-shadow:0 0 7px #f6dc8780; }
+.message-strip { border-radius:0 0 var(--panel-radius) var(--panel-radius); }
+.message-strip span { clip-path:none; border-radius:0 16px 0 0; padding-right:16px; }
+.party-lobby .portal-rates { border-radius:999px; }
+.portal-caption { backdrop-filter:blur(6px); }
+.party-lobby .wish-commands button:enabled,.party-lobby .dialog-actions button:last-child:enabled {
+  background:linear-gradient(155deg,#5e50a9,#382a73 65%,#302461);
+  color:#fff; border-color:#c8bcec;
+  box-shadow:inset 0 1px 0 #e8deff75,0 0 12px #bba7ff55,0 3px 10px #21133555;
+}
+.party-lobby button[aria-pressed=true],.game-shell :focus-visible { box-shadow:var(--halo); }
+.game-shell :focus-visible { outline:2px solid #6650a7; outline-offset:3px; }
+@media (hover:hover) {
+  .party-lobby button:not(.bingo-crank):enabled:hover,.game-shell .actions button:enabled:hover,.game-shell .reward-grid button:hover {
+    border-color:#c6b7ff; box-shadow:var(--halo);
+  }
+}
+@media (prefers-reduced-motion:no-preference) {
+  .party-lobby button:not(.bingo-crank),.actions button,.reward-grid button,.game-over button {
+    transition:transform 180ms var(--ease),box-shadow 220ms var(--ease),border-color 180ms ease;
+  }
+  .game-shell button:not(.bingo-crank,.enemy-unit):enabled:active { transform:scale(.98); }
+  .wish-dialog[open],.overlay .modal { animation:panel-arrive 220ms var(--ease) both; }
+  .wish-dialog[open]::backdrop { animation:veil-arrive 190ms ease-out both; }
+  @keyframes panel-arrive { from { opacity:0; translate:0 7px; } to { opacity:1; translate:0 0; } }
+  @keyframes veil-arrive { from { opacity:0; } to { opacity:1; } }
+}.topbar button.currency,.topbar .sound-button,.groove-card button {
+  border:1px solid var(--line); border-radius:var(--control-radius);
+}
+.topbar button.currency { padding:5px 12px; background:var(--pearl); box-shadow:var(--edge); }
+.route > div > span { border-radius:9px; }
+.arena-hero > span { color:#fffaf1; }
