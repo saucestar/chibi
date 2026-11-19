@@ -36,7 +36,7 @@ const typeChart:Record<ElementType,[ElementType[],ElementType[],ElementType[]]>=
  steel:[["ice","rock","fairy"],["fire","water","electric","steel"],[]],
  fairy:[["fighting","dragon","dark"],["fire","poison","steel"],[]]
 };
-const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"]};
+const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"]};
 const enemyElements:Record<EnemyKind,ElementType[]>={frog:["water"],wolf:["dark"],shinigami:["dark","flying"],"jey-pengi":["water","ice"],"electro-pengi":["electric"],"psyche-fox":["psychic"]};
 function effectiveness(attack:ElementType,defense:ElementType[]):number {
  const [strong,weak,immune]=typeChart[attack];
@@ -48,7 +48,9 @@ function typedDamage(base:number,attack:ElementType,defense:ElementType[]):numbe
 function affinityText(scale:number):string {return scale===0?"Sans effet":scale>1?`Super efficace ×${scale}`:scale<1?`Résisté ×${scale}`:"×1";}
 function badgeElement(pin:Pin):ElementType {
  const power=pin.psych,name=pin.name;
- if(pin.id==="buster-sword")return "steel";
+ if(["buster-sword","virtuous-contract","type-40-blade"].includes(pin.id))return "steel";
+ if(pin.id==="kingdom-key")return "fairy";
+ if(pin.id==="way-to-dawn")return "dark";
  if(pin.kind==="heal"||/Healing|Cure|Holy|Subconscious|Vent guérisseur/.test(power))return "fairy";
  if(/Pyrokinesis|Flame|Ignition|Fire|Explosion|Time Bomb/.test(power))return "fire";
  if(/Aqua|Splash/.test(power)||/Aqua|Water/.test(name))return "water";
@@ -85,7 +87,7 @@ type Enemy = {
 };
 
 type Fighter = {
-  xp?:number; level?:number; atk?:number; mag?:number; speed?:number; portraitCenter?:number;
+  xp?:number; level?:number; atk?:number; mag?:number; speed?:number; portraitCenter?:number; portraitTop?:number;
   name: string;
   role: string;
   hp: number;
@@ -100,6 +102,11 @@ type Fighter = {
 };
 
 const characterRoster: Fighter[] = [
+  {name:"2B",role:"YORHA",hp:128,maxHp:128,sprite:"./assets/game/2b-idle.png",accent:"#d2cce0",frames:4,frameWidth:176,frameHeight:160,portraitCenter:88,portraitTop:40},
+  {name:"A2",role:"YORHA",hp:132,maxHp:132,sprite:"./assets/game/a2-idle.png",accent:"#b8b1be",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
+  {name:"SORA",role:"KEYBLADE",hp:122,maxHp:122,sprite:"./assets/game/sora-idle.png",accent:"#ffd25c",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
+  {name:"RIKU",role:"KEYBLADE",hp:126,maxHp:126,sprite:"./assets/game/riku-idle.png",accent:"#9b9ce9",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
+
   {name:"CLOUD",portraitCenter:64,role:"EX-SOLDAT",hp:138,maxHp:138,sprite:"./assets/game/cloud-idle.png",accent:"#88b9ff",frames:20,frameWidth:128,frameHeight:116},
   {name:"AERITH",portraitCenter:40,role:"CETRA",hp:104,maxHp:104,sprite:"./assets/game/aerith-idle.png",accent:"#ffb1c5",frames:4,frameWidth:80,frameHeight:116},
 
@@ -216,6 +223,18 @@ const makeWave = (wave: number): Enemy[] => {
 
 type Action = "pyro" | "shockwave" | "heal" | "guard" | "burst" | null;
 
+function SpritePreview({fighter,maximumScale=1}:{fighter:Fighter;maximumScale?:number}) {
+  const ref=React.useRef<HTMLSpanElement>(null);
+  const [scale,setScale]=useState(1);
+  React.useLayoutEffect(()=>{
+    const element=ref.current!;
+    const fit=()=>{setScale(Math.min(maximumScale,element.clientWidth/(fighter.frameWidth||80),element.clientHeight/(fighter.frameHeight||116)));};
+    fit();const observer=new ResizeObserver(fit);observer.observe(element);
+    return()=>observer.disconnect();
+  },[fighter.frameWidth,fighter.frameHeight,maximumScale]);
+  return <span className="sprite-preview" ref={ref}><span className="sprite-preview-inner" style={{transform:`scale(${scale})`}}><Sprite fighter={fighter}/></span></span>;
+}
+
 function Sprite({
   fighter,
   action = null,
@@ -245,8 +264,13 @@ function Sprite({
 
 type Pin = { element?:ElementType; grade?:string; id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
 declare const pinList: Pin[];
-const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind"};
+const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn"};
 const partnerPsychs:Pin[] = [
+  {id:"virtuous-contract",name:"Virtuous Contract",psych:"Lame YoRHa",kind:"physical",power:28},
+  {id:"type-40-blade",name:"Type-40 Blade",psych:"Lame YoRHa",kind:"physical",power:31},
+  {id:"kingdom-key",name:"Kingdom Key",psych:"Lumière de la Keyblade",kind:"physical",power:27},
+  {id:"way-to-dawn",name:"Way to the Dawn",psych:"Lame de l’aube",kind:"special",power:29},
+
   {id:"buster-sword",name:"Buster Sword",psych:"Braver",kind:"physical",power:30},
   {id:"healing-wind",name:"Healing Wind",psych:"Vent guérisseur",kind:"heal",power:45},
 
@@ -258,11 +282,11 @@ const psychs: Record<string, Pin> = Object.fromEntries([...pinList,...partnerPsy
 type Psych = string;
 const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
 function PinIcon({ pin }: {pin:Pin}) {
-  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿"}[pin.id]}</i>;
+  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾"}[pin.id]}</i>;
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
-const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality" };
-const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18] };
+const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands" };
+const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18],"2B":[32,24,21],A2:[35,21,19],SORA:[29,29,20],RIKU:[27,32,21] };
 const maxLevel=99;
 function xpAtLevel(level:number) {
   const n=level-1;
@@ -394,7 +418,7 @@ function wishQuote(p:Profile,count:number) {
 
 const characterChance = 0.10;
 function portalRoster(id:string):Fighter[] {
-  const names=id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
+  const names=id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
   return characterRoster.filter(f=>names.includes(f.name));
 }
 function portalPool(id:string, _profile?:Profile) {
@@ -722,7 +746,7 @@ function App() {
         {id==="reality" && <>
           {!matchMedia("(prefers-reduced-motion: reduce)").matches && <PortalVideo src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp"/>}
         </>}
-        {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
+        {["partners","apocalyptic","destiny"].includes(id) && <div className="portal-duo">{characterRoster.filter(f=>(id==="partners"?["BEAT","JOSHUA"]:id==="apocalyptic"?["2B","A2"]:["SORA","RIKU"]).includes(f.name)).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
@@ -734,7 +758,7 @@ function App() {
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString("fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} gratuit{wishQuote(profile,n).free>1?"s":""} inclus</small>}
         </div>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
 
     </article>)}</div>
@@ -770,13 +794,13 @@ function App() {
       const fighter=characterRoster.find(f=>f.name===name);
       const stats=fighter && trained(fighter,profile.xp[name]||0,profile.awakened.includes(name));
       return <button key={index} aria-label={`Emplacement ${index+1} · ${name||"Choisir un personnage"}`} onClick={()=>setEditingSlot(index)}>
-        {fighter && stats ? <><Sprite fighter={fighter}/><strong>{name}</strong><TypeChips elements={characterElements[name]}/><RankBadge level={profile.levels[name]}/><small>PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small><XpProgress xp={stats.xp}/></> : <span aria-hidden="true">+</span>}
+        {fighter && stats ? <><SpritePreview fighter={fighter}/><strong>{name}</strong><TypeChips elements={characterElements[name]}/><RankBadge level={profile.levels[name]}/><small>PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small><XpProgress xp={stats.xp}/></> : <span aria-hidden="true">+</span>}
       </button>;
     })}</div>
     {editingSlot!==null && <WishDialog title={`Choisir un personnage · ${editingSlot+1} / 2`} close={()=>setEditingSlot(null)}>
       {profile.owned.length===0 && <p>Débloque ton premier personnage dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
       <div className="party-list">{characterRoster.filter(f=>profile.owned.includes(f.name)).map(f=><button key={f.name} disabled={profile.equipped[1-editingSlot]===f.name} onClick={()=>chooseFighter(f.name)}>
-        <Sprite fighter={f}/><strong>{f.name}</strong>{profile.equipped[1-editingSlot]===f.name && <small>Déjà équipé</small>}
+        <SpritePreview fighter={f}/><strong>{f.name}</strong>{profile.equipped[1-editingSlot]===f.name && <small>Déjà équipé</small>}
       </button>)}</div>
       <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
     </WishDialog>}
@@ -802,7 +826,7 @@ function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
       let left=width,right=0,top=height,bottom=0;
       try{const pixels=scan.getImageData(0,0,width,height).data;for(let y=0;y<height;y++)for(let x=0;x<width;x++)if(pixels[(y*width+x)*4+3]>64){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}}catch{left=0;right=width;top=0;bottom=height;}
       const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(fighter?.portraitCenter??(left+right)/2)-crop/2));
-      context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,x,top,crop,crop,0,0,64,64);
+      context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,x,fighter?.portraitTop??top,crop,crop,0,0,64,64);
     };
     image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;
     return ()=>{disposed=true;};

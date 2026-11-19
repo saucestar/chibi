@@ -60,7 +60,11 @@ const characterElements = {
   BEAT: ["fighting"],
   JOSHUA: ["psychic", "flying"],
   CLOUD: ["fighting", "steel"],
-  AERITH: ["grass", "fairy"]
+  AERITH: ["grass", "fairy"],
+  "2B": ["steel", "fighting"],
+  A2: ["steel", "dark"],
+  SORA: ["normal", "fairy"],
+  RIKU: ["dark", "psychic"]
 };
 const enemyElements = {
   frog: ["water"],
@@ -84,7 +88,9 @@ function affinityText(scale) {
 function badgeElement(pin) {
   const power = pin.psych,
     name = pin.name;
-  if (pin.id === "buster-sword") return "steel";
+  if (["buster-sword", "virtuous-contract", "type-40-blade"].includes(pin.id)) return "steel";
+  if (pin.id === "kingdom-key") return "fairy";
+  if (pin.id === "way-to-dawn") return "dark";
   if (pin.kind === "heal" || /Healing|Cure|Holy|Subconscious|Vent guérisseur/.test(power)) return "fairy";
   if (/Pyrokinesis|Flame|Ignition|Fire|Explosion|Time Bomb/.test(power)) return "fire";
   if (/Aqua|Splash/.test(power) || /Aqua|Water/.test(name)) return "water";
@@ -114,6 +120,54 @@ function TypeChips({
   }, elementNames[t])));
 }
 const characterRoster = [{
+  name: "2B",
+  role: "YORHA",
+  hp: 128,
+  maxHp: 128,
+  sprite: "./assets/game/2b-idle.png",
+  accent: "#d2cce0",
+  frames: 4,
+  frameWidth: 176,
+  frameHeight: 160,
+  portraitCenter: 88,
+  portraitTop: 40
+}, {
+  name: "A2",
+  role: "YORHA",
+  hp: 132,
+  maxHp: 132,
+  sprite: "./assets/game/a2-idle.png",
+  accent: "#b8b1be",
+  frames: 4,
+  frameWidth: 144,
+  frameHeight: 160,
+  portraitCenter: 72,
+  portraitTop: 40
+}, {
+  name: "SORA",
+  role: "KEYBLADE",
+  hp: 122,
+  maxHp: 122,
+  sprite: "./assets/game/sora-idle.png",
+  accent: "#ffd25c",
+  frames: 4,
+  frameWidth: 144,
+  frameHeight: 160,
+  portraitCenter: 72,
+  portraitTop: 40
+}, {
+  name: "RIKU",
+  role: "KEYBLADE",
+  hp: 126,
+  maxHp: 126,
+  sprite: "./assets/game/riku-idle.png",
+  accent: "#9b9ce9",
+  frames: 4,
+  frameWidth: 144,
+  frameHeight: 160,
+  portraitCenter: 72,
+  portraitTop: 40
+}, {
   name: "CLOUD",
   portraitCenter: 64,
   role: "EX-SOLDAT",
@@ -366,6 +420,34 @@ const makeWave = wave => {
     };
   });
 };
+function SpritePreview({
+  fighter,
+  maximumScale = 1
+}) {
+  const ref = React.useRef(null);
+  const [scale, setScale] = useState(1);
+  React.useLayoutEffect(() => {
+    const element = ref.current;
+    const fit = () => {
+      setScale(Math.min(maximumScale, element.clientWidth / (fighter.frameWidth || 80), element.clientHeight / (fighter.frameHeight || 116)));
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [fighter.frameWidth, fighter.frameHeight, maximumScale]);
+  return React.createElement("span", {
+    className: "sprite-preview",
+    ref: ref
+  }, React.createElement("span", {
+    className: "sprite-preview-inner",
+    style: {
+      transform: `scale(${scale})`
+    }
+  }, React.createElement(Sprite, {
+    fighter: fighter
+  })));
+}
 function Sprite({
   fighter,
   action = null,
@@ -396,9 +478,37 @@ const basePsych = {
   BEAT: "sk8-combo",
   JOSHUA: "joshua-phone",
   CLOUD: "buster-sword",
-  AERITH: "healing-wind"
+  AERITH: "healing-wind",
+  "2B": "virtuous-contract",
+  A2: "type-40-blade",
+  SORA: "kingdom-key",
+  RIKU: "way-to-dawn"
 };
 const partnerPsychs = [{
+  id: "virtuous-contract",
+  name: "Virtuous Contract",
+  psych: "Lame YoRHa",
+  kind: "physical",
+  power: 28
+}, {
+  id: "type-40-blade",
+  name: "Type-40 Blade",
+  psych: "Lame YoRHa",
+  kind: "physical",
+  power: 31
+}, {
+  id: "kingdom-key",
+  name: "Kingdom Key",
+  psych: "Lumière de la Keyblade",
+  kind: "physical",
+  power: 27
+}, {
+  id: "way-to-dawn",
+  name: "Way to the Dawn",
+  psych: "Lame de l’aube",
+  kind: "special",
+  power: 29
+}, {
   id: "buster-sword",
   name: "Buster Sword",
   psych: "Braver",
@@ -467,7 +577,11 @@ function PinIcon({
     "sk8-combo": "★",
     "joshua-phone": "☎",
     "buster-sword": "⚔",
-    "healing-wind": "✿"
+    "healing-wind": "✿",
+    "virtuous-contract": "⚔",
+    "type-40-blade": "⚔",
+    "kingdom-key": "✦",
+    "way-to-dawn": "☾"
   }[pin.id]);
   return React.createElement("i", {
     "aria-hidden": "true",
@@ -485,7 +599,9 @@ function PinIcon({
 const portals = {
   shibuya: "Shibuya",
   partners: "Partenaires",
-  reality: "From another reality"
+  reality: "From another reality",
+  apocalyptic: "Apocalyptic Future",
+  destiny: "Destiny Islands"
 };
 const bases = {
   NEKU: [24, 32, 14],
@@ -493,7 +609,11 @@ const bases = {
   BEAT: [34, 18, 12],
   JOSHUA: [19, 36, 16],
   CLOUD: [36, 21, 15],
-  AERITH: [16, 38, 18]
+  AERITH: [16, 38, 18],
+  "2B": [32, 24, 21],
+  A2: [35, 21, 19],
+  SORA: [29, 29, 20],
+  RIKU: [27, 32, 21]
 };
 const maxLevel = 99;
 function xpAtLevel(level) {
@@ -765,7 +885,7 @@ function wishQuote(p, count) {
 }
 const characterChance = 0.10;
 function portalRoster(id) {
-  const names = id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
+  const names = id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
   return characterRoster.filter(f => names.includes(f.name));
 }
 function portalPool(id, _profile) {
@@ -1473,11 +1593,12 @@ function App() {
   }), id === "reality" && React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement(PortalVideo, {
     src: "./assets/bingo/from-another-reality.mp4",
     poster: "./assets/bingo/from-another-reality.webp"
-  })), id === "partners" && React.createElement("div", {
+  })), ["partners", "apocalyptic", "destiny"].includes(id) && React.createElement("div", {
     className: "portal-duo"
-  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
+  }, characterRoster.filter(f => (id === "partners" ? ["BEAT", "JOSHUA"] : id === "apocalyptic" ? ["2B", "A2"] : ["SORA", "RIKU"]).includes(f.name)).map(f => React.createElement(SpritePreview, {
     key: f.name,
-    fighter: f
+    fighter: f,
+    maximumScale: 1.6
   }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("button", {
     className: "portal-rates",
     onClick: () => {
@@ -1513,7 +1634,7 @@ function App() {
     className: "wish-free"
   }, wishQuote(profile, n).free, " gratuit", wishQuote(profile, n).free > 1 ? "s" : "", " inclus")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     title: `Taux · ${portalName}`,
     close: closeDialog
@@ -1587,7 +1708,7 @@ function App() {
       key: index,
       "aria-label": `Emplacement ${index + 1} · ${name || "Choisir un personnage"}`,
       onClick: () => setEditingSlot(index)
-    }, fighter && stats ? React.createElement(React.Fragment, null, React.createElement(Sprite, {
+    }, fighter && stats ? React.createElement(React.Fragment, null, React.createElement(SpritePreview, {
       fighter: fighter
     }), React.createElement("strong", null, name), React.createElement(TypeChips, {
       elements: characterElements[name]
@@ -1610,7 +1731,7 @@ function App() {
     key: f.name,
     disabled: profile.equipped[1 - editingSlot] === f.name,
     onClick: () => chooseFighter(f.name)
-  }, React.createElement(Sprite, {
+  }, React.createElement(SpritePreview, {
     fighter: f
   }), React.createElement("strong", null, f.name), profile.equipped[1 - editingSlot] === f.name && React.createElement("small", null, "D\xE9j\xE0 \xE9quip\xE9")))), React.createElement("div", {
     className: "dialog-actions"
@@ -1697,7 +1818,7 @@ function HudPortrait({
         x = Math.max(0, Math.min(width - crop, (fighter?.portraitCenter ?? (left + right) / 2) - crop / 2));
       context.imageSmoothingEnabled = false;
       context.clearRect(0, 0, 64, 64);
-      context.drawImage(image, x, top, crop, crop, 0, 0, 64, 64);
+      context.drawImage(image, x, fighter?.portraitTop ?? top, crop, crop, 0, 0, 64, 64);
     };
     image.src = enemy ? `./assets/game/enemy-atlases/${enemy.kind}.png` : fighter.sprite;
     return () => {

@@ -820,3 +820,17 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .portal-scene .wish-option { gap:7px; }
 .quest-tabs:has(button:nth-child(4)) { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .pc-mission-coins article { grid-template-columns:minmax(0,1fr) auto; font-size:12px; }
+/* Character cards resize their whole sprite, preserving weapons and effects. */
+.sprite-preview { position:relative; display:grid; grid-template-columns:minmax(0,1fr); place-items:center; width:100%; height:160px; min-width:0; flex-shrink:0; pointer-events:none; }
+.sprite-preview-inner { display:block; justify-self:center; width:max-content; line-height:0; transform-origin:center; }
+.party-lobby .party-list { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); }
+.party-lobby .party-list button { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-width:0; overflow:hidden; }
+.party-lobby .team-slots button { min-width:0; overflow:hidden; }
+.party-lobby .party-list button strong,.party-lobby .team-slots button strong { max-width:100%; overflow-wrap:anywhere; }
+.party-lobby .portal-duo { left:8%; right:8%; top:22%; height:42%; width:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4%; align-items:end; transform:none; }
+.portal-duo .sprite-preview { height:100%; }
+.scene-apocalyptic { background:radial-gradient(ellipse at 50% 58%,#a4a8b2 0%,#565769 30%,#1a1927 70%),#1a1927; }
+.scene-destiny { background:radial-gradient(ellipse at 50% 64%,#f6e1a4 0%,#709cad 20%,#324668 54%,#19182c 100%); }
+.scene-apocalyptic h3,.scene-destiny h3 { max-width:70%; font-size:clamp(18px,4.5vw,30px); text-wrap:balance; }
+.scene-apocalyptic::before,.scene-destiny::before { content:""; position:absolute; inset:15% 8% 25%; border-radius:50%; background:radial-gradient(ellipse,#f0eaff44,transparent 65%); pointer-events:none; }
+@media(prefers-reduced-motion:no-preference) { .scene-apocalyptic::before,.scene-destiny::before { animation:portal-ambient 4s ease-in-out infinite alternate; } @keyframes portal-ambient { from{opacity:.35}to{opacity:1} } }
