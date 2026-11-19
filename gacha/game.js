@@ -7,12 +7,6 @@ const nekuSprite = "./assets/game/neku-idle.png";
 const beatSprite = "./assets/game/beat-idle.png";
 const shikiSprite = "./assets/game/shiki-idle.png";
 const joshuaSprite = "./assets/game/joshua-idle.png";
-const frogSprite = "./assets/game/frog-idle.png";
-const wolfSprite = "./assets/game/wolf-idle.png";
-const shinigamiSprite = "./assets/game/shinigami-idle.png";
-const jeyPengiSprite = "./assets/game/jey-pengi-idle.png";
-const electroPengiSprite = "./assets/game/electro-pengi-idle.png";
-const psycheFoxSprite = "./assets/game/psyche-fox-idle.png";
 const nekuAttackSprite = "./assets/game/neku-attack.png";
 const beatAttackSprite = "./assets/game/beat-attack.png";
 const shikiAttackSprite = "./assets/game/shiki-attack.png";
@@ -111,7 +105,6 @@ const Icon = ({
 const enemyCatalog = {
   frog: {
     name: "BIG BANG FROG",
-    sprite: frogSprite,
     frames: 4,
     frameWidth: 68,
     frameHeight: 72,
@@ -120,7 +113,6 @@ const enemyCatalog = {
   },
   wolf: {
     name: "GARAGE WOLF",
-    sprite: wolfSprite,
     frames: 4,
     frameWidth: 82,
     frameHeight: 78,
@@ -129,17 +121,15 @@ const enemyCatalog = {
   },
   shinigami: {
     name: "SHINIGAMI",
-    sprite: shinigamiSprite,
     frames: 5,
-    frameWidth: 52,
-    frameHeight: 80,
+    frameWidth: 46,
+    frameHeight: 76,
     hp: 92,
     attack: 17
   },
   "jey-pengi": {
     name: "JEY PENGI",
-    sprite: jeyPengiSprite,
-    frames: 5,
+    frames: 14,
     frameWidth: 42,
     frameHeight: 65,
     hp: 64,
@@ -147,8 +137,7 @@ const enemyCatalog = {
   },
   "electro-pengi": {
     name: "ELECTRO PENGI",
-    sprite: electroPengiSprite,
-    frames: 5,
+    frames: 14,
     frameWidth: 42,
     frameHeight: 65,
     hp: 82,
@@ -156,10 +145,9 @@ const enemyCatalog = {
   },
   "psyche-fox": {
     name: "PSYCHE FOX",
-    sprite: psycheFoxSprite,
-    frames: 5,
-    frameWidth: 50,
-    frameHeight: 72,
+    frames: 6,
+    frameWidth: 169,
+    frameHeight: 205,
     hp: 126,
     attack: 21
   }
@@ -175,6 +163,7 @@ function EnemySprite({
   const displayFrameWidth = 92 * spec.frameWidth / spec.frameHeight;
   useEffect(() => {
     setFrame(0);
+    if (spec.frames < 2) return;
     const timer = window.setInterval(() => {
       setFrame(current => (current + 1) % spec.frames);
     }, 1000 / spec.frames);

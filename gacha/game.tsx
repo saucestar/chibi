@@ -3,12 +3,6 @@ const nekuSprite = "./assets/game/neku-idle.png";
 const beatSprite = "./assets/game/beat-idle.png";
 const shikiSprite = "./assets/game/shiki-idle.png";
 const joshuaSprite = "./assets/game/joshua-idle.png";
-const frogSprite = "./assets/game/frog-idle.png";
-const wolfSprite = "./assets/game/wolf-idle.png";
-const shinigamiSprite = "./assets/game/shinigami-idle.png";
-const jeyPengiSprite = "./assets/game/jey-pengi-idle.png";
-const electroPengiSprite = "./assets/game/electro-pengi-idle.png";
-const psycheFoxSprite = "./assets/game/psyche-fox-idle.png";
 const nekuAttackSprite = "./assets/game/neku-attack.png";
 const beatAttackSprite = "./assets/game/beat-attack.png";
 const shikiAttackSprite = "./assets/game/shiki-attack.png";
@@ -82,13 +76,13 @@ const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" |
   );
 };
 
-const enemyCatalog: Record<EnemyKind, { name: string; sprite: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number }> = {
-  frog: { name: "BIG BANG FROG", sprite: frogSprite, frames: 4, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
-  wolf: { name: "GARAGE WOLF", sprite: wolfSprite, frames: 4, frameWidth: 82, frameHeight: 78, hp: 72, attack: 15 },
-  shinigami: { name: "SHINIGAMI", sprite: shinigamiSprite, frames: 5, frameWidth: 52, frameHeight: 80, hp: 92, attack: 17 },
-  "jey-pengi": { name: "JEY PENGI", sprite: jeyPengiSprite, frames: 5, frameWidth: 42, frameHeight: 65, hp: 64, attack: 12 },
-  "electro-pengi": { name: "ELECTRO PENGI", sprite: electroPengiSprite, frames: 5, frameWidth: 42, frameHeight: 65, hp: 82, attack: 16 },
-  "psyche-fox": { name: "PSYCHE FOX", sprite: psycheFoxSprite, frames: 5, frameWidth: 50, frameHeight: 72, hp: 126, attack: 21 },
+const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number }> = {
+  frog: { name: "BIG BANG FROG", frames: 4, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
+  wolf: { name: "GARAGE WOLF", frames: 4, frameWidth: 82, frameHeight: 78, hp: 72, attack: 15 },
+  shinigami: { name: "SHINIGAMI", frames: 5, frameWidth: 46, frameHeight: 76, hp: 92, attack: 17 },
+  "jey-pengi": { name: "JEY PENGI", frames: 14, frameWidth: 42, frameHeight: 65, hp: 64, attack: 12 },
+  "electro-pengi": { name: "ELECTRO PENGI", frames: 14, frameWidth: 42, frameHeight: 65, hp: 82, attack: 16 },
+  "psyche-fox": { name: "PSYCHE FOX", frames: 6, frameWidth: 169, frameHeight: 205, hp: 126, attack: 21 },
 };
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
@@ -100,6 +94,7 @@ function EnemySprite({ kind, boss }: { kind: EnemyKind; boss: boolean }) {
 
   useEffect(() => {
     setFrame(0);
+    if (spec.frames < 2) return;
     const timer = window.setInterval(() => {
       setFrame((current) => (current + 1) % spec.frames);
     }, 1000 / spec.frames);
