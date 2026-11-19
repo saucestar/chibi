@@ -188,7 +188,10 @@ const ranks = ["E", "D", "C", "B", "A", "etoile"];
 function RankBadge({ level }: { level: number }) {
   return <img className="rank-badge" src={`./assets/bingo/rang-${ranks[level]}.webp`} alt={`Rang ${level === 5 ? "étoile" : ranks[level]}`} />;
 }
-type Profile = { copies:Record<string,number>; wins:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
+type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
+function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
+const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
+type Profile = { pins:string[]; wishStep:number; copies:Record<string,number>; wins:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function loadProfile(): Profile {
@@ -196,20 +199,22 @@ function loadProfile(): Profile {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
     const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped,
+    const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id=>Object.hasOwn(psychs,id));
+    const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped, pins, wishStep,
       copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
       wins:Object.fromEntries(owned.map(n=>[n,Math.max(0,Math.floor(Number(saved.wins?.[n])||0))])),
 
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
-      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))), coins: saved.coins };
+      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => pins.includes(String(id)))), coins: saved.coins };
   } catch {}
-  return { copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
+  return { pins:[], wishStep:0, copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
 }
 
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState<Fighter[] | null>(null);
-  const [result, setResult] = useState<{name:string; rank:number; copies:number}[]>([]);
+  const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
   const [portal,setPortal]=useState("shibuya");
   const [phase, setPhase] = useState<"ready" | "spin" | "drop">("ready");
@@ -231,22 +236,30 @@ function App() {
     displayProfile(next);
   };
 
-  const wishCost = (p:Profile) => 100*Math.max(0,quantity-Math.max(0,2-p.owned.length));
-  const remaining = (p:Profile) => characterRoster.reduce((sum,f)=>sum+(p.owned.includes(f.name)?5-(p.copies[f.name]||0):6),0);
-  const price = wishCost(profile), complete = remaining(profile)<quantity;
+  const starter = (p:Profile) => p.owned.length < 2 || !p.pins.some(offensive);
+  const wishCost = (p:Profile) => quantity === 1 && starter(p) ? 0 : 100 * quantity;
+  const price = wishCost(profile);
   const recruit = () => {
     if (turning.current) return;
-    const draws = [];
+    const draws:Wish[] = [];
     setProfile(p => {
-      if (remaining(p)<quantity || p.coins<wishCost(p)) return p;
-      const next={...p,coins:p.coins-wishCost(p),owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
+      if (p.coins<wishCost(p)) return p;
+      const next={...p,pins:[...p.pins],coins:p.coins-wishCost(p),owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<quantity;i++){
+        next.wishStep=(next.wishStep+1)%10;
+        if(next.wishStep!==0 && Math.random()>=0.10){
+          const pin=pick(pinList);
+          if(!next.pins.includes(pin.id)) next.pins.push(pin.id);
+          draws.push({pin});
+          continue;
+        }
         const missing=characterRoster.filter(f=>!next.owned.includes(f.name));
-        const pool=missing.length ? missing : characterRoster.filter(f=>(next.copies[f.name]||0)<5);
+        const available=characterRoster.filter(f=>(next.copies[f.name]||0)<5);
+        const pool=missing.length ? missing : available.length ? available : characterRoster;
         const weighted=portal==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
         const name=weighted[Math.floor(Math.random()*weighted.length)].name;
         const roll=Math.random(), rank=roll<.5?0:roll<.78?1:roll<.92?2:roll<.98?3:4;
-        if(next.owned.includes(name)) next.copies[name]=(next.copies[name]||0)+1;
+        if(next.owned.includes(name)) next.copies[name]=Math.min(5,(next.copies[name]||0)+1);
         else { next.owned.push(name); next.copies[name]=0; }
         next.levels[name]=next.copies[name]===5 ? 5 : Math.max(next.levels[name]||0,rank);
         draws.push({name,rank,copies:next.copies[name]});
@@ -263,10 +276,13 @@ function App() {
     setProfile(p => ({ ...p, equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2) }));
   };
   if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
+    onDrops={(ids) => setProfile(p => ({...p,pins:[...new Set([...p.pins,...ids])]}))}
     onVictory={() => setProfile(p => ({ ...p, coins:p.coins+5, wins:{...p.wins,...Object.fromEntries(party.map(f=>[f.name,(p.wins[f.name]||0)+1]))} }))}
     leave={() => { setParty(null); setResult([]); }} />;
   if (gachaView) return <main className="game-shell party-lobby"><section>
-    <h2>Gacha personnages</h2>
+    <h2>Bingo Kai</h2>
+    <p>10 % de chance de tirer un personnage. Chaque dixième vœu garantit un personnage, tous portails confondus. Garantie dans {10-profile.wishStep} vœu(x).</p>
+    {starter(profile) && <p>Les vœux simples sont gratuits jusqu’à obtenir deux personnages et un psych offensif.</p>}
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
     <label>Portail <select value={portal} disabled={phase!=="ready"} onChange={e=>setPortal(e.target.value)}>{Object.entries(portals).map(([id,title])=><option key={id} value={id}>{title}</option>)}</select></label>
     {portal==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
@@ -274,15 +290,15 @@ function App() {
     <div className="bingo-stage"><div className="bingo-machine">
       <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai" />
       <button className={`bingo-crank ${phase === "spin" ? "turning" : ""}`} onClick={recruit}
-        disabled={phase !== "ready" || complete || profile.coins < price}
+        disabled={phase !== "ready" || profile.coins < price}
         aria-label={`Faire ${quantity} vœu(x) pour ${price} pièces`}
         onAnimationEnd={e => { if (e.animationName === "bingo-turn") setPhase("drop"); }}/>
       {phase === "drop" && <span className="bingo-ball" onAnimationEnd={() => {
         turning.current = false; setPhase("ready");
       }} />}
     </div></div>
-    <p>{complete ? "Pas assez de recrues ou de doublons disponibles pour ce lot." : price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`}</p>
-    <div aria-live="polite">{phase==="ready" && result.map((draw,i)=><div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>
+    <p>{price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`}</p>
+    <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
       <RankBadge level={profile.levels[name]}/><b>{name}</b><span>{profile.copies[name]||0}/5 doublons</span>
       {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&
@@ -303,13 +319,13 @@ function App() {
         <span>{owned && <RankBadge level={profile.levels[f.name]}/>}</span><span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
       </button>;
     })}</div>
-    <details><summary>Catalogue · {pinList.length} badges</summary><div className="pin-catalog">{pinList.map(pin=><div key={pin.id}><PinIcon pin={pin}/> #{pin.number} {pin.name} · {types[pin.kind]}</div>)}</div><small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small></details>
+    <details><summary>Catalogue · {profile.pins.length} / {pinList.length} badges obtenus</summary><div className="pin-catalog">{pinList.map(pin=><div key={pin.id}><PinIcon pin={pin}/> #{pin.number} {pin.name} · {types[pin.kind]} · {profile.pins.includes(pin.id) ? "Obtenu" : "À découvrir"}</div>)}</div><small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small></details>
     {profile.equipped.map(name => <label className="psych-choice" key={name}>Psych de {name}
       <select value={profile.loadout[name] || ""} onChange={e => {
         const psych = e.target.value as Psych;
-        setProfile(p => ({ ...p, loadout: { ...p.loadout, [name]: psych } }));
+        setProfile(p => p.pins.includes(psych) ? { ...p, loadout: { ...p.loadout, [name]: psych } } : p);
       }}><option value="" disabled>Choisir un psych</option>
-        {Object.entries(psychs).map(([id, item]) => <option key={id} value={id}>#{item.number} {item.name} · {types[item.kind]} · {item.cost} EN</option>)}
+        {profile.pins.map(id=>[id,psychs[id]] as const).map(([id, item]) => <option key={id} value={id}>#{item.number} {item.name} · {types[item.kind]} · {item.cost} EN</option>)}
       </select></label>)}
     {profile.equipped.length === 2 && profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
@@ -318,7 +334,7 @@ function App() {
   </section></main>;
 }
 
-function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onVictory: () => void; leave: () => void }) {
+function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onDrops:(ids:string[])=>void; onVictory: () => void; leave: () => void }) {
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
@@ -330,6 +346,7 @@ function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam
   const [message, setMessage] = useState("Noise detected. Choose your move.");
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState<number | null>(null);
+  const [loot,setLoot]=useState<string[]>([]);
   const [reward, setReward] = useState(false);
   const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
@@ -350,6 +367,12 @@ function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam
   }, [enemies, livingEnemies, selected]);
 
   const enemyTurn = (updatedEnemies: Enemy[], wasGuarded = guarded) => {
+    const defeated=updatedEnemies.filter((enemy,i)=>enemy.hp===0 && enemies[i].hp>0);
+    const drops=defeated.filter(()=>Math.random()<0.25).map(()=>pick(pinList));
+    if(drops.length){
+      onDrops(drops.map(pin=>pin.id));
+      setLoot(old=>[...old,...drops.map(pin=>pin.name)]);
+    }
     const attackers = updatedEnemies.filter((enemy) => enemy.hp > 0);
     if (!attackers.length) {
       setTimeout(() => {
@@ -467,6 +490,7 @@ function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam
       setTeam((current) => current.map((fighter) => ({ ...fighter, hp: fighter.maxHp })));
     }
     const next = wave + 1;
+    setLoot([]);
     setWave(next);
     setTurn(1);
     setEnemies(makeWave(next));
@@ -480,6 +504,7 @@ function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam
   const sector = Math.floor((wave - 1) / 5) + 1;
 
   const retry = () => {
+    setLoot([]);
     setWave(1);
     setTurn(1);
     const saved=loadProfile();
@@ -687,12 +712,14 @@ function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam
         </aside>
       </section>
 
+      {loot.length>0 && <p role="status">Psychs récupérés · {loot.join(", ")}</p>}
       {reward && (
         <div className="overlay">
           <div className="modal reward-modal">
             <small>WAVE {String(wave).padStart(2, "0")} COMPLETE</small>
             <h2>CHOOSE YOUR DROP</h2>
             <p>+5 pièces · +1 XP par personnage. Un niveau tous les 3 XP.</p>
+            {loot.length>0 && <p>Psychs récupérés · {loot.join(", ")}</p>}
             <div className="reward-grid">
               <button onClick={() => nextWave("power")}>
                 <Icon name="bolt" />
