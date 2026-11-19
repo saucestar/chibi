@@ -267,3 +267,20 @@
 .reveal-footer { display:flex; justify-content:center; align-items:center; gap:12px; margin-top:12px; }
 .reveal-footer button { padding:8px 20px; border:1px solid var(--line); border-radius:12px; background:var(--silver); color:var(--ink); }
 @media(prefers-reduced-motion:no-preference){.reward-object { animation:prize-arrive .35s var(--ease) both; } @keyframes prize-arrive { from { opacity:0; scale:.82; } to { opacity:1; scale:1; } }}
+
+.enemy-unit { touch-action:manipulation; }
+.enemy-unit.hit { animation:enemy-hit-light .3s linear; }
+@keyframes enemy-hit-light { 0%,100% { filter:brightness(1); } 50% { filter:brightness(1.8); } }
+.enemy-unit .enemy-sprite { display:block; flex-shrink:0; }
+.enemy-hp { position:absolute; left:50%; top:calc(50% + 49px); transform:translateX(-50%); width:min(76px,70%); height:7px; border:1px solid #fff4cf; background:#181027; border-radius:999px; overflow:hidden; box-shadow:0 1px 4px #0b0718; }
+.enemy-hp i { display:block; height:100%; background:linear-gradient(#ffd78c,#f05b31); transition:width .2s ease; }
+.enemy-unit.selected .enemy-hp { outline:2px solid #ffdd6b; outline-offset:2px; }
+.enemies-count-3 .enemy-hp { top:calc(50% + 32px); }
+.enemies-count-4 .enemy-hp { top:calc(50% + 25px); }
+.enemy-inspection { display:grid; place-items:center; padding:14px 0 26px; }
+.xp-progress { width:100%; color:#45366c; font:600 11px/1.4 'Segoe UI',Arial,sans-serif; margin:5px 0; }
+.xp-progress progress { display:block; appearance:none; border:0; width:100%; height:5px; margin-top:3px; border-radius:999px; overflow:hidden; background:#cec8df; }
+.xp-progress progress::-webkit-progress-bar { background:#cec8df; }
+.xp-progress progress::-webkit-progress-value { background:#6550af; }
+.xp-progress progress::-moz-progress-bar { background:#6550af; }
+@media(max-width:430px) { .enemy-hp { top:calc(50% + 42px); } .enemies-count-3 .enemy-hp { top:calc(50% + 28px); } .enemies-count-4 .enemy-hp { top:calc(50% + 22px); } }

@@ -20,11 +20,13 @@ type Enemy = {
   hp: number;
   maxHp: number;
   attack: number;
+  level: number;
+  xp: number;
   boss: boolean;
 };
 
 type Fighter = {
-  wins?:number; level?:number; atk?:number; mag?:number; speed?:number;
+  xp?:number; level?:number; atk?:number; mag?:number; speed?:number;
   name: string;
   role: string;
   hp: number;
@@ -78,9 +80,9 @@ const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" |
 };
 
 const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth: number; frameHeight: number; hp: number; attack: number }> = {
-  frog: { name: "BIG BANG FROG", frames: 4, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
-  wolf: { name: "GARAGE WOLF", frames: 4, frameWidth: 82, frameHeight: 78, hp: 72, attack: 15 },
-  shinigami: { name: "SHINIGAMI", frames: 5, frameWidth: 46, frameHeight: 76, hp: 92, attack: 17 },
+  frog: { name: "BIG BANG FROG", frames: 2, frameWidth: 68, frameHeight: 72, hp: 50, attack: 10 },
+  wolf: { name: "GARAGE WOLF", frames: 6, frameWidth: 102, frameHeight: 78, hp: 72, attack: 15 },
+  shinigami: { name: "SHINIGAMI", frames: 5, frameWidth: 52, frameHeight: 76, hp: 92, attack: 17 },
   "jey-pengi": { name: "JEY PENGI", frames: 14, frameWidth: 42, frameHeight: 65, hp: 64, attack: 12 },
   "electro-pengi": { name: "ELECTRO PENGI", frames: 14, frameWidth: 42, frameHeight: 65, hp: 82, attack: 16 },
   "psyche-fox": { name: "PSYCHE FOX", frames: 6, frameWidth: 169, frameHeight: 205, hp: 126, attack: 21 },
@@ -88,32 +90,32 @@ const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
 
-function EnemySprite({ kind, boss }: { kind: EnemyKind; boss: boolean }) {
-  const spec = enemyCatalog[kind];
-  const [frame, setFrame] = useState(0);
-  const displayFrameWidth = (92 * spec.frameWidth) / spec.frameHeight;
-
-  useEffect(() => {
-    setFrame(0);
-    if (spec.frames < 2) return;
-    const timer = window.setInterval(() => {
-      setFrame((current) => (current + 1) % spec.frames);
-    }, 1000 / spec.frames);
-    return () => window.clearInterval(timer);
-  }, [kind, spec.frames]);
-
-  return (
-    <img
-      className={`pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`}
-      src={`./assets/game/enemy-frames/${kind}-${frame}.png`}
-      alt=""
-      draggable={false}
-      style={{
-        width: `${displayFrameWidth}px`,
-        height: "92px",
-      }}
-    />
-  );
+function EnemySprite({kind,boss}:{kind:EnemyKind;boss:boolean}) {
+  const spec=enemyCatalog[kind];
+  const canvas=React.useRef<HTMLCanvasElement>(null);
+  useEffect(()=>{
+    const context=canvas.current?.getContext("2d");
+    if(!context) return;
+    const atlas=new Image();
+    let timer:number|undefined, disposed=false, frame=0;
+    context.imageSmoothingEnabled=false;
+    const draw=()=>{
+      context.clearRect(0,0,spec.frameWidth,spec.frameHeight);
+      context.drawImage(atlas,frame*spec.frameWidth,0,spec.frameWidth,spec.frameHeight,0,0,spec.frameWidth,spec.frameHeight);
+    };
+    atlas.onload=()=>{
+      if(disposed) return;
+      draw();
+      if(!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/Math.min(spec.frames,8));
+      }
+    };
+    atlas.src=`./assets/game/enemy-atlases/${kind}.png`;
+    return ()=>{disposed=true;window.clearInterval(timer);};
+  },[kind,spec]);
+  return <canvas ref={canvas} width={spec.frameWidth} height={spec.frameHeight} aria-hidden="true"
+    className={`pixel-sprite enemy-sprite ${boss?"boss-noise":""}`}
+    style={{width:`${92*spec.frameWidth/spec.frameHeight}px`,height:"92px"}}/>;
 }
 
 const makeWave = (wave: number): Enemy[] => {
@@ -133,6 +135,8 @@ const makeWave = (wave: number): Enemy[] => {
       kind,
       hp: maxHp,
       maxHp,
+      level: wave,
+      xp: Math.round((10+template.hp*.15)*growth*(boss?3:1)),
       attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
       boss,
     };
@@ -185,10 +189,38 @@ function PinIcon({ pin }: {pin:Pin}) {
 }
 const portals = { shibuya:"Shibuya", partners:"Partenaires" };
 const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16] };
-function trained(f:Fighter, wins:number, awake:boolean) {
-  const n = Math.floor(wins/3), [atk,mag,speed] = bases[f.name];
-  const maxHp = f.maxHp + n*5 + (awake ? 20 : 0);
-  return {...f, wins, level:n+1, atk:atk+n*2, mag:mag+n*2, speed:speed+n, hp:maxHp, maxHp};
+const maxLevel=99;
+function xpAtLevel(level:number) {
+  const n=level-1;
+  return 100*n+35*n*(n-1)/2+5*n*(n-1)*(2*n-1)/6;
+}
+function experience(total:number) {
+  const xp=Math.min(xpAtLevel(maxLevel),Math.max(0,Math.floor(Number(total)||0)));
+  let level=1;
+  while(level<maxLevel && xp>=xpAtLevel(level+1)) level++;
+  const current=xp-xpAtLevel(level);
+  const required=level===maxLevel?0:xpAtLevel(level+1)-xpAtLevel(level);
+  return {xp,level,current,required};
+}
+function legacyExperience(wins:number) {
+  const count=Math.max(0,Math.floor(Number(wins)||0));
+  const level=Math.min(maxLevel,1+Math.floor(count/3));
+  return level===maxLevel?xpAtLevel(maxLevel):xpAtLevel(level)+Math.floor((count%3)/3*(xpAtLevel(level+1)-xpAtLevel(level)));
+}
+function gainExperience(f:Fighter,amount:number):Fighter {
+  const progress=experience((f.xp||0)+amount);
+  const levels=progress.level-(f.level||1);
+  return {...f,xp:progress.xp,level:progress.level,atk:f.atk+levels*2,mag:f.mag+levels*2,speed:f.speed+levels,maxHp:f.maxHp+levels*5,hp:f.hp>0?f.hp+levels*5:0};
+}
+function XpProgress({xp}:{xp:number}) {
+  const p=experience(xp);
+  return <div className="xp-progress"><span>Niv. {p.level} · {p.required?`${p.current} / ${p.required} XP`:"MAX"}</span>
+    <progress aria-label="Progression du niveau" max={p.required||1} value={p.required?p.current:1}/></div>;
+}
+function trained(f:Fighter, xp:number, awake:boolean) {
+  const progress=experience(xp), n=progress.level-1, [atk,mag,speed]=bases[f.name];
+  const maxHp=f.maxHp+n*5+(awake?20:0);
+  return {...f,xp:progress.xp,level:progress.level,atk:atk+n*2,mag:mag+n*2,speed:speed+n,hp:maxHp,maxHp};
 }
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const ranks = ["E", "D", "C", "B", "A", "etoile"];
@@ -198,7 +230,7 @@ function RankBadge({ level }: { level: number }) {
 type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
 function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
 const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
-type Profile = { pins:string[]; wishStep:number; copies:Record<string,number>; wins:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
+type Profile = { pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function assignBasePsychs(profile:Profile):Profile {
@@ -221,12 +253,12 @@ function loadProfile(): Profile {
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({ owned, equipped, pins, wishStep,
       copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
-      wins:Object.fromEntries(owned.map(n=>[n,Math.max(0,Math.floor(Number(saved.wins?.[n])||0))])),
+      xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name,id])=>owned.includes(name) && (pins.includes(String(id)) || basePsych[name]===id))), coins: saved.coins });
   } catch {}
-  return { pins:[], wishStep:0, copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
+  return { pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
 }
 
 const characterChance = 0.10;
@@ -326,6 +358,12 @@ function App() {
   const [phase, setPhase] = useState<"ready" | "rates" | "confirm" | "crank" | "spin" | "drop" | "reveal">("ready");
   const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
+  useEffect(()=>{
+    try {
+      const saved=JSON.parse(localStorage.getItem(profileKey)||"null");
+      if(saved && !saved.xp) localStorage.setItem(profileKey,JSON.stringify(loadProfile()));
+    } catch { setSaveError(true); }
+  },[]);
   useEffect(() => {
     const sync = (event: StorageEvent) => {
       if (event.key === profileKey) displayProfile(loadProfile());
@@ -392,7 +430,8 @@ function App() {
   }
   if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
     onDrops={(ids) => setProfile(p => ({...p,pins:[...new Set([...p.pins,...ids])]}))}
-    onVictory={() => setProfile(p => ({ ...p, coins:p.coins+5, wins:{...p.wins,...Object.fromEntries(party.map(f=>[f.name,(p.wins[f.name]||0)+1]))} }))}
+    onExperience={(amount)=>setProfile(p=>({...p,xp:{...p.xp,...Object.fromEntries(party.map(f=>[f.name,experience((p.xp[f.name]||0)+amount).xp]))}}))}
+    onVictory={()=>setProfile(p=>({...p,coins:p.coins+5}))}
     leave={() => { setParty(null); setResult([]); }} />;
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Bingo Kai</h2>
@@ -445,9 +484,9 @@ function App() {
   return <main className="game-shell party-lobby"><section><h1>Team</h1>
     <div className="team-slots">{profile.equipped.map((name,index)=>{
       const fighter=characterRoster.find(f=>f.name===name);
-      const stats=fighter && trained(fighter,profile.wins[name]||0,profile.awakened.includes(name));
+      const stats=fighter && trained(fighter,profile.xp[name]||0,profile.awakened.includes(name));
       return <button key={index} aria-label={`Emplacement ${index+1} · ${name||"Choisir un personnage"}`} onClick={()=>setEditingSlot(index)}>
-        {fighter && stats ? <><Sprite fighter={fighter}/><strong>{name}</strong><RankBadge level={profile.levels[name]}/><small>Niv. {stats.level} · PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small></> : <span aria-hidden="true">+</span>}
+        {fighter && stats ? <><Sprite fighter={fighter}/><strong>{name}</strong><RankBadge level={profile.levels[name]}/><small>PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small><XpProgress xp={stats.xp}/></> : <span aria-hidden="true">+</span>}
       </button>;
     })}</div>
     {editingSlot!==null && <WishDialog title={`Choisir un personnage · ${editingSlot+1} / 2`} close={()=>setEditingSlot(null)}>
@@ -468,12 +507,17 @@ function App() {
       </select></label>)}
     {fighters.length === 2 && fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
-      onClick={() => setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.wins[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
+      onClick={() => setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.xp[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }
 
-function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onDrops:(ids:string[])=>void; onVictory: () => void; leave: () => void }) {
+function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onDrops:(ids:string[])=>void; onExperience:(amount:number)=>void; onVictory: () => void; leave: () => void }) {
+  const [inspectedId,setInspectedId]=useState<number|null>(null);
+  const lastTap=React.useRef({id:-1,time:0});
+  const awarded=React.useRef(new Set<number>());
+  const clearedWave=React.useRef(false);
+  const [earnedXp,setEarnedXp]=useState(0);
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
@@ -492,6 +536,16 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
   const [guarded, setGuarded] = useState(false);
   const [activeAction, setActiveAction] = useState<Action>(null);
 
+  const inspected=enemies.find(enemy=>enemy.id===inspectedId);
+  function selectEnemy(enemy:Enemy) {
+    if(enemy.hp<=0) return;
+    setSelected(enemy.id);
+    const time=performance.now();
+    if(lastTap.current.id===enemy.id && time-lastTap.current.time<=400) {
+      setInspectedId(enemy.id);
+      lastTap.current={id:-1,time:0};
+    } else lastTap.current={id:enemy.id,time};
+  }
   const livingEnemies = enemies.filter((enemy) => enemy.hp > 0);
   const totalEnemyHp = livingEnemies.reduce((sum, enemy) => sum + enemy.hp, 0);
   const threat = useMemo(() => {
@@ -507,7 +561,14 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
   }, [enemies, livingEnemies, selected]);
 
   const enemyTurn = (updatedEnemies: Enemy[], wasGuarded = guarded) => {
-    const defeated=updatedEnemies.filter((enemy,i)=>enemy.hp===0 && enemies[i].hp>0);
+    const defeated=updatedEnemies.filter((enemy,i)=>enemy.hp===0 && enemies[i].hp>0 && !awarded.current.has(enemy.id));
+    defeated.forEach(enemy=>awarded.current.add(enemy.id));
+    const earned=defeated.reduce((sum,enemy)=>sum+enemy.xp,0);
+    if(earned){
+      onExperience(earned);
+      setTeam(current=>current.map(f=>gainExperience(f,earned)));
+      setEarnedXp(total=>total+earned);
+    }
     const drops=defeated.filter(()=>Math.random()<0.25).map(()=>pick(pinList));
     if(drops.length){
       setDropReveal(drops.map(pin=>({pin})));
@@ -516,13 +577,10 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
     }
     const attackers = updatedEnemies.filter((enemy) => enemy.hp > 0);
     if (!attackers.length) {
+      if(clearedWave.current) return;
+      clearedWave.current=true;
       setTimeout(() => {
         onVictory();
-        setTeam(prev=>prev.map(f=>{
-          const wins=(f.wins||0)+1;
-          if(wins%3) return {...f,wins};
-          return {...f,wins,level:f.level+1,atk:f.atk+2,mag:f.mag+2,speed:f.speed+1,maxHp:f.maxHp+5,hp:f.hp>0?f.hp+5:0};
-        }));
         setReward(true);
         setBusy(false);
         setActiveAction(null);
@@ -632,6 +690,11 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
     }
     const next = wave + 1;
     setLoot([]);
+    setEarnedXp(0);
+    setInspectedId(null);
+    lastTap.current={id:-1,time:0};
+    awarded.current.clear();
+    clearedWave.current=false;
     setWave(next);
     setTurn(1);
     setEnemies(makeWave(next));
@@ -646,10 +709,15 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
 
   const retry = () => {
     setLoot([]);
+    setEarnedXp(0);
+    setInspectedId(null);
+    lastTap.current={id:-1,time:0};
+    awarded.current.clear();
+    clearedWave.current=false;
     setWave(1);
     setTurn(1);
     const saved=loadProfile();
-    setTeam(initialTeam.map(f=>trained(characterRoster.find(base=>base.name===f.name)!,saved.wins[f.name]||0,saved.awakened.includes(f.name))));
+    setTeam(initialTeam.map(f=>trained(characterRoster.find(base=>base.name===f.name)!,saved.xp[f.name]||0,saved.awakened.includes(f.name))));
     setEnemies(makeWave(1));
     setSelected(10);
     setEnergy(3);
@@ -699,6 +767,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
               <div className="fighter-info">
                 <small>{fighter.role}</small>
                 <h2>{fighter.name}</h2>
+                <XpProgress xp={fighter.xp||0}/>
                 <div className="health-readout">
                   <span>HP</span>
                   <b>{fighter.hp}</b>
@@ -748,25 +817,14 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
                 <button
                   key={enemy.id}
                   className={`enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`}
-                  onClick={() => enemy.hp > 0 && setSelected(enemy.id)}
-                  aria-label={`Target ${enemy.name}`}
+                  onClick={()=>selectEnemy(enemy)}
+                  onDoubleClick={()=>enemy.hp>0 && setInspectedId(enemy.id)}
+                  aria-label={`${enemy.name} · ${enemy.hp} / ${enemy.maxHp} PV. Deux appuis pour les statistiques.`}
+                  title="Deux appuis pour les statistiques"
                 >
                   <EnemySprite kind={enemy.kind} boss={enemy.boss} />
-                  <div className="enemy-tag">
-                    <strong>{enemy.name}</strong>
-                    <span>
-                      {enemy.hp} / {enemy.maxHp}
-                    </span>
-                    <div>
-                      <i style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }} />
-                    </div>
-                  </div>
-                  {selected === enemy.id && enemy.hp > 0 && (
-                    <span className="target-reticle">
-                      <Icon name="target" />
-                    </span>
-                  )}
-                  {impact === enemy.id && <b className="damage-flash">HIT!</b>}
+                  <span className="enemy-hp" aria-hidden="true"><i style={{width:`${100*enemy.hp/enemy.maxHp}%`}}/></span>
+
                 </button>
               ))}
             </div>
@@ -853,6 +911,12 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
         </aside>
       </section>
 
+      {inspected && <WishDialog title={inspected.name} close={()=>setInspectedId(null)}>
+        <div className="enemy-inspection"><EnemySprite kind={inspected.kind} boss={inspected.boss}/></div>
+        <dl><dt>Niveau</dt><dd>{inspected.level}</dd><dt>PV</dt><dd>{inspected.hp} / {inspected.maxHp}</dd>
+          <dt>ATK</dt><dd>{inspected.attack}</dd><dt>XP par personnage</dt><dd>{inspected.xp}</dd><dt>Type</dt><dd>{inspected.boss?"Boss":"Noise"}</dd></dl>
+        <button className="pull-button" onClick={()=>setInspectedId(null)}>Fermer</button>
+      </WishDialog>}
       {dropReveal.length>0 && <WishDialog title="Butin de combat" close={()=>setDropReveal([])}>
         <RewardReveal draws={dropReveal} close={()=>setDropReveal([])}/>
       </WishDialog>}
@@ -862,7 +926,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
           <div className="modal reward-modal">
             <small>WAVE {String(wave).padStart(2, "0")} COMPLETE</small>
             <h2>CHOOSE YOUR DROP</h2>
-            <p>+5 pièces · +1 XP par personnage. Un niveau tous les 3 XP.</p>
+            <p>+5 pièces · +{earnedXp} XP par personnage.</p>
             {loot.length>0 && <p>Psychs récupérés · {loot.join(", ")}</p>}
             <div className="reward-grid">
               <button onClick={() => nextWave("power")}>

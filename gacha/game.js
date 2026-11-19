@@ -104,7 +104,7 @@ const Icon = ({
 const enemyCatalog = {
   frog: {
     name: "BIG BANG FROG",
-    frames: 4,
+    frames: 2,
     frameWidth: 68,
     frameHeight: 72,
     hp: 50,
@@ -112,8 +112,8 @@ const enemyCatalog = {
   },
   wolf: {
     name: "GARAGE WOLF",
-    frames: 4,
-    frameWidth: 82,
+    frames: 6,
+    frameWidth: 102,
     frameHeight: 78,
     hp: 72,
     attack: 15
@@ -121,7 +121,7 @@ const enemyCatalog = {
   shinigami: {
     name: "SHINIGAMI",
     frames: 5,
-    frameWidth: 46,
+    frameWidth: 52,
     frameHeight: 76,
     hp: 92,
     attack: 17
@@ -158,23 +158,43 @@ function EnemySprite({
   boss
 }) {
   const spec = enemyCatalog[kind];
-  const [frame, setFrame] = useState(0);
-  const displayFrameWidth = 92 * spec.frameWidth / spec.frameHeight;
+  const canvas = React.useRef(null);
   useEffect(() => {
-    setFrame(0);
-    if (spec.frames < 2) return;
-    const timer = window.setInterval(() => {
-      setFrame(current => (current + 1) % spec.frames);
-    }, 1000 / spec.frames);
-    return () => window.clearInterval(timer);
-  }, [kind, spec.frames]);
-  return React.createElement("img", {
+    const context = canvas.current?.getContext("2d");
+    if (!context) return;
+    const atlas = new Image();
+    let timer,
+      disposed = false,
+      frame = 0;
+    context.imageSmoothingEnabled = false;
+    const draw = () => {
+      context.clearRect(0, 0, spec.frameWidth, spec.frameHeight);
+      context.drawImage(atlas, frame * spec.frameWidth, 0, spec.frameWidth, spec.frameHeight, 0, 0, spec.frameWidth, spec.frameHeight);
+    };
+    atlas.onload = () => {
+      if (disposed) return;
+      draw();
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        timer = window.setInterval(() => {
+          frame = (frame + 1) % spec.frames;
+          draw();
+        }, 1000 / Math.min(spec.frames, 8));
+      }
+    };
+    atlas.src = `./assets/game/enemy-atlases/${kind}.png`;
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [kind, spec]);
+  return React.createElement("canvas", {
+    ref: canvas,
+    width: spec.frameWidth,
+    height: spec.frameHeight,
+    "aria-hidden": "true",
     className: `pixel-sprite enemy-sprite ${boss ? "boss-noise" : ""}`,
-    src: `./assets/game/enemy-frames/${kind}-${frame}.png`,
-    alt: "",
-    draggable: false,
     style: {
-      width: `${displayFrameWidth}px`,
+      width: `${92 * spec.frameWidth / spec.frameHeight}px`,
       height: "92px"
     }
   });
@@ -196,6 +216,8 @@ const makeWave = wave => {
       kind,
       hp: maxHp,
       maxHp,
+      level: wave,
+      xp: Math.round((10 + template.hp * .15) * growth * (boss ? 3 : 1)),
       attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
       boss
     };
@@ -308,14 +330,64 @@ const bases = {
   BEAT: [34, 18, 12],
   JOSHUA: [19, 36, 16]
 };
-function trained(f, wins, awake) {
-  const n = Math.floor(wins / 3),
+const maxLevel = 99;
+function xpAtLevel(level) {
+  const n = level - 1;
+  return 100 * n + 35 * n * (n - 1) / 2 + 5 * n * (n - 1) * (2 * n - 1) / 6;
+}
+function experience(total) {
+  const xp = Math.min(xpAtLevel(maxLevel), Math.max(0, Math.floor(Number(total) || 0)));
+  let level = 1;
+  while (level < maxLevel && xp >= xpAtLevel(level + 1)) level++;
+  const current = xp - xpAtLevel(level);
+  const required = level === maxLevel ? 0 : xpAtLevel(level + 1) - xpAtLevel(level);
+  return {
+    xp,
+    level,
+    current,
+    required
+  };
+}
+function legacyExperience(wins) {
+  const count = Math.max(0, Math.floor(Number(wins) || 0));
+  const level = Math.min(maxLevel, 1 + Math.floor(count / 3));
+  return level === maxLevel ? xpAtLevel(maxLevel) : xpAtLevel(level) + Math.floor(count % 3 / 3 * (xpAtLevel(level + 1) - xpAtLevel(level)));
+}
+function gainExperience(f, amount) {
+  const progress = experience((f.xp || 0) + amount);
+  const levels = progress.level - (f.level || 1);
+  return {
+    ...f,
+    xp: progress.xp,
+    level: progress.level,
+    atk: f.atk + levels * 2,
+    mag: f.mag + levels * 2,
+    speed: f.speed + levels,
+    maxHp: f.maxHp + levels * 5,
+    hp: f.hp > 0 ? f.hp + levels * 5 : 0
+  };
+}
+function XpProgress({
+  xp
+}) {
+  const p = experience(xp);
+  return React.createElement("div", {
+    className: "xp-progress"
+  }, React.createElement("span", null, "Niv. ", p.level, " \xB7 ", p.required ? `${p.current} / ${p.required} XP` : "MAX"), React.createElement("progress", {
+    "aria-label": "Progression du niveau",
+    max: p.required || 1,
+    value: p.required ? p.current : 1
+  }));
+}
+function trained(f, xp, awake) {
+  const progress = experience(xp),
+    n = progress.level - 1,
     [atk, mag, speed] = bases[f.name];
   const maxHp = f.maxHp + n * 5 + (awake ? 20 : 0);
   return {
     ...f,
-    wins,
-    level: n + 1,
+    xp: progress.xp,
+    level: progress.level,
     atk: atk + n * 2,
     mag: mag + n * 2,
     speed: speed + n,
@@ -370,7 +442,7 @@ function loadProfile() {
       pins,
       wishStep,
       copies: Object.fromEntries(owned.map(n => [n, saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5, Math.max(0, Math.floor(Number(saved.copies?.[n]) || 0)))])),
-      wins: Object.fromEntries(owned.map(n => [n, Math.max(0, Math.floor(Number(saved.wins?.[n]) || 0))])),
+      xp: Object.fromEntries(owned.map(n => [n, Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n] >= 0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
       loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name, id]) => owned.includes(name) && (pins.includes(String(id)) || basePsych[name] === id))),
@@ -381,7 +453,7 @@ function loadProfile() {
     pins: [],
     wishStep: 0,
     copies: {},
-    wins: {},
+    xp: {},
     levels: {},
     awakened: [],
     owned: [],
@@ -570,6 +642,14 @@ function App() {
   const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
+      if (saved && !saved.xp) localStorage.setItem(profileKey, JSON.stringify(loadProfile()));
+    } catch {
+      setSaveError(true);
+    }
+  }, []);
+  useEffect(() => {
     const sync = event => {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
@@ -683,13 +763,16 @@ function App() {
       ...p,
       pins: [...new Set([...p.pins, ...ids])]
     })),
+    onExperience: amount => setProfile(p => ({
+      ...p,
+      xp: {
+        ...p.xp,
+        ...Object.fromEntries(party.map(f => [f.name, experience((p.xp[f.name] || 0) + amount).xp]))
+      }
+    })),
     onVictory: () => setProfile(p => ({
       ...p,
-      coins: p.coins + 5,
-      wins: {
-        ...p.wins,
-        ...Object.fromEntries(party.map(f => [f.name, (p.wins[f.name] || 0) + 1]))
-      }
+      coins: p.coins + 5
     })),
     leave: () => {
       setParty(null);
@@ -814,7 +897,7 @@ function App() {
     className: "team-slots"
   }, profile.equipped.map((name, index) => {
     const fighter = characterRoster.find(f => f.name === name);
-    const stats = fighter && trained(fighter, profile.wins[name] || 0, profile.awakened.includes(name));
+    const stats = fighter && trained(fighter, profile.xp[name] || 0, profile.awakened.includes(name));
     return React.createElement("button", {
       key: index,
       "aria-label": `Emplacement ${index + 1} · ${name || "Choisir un personnage"}`,
@@ -823,7 +906,9 @@ function App() {
       fighter: fighter
     }), React.createElement("strong", null, name), React.createElement(RankBadge, {
       level: profile.levels[name]
-    }), React.createElement("small", null, "Niv. ", stats.level, " \xB7 PV ", stats.maxHp, React.createElement("br", null), "ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed)) : React.createElement("span", {
+    }), React.createElement("small", null, "PV ", stats.maxHp, React.createElement("br", null), "ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed), React.createElement(XpProgress, {
+      xp: stats.xp
+    })) : React.createElement("span", {
       "aria-hidden": "true"
     }, "+"));
   })), editingSlot !== null && React.createElement(WishDialog, {
@@ -876,7 +961,7 @@ function App() {
     disabled: fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)),
     onClick: () => setParty(fighters.map(name => {
       const f = characterRoster.find(f => f.name === name);
-      return trained(f, profile.wins[name] || 0, profile.awakened.includes(name));
+      return trained(f, profile.xp[name] || 0, profile.awakened.includes(name));
     }))
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
@@ -887,9 +972,18 @@ function Battle({
   loadout,
   coins,
   onDrops,
+  onExperience,
   onVictory,
   leave
 }) {
+  const [inspectedId, setInspectedId] = useState(null);
+  const lastTap = React.useRef({
+    id: -1,
+    time: 0
+  });
+  const awarded = React.useRef(new Set());
+  const clearedWave = React.useRef(false);
+  const [earnedXp, setEarnedXp] = useState(0);
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
@@ -906,6 +1000,22 @@ function Battle({
   const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
   const [activeAction, setActiveAction] = useState(null);
+  const inspected = enemies.find(enemy => enemy.id === inspectedId);
+  function selectEnemy(enemy) {
+    if (enemy.hp <= 0) return;
+    setSelected(enemy.id);
+    const time = performance.now();
+    if (lastTap.current.id === enemy.id && time - lastTap.current.time <= 400) {
+      setInspectedId(enemy.id);
+      lastTap.current = {
+        id: -1,
+        time: 0
+      };
+    } else lastTap.current = {
+      id: enemy.id,
+      time
+    };
+  }
   const livingEnemies = enemies.filter(enemy => enemy.hp > 0);
   const totalEnemyHp = livingEnemies.reduce((sum, enemy) => sum + enemy.hp, 0);
   const threat = useMemo(() => {
@@ -919,7 +1029,14 @@ function Battle({
     }
   }, [enemies, livingEnemies, selected]);
   const enemyTurn = (updatedEnemies, wasGuarded = guarded) => {
-    const defeated = updatedEnemies.filter((enemy, i) => enemy.hp === 0 && enemies[i].hp > 0);
+    const defeated = updatedEnemies.filter((enemy, i) => enemy.hp === 0 && enemies[i].hp > 0 && !awarded.current.has(enemy.id));
+    defeated.forEach(enemy => awarded.current.add(enemy.id));
+    const earned = defeated.reduce((sum, enemy) => sum + enemy.xp, 0);
+    if (earned) {
+      onExperience(earned);
+      setTeam(current => current.map(f => gainExperience(f, earned)));
+      setEarnedXp(total => total + earned);
+    }
     const drops = defeated.filter(() => Math.random() < 0.25).map(() => pick(pinList));
     if (drops.length) {
       setDropReveal(drops.map(pin => ({
@@ -930,25 +1047,10 @@ function Battle({
     }
     const attackers = updatedEnemies.filter(enemy => enemy.hp > 0);
     if (!attackers.length) {
+      if (clearedWave.current) return;
+      clearedWave.current = true;
       setTimeout(() => {
         onVictory();
-        setTeam(prev => prev.map(f => {
-          const wins = (f.wins || 0) + 1;
-          if (wins % 3) return {
-            ...f,
-            wins
-          };
-          return {
-            ...f,
-            wins,
-            level: f.level + 1,
-            atk: f.atk + 2,
-            mag: f.mag + 2,
-            speed: f.speed + 1,
-            maxHp: f.maxHp + 5,
-            hp: f.hp > 0 ? f.hp + 5 : 0
-          };
-        }));
         setReward(true);
         setBusy(false);
         setActiveAction(null);
@@ -1063,6 +1165,14 @@ function Battle({
     }
     const next = wave + 1;
     setLoot([]);
+    setEarnedXp(0);
+    setInspectedId(null);
+    lastTap.current = {
+      id: -1,
+      time: 0
+    };
+    awarded.current.clear();
+    clearedWave.current = false;
     setWave(next);
     setTurn(1);
     setEnemies(makeWave(next));
@@ -1075,10 +1185,18 @@ function Battle({
   const sector = Math.floor((wave - 1) / 5) + 1;
   const retry = () => {
     setLoot([]);
+    setEarnedXp(0);
+    setInspectedId(null);
+    lastTap.current = {
+      id: -1,
+      time: 0
+    };
+    awarded.current.clear();
+    clearedWave.current = false;
     setWave(1);
     setTurn(1);
     const saved = loadProfile();
-    setTeam(initialTeam.map(f => trained(characterRoster.find(base => base.name === f.name), saved.wins[f.name] || 0, saved.awakened.includes(f.name))));
+    setTeam(initialTeam.map(f => trained(characterRoster.find(base => base.name === f.name), saved.xp[f.name] || 0, saved.awakened.includes(f.name))));
     setEnemies(makeWave(1));
     setSelected(10);
     setEnergy(3);
@@ -1128,7 +1246,9 @@ function Battle({
     fighter: fighter
   }), React.createElement("span", null, "0", index + 1)), React.createElement("div", {
     className: "fighter-info"
-  }, React.createElement("small", null, fighter.role), React.createElement("h2", null, fighter.name), React.createElement("div", {
+  }, React.createElement("small", null, fighter.role), React.createElement("h2", null, fighter.name), React.createElement(XpProgress, {
+    xp: fighter.xp || 0
+  }), React.createElement("div", {
     className: "health-readout"
   }, React.createElement("span", null, "HP"), React.createElement("b", null, fighter.hp), React.createElement("em", null, "/ ", fighter.maxHp)), React.createElement("div", {
     className: "bar"
@@ -1167,24 +1287,21 @@ function Battle({
   }, enemies.map(enemy => React.createElement("button", {
     key: enemy.id,
     className: `enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`,
-    onClick: () => enemy.hp > 0 && setSelected(enemy.id),
-    "aria-label": `Target ${enemy.name}`
+    onClick: () => selectEnemy(enemy),
+    onDoubleClick: () => enemy.hp > 0 && setInspectedId(enemy.id),
+    "aria-label": `${enemy.name} · ${enemy.hp} / ${enemy.maxHp} PV. Deux appuis pour les statistiques.`,
+    title: "Deux appuis pour les statistiques"
   }, React.createElement(EnemySprite, {
     kind: enemy.kind,
     boss: enemy.boss
-  }), React.createElement("div", {
-    className: "enemy-tag"
-  }, React.createElement("strong", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp), React.createElement("div", null, React.createElement("i", {
+  }), React.createElement("span", {
+    className: "enemy-hp",
+    "aria-hidden": "true"
+  }, React.createElement("i", {
     style: {
-      width: `${enemy.hp / enemy.maxHp * 100}%`
+      width: `${100 * enemy.hp / enemy.maxHp}%`
     }
-  }))), selected === enemy.id && enemy.hp > 0 && React.createElement("span", {
-    className: "target-reticle"
-  }, React.createElement(Icon, {
-    name: "target"
-  })), impact === enemy.id && React.createElement("b", {
-    className: "damage-flash"
-  }, "HIT!")))), React.createElement("div", {
+  }))))), React.createElement("div", {
     className: "player-line"
   }, team.map(fighter => React.createElement("div", {
     className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""}`,
@@ -1255,7 +1372,18 @@ function Battle({
     href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
     target: "_blank",
     rel: "noreferrer"
-  }, "PIN DATABASE \u2197")))), dropReveal.length > 0 && React.createElement(WishDialog, {
+  }, "PIN DATABASE \u2197")))), inspected && React.createElement(WishDialog, {
+    title: inspected.name,
+    close: () => setInspectedId(null)
+  }, React.createElement("div", {
+    className: "enemy-inspection"
+  }, React.createElement(EnemySprite, {
+    kind: inspected.kind,
+    boss: inspected.boss
+  })), React.createElement("dl", null, React.createElement("dt", null, "Niveau"), React.createElement("dd", null, inspected.level), React.createElement("dt", null, "PV"), React.createElement("dd", null, inspected.hp, " / ", inspected.maxHp), React.createElement("dt", null, "ATK"), React.createElement("dd", null, inspected.attack), React.createElement("dt", null, "XP par personnage"), React.createElement("dd", null, inspected.xp), React.createElement("dt", null, "Type"), React.createElement("dd", null, inspected.boss ? "Boss" : "Noise")), React.createElement("button", {
+    className: "pull-button",
+    onClick: () => setInspectedId(null)
+  }, "Fermer")), dropReveal.length > 0 && React.createElement(WishDialog, {
     title: "Butin de combat",
     close: () => setDropReveal([])
   }, React.createElement(RewardReveal, {
@@ -1267,7 +1395,7 @@ function Battle({
     className: "overlay"
   }, React.createElement("div", {
     className: "modal reward-modal"
-  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +1 XP par personnage. Un niveau tous les 3 XP."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), React.createElement("div", {
+  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +", earnedXp, " XP par personnage."), loot.length > 0 && React.createElement("p", null, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), React.createElement("div", {
     className: "reward-grid"
   }, React.createElement("button", {
     onClick: () => nextWave("power")
