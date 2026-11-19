@@ -550,3 +550,24 @@
  .combat-hud .enemy-line.enemies-count-3 .enemy-sprite { transform:scale(.55); }
  .combat-hud .enemy-line.enemies-count-4 .enemy-sprite { transform:scale(.45); }
 }
+
+/* Crop the source image's magenta edge inside the existing stage. */
+.combat-hud .arena::before { content:""; position:absolute; inset:-1.5%; background:inherit; background-size:cover; background-position:center; pointer-events:none; z-index:0; }
+/* Share the gacha wish-button material across battle commands. */
+.combat-hud .round-planner button,.combat-hud .action-menu button {
+ border:1px solid #c8bcec; border-radius:999px; color:#fff;
+ background:linear-gradient(155deg,#5e50a9,#382a73 65%,#302461);
+ box-shadow:inset 0 1px 0 #e8deff75,0 0 12px #bba7ff55,0 3px 10px #21133555;
+ font-family:inherit; text-align:center;
+}
+.combat-hud .planned-actions button :is(b,span,small) { color:#fff; }
+.combat-hud .planned-actions button b { font-weight:700; }
+.combat-hud .planned-actions button small { color:#e5dcfa; }
+.combat-hud .round-planner button:disabled,.combat-hud .action-menu button:disabled {
+ opacity:1; color:#646071; background:#e2dfe8; border-color:#b6aaca; box-shadow:var(--edge);
+}
+.combat-hud .round-planner button:disabled :is(b,span,small) { color:#646071; }
+.combat-hud .round-planner button:enabled:hover,.combat-hud .action-menu button:enabled:hover { border-color:#c6b7ff; box-shadow:var(--halo); }
+@media(prefers-reduced-motion:no-preference) {
+ .combat-hud .round-planner button,.combat-hud .action-menu button { transition:transform 180ms var(--ease),box-shadow 220ms var(--ease),border-color 180ms ease; }
+}
