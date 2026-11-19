@@ -1,0 +1,73 @@
+/* Shibuya handheld display */
+.game-shell {
+  --ink: #131527;
+  --rim: #655a8b;
+  --paper: #f2ebd6;
+  --signal: #ffd857;
+  --lcd: #a7f4e4;
+  background-color: #191827;
+  background-image: repeating-linear-gradient(135deg, transparent 0 8px, #252235 8px 10px);
+}
+.party-lobby { padding: clamp(12px, 3vw, 32px); }
+.party-lobby section {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 620px);
+  padding: 0 clamp(14px, 4vw, 28px) 24px;
+  border: 3px solid var(--ink);
+  outline: 2px solid var(--rim);
+  background: repeating-linear-gradient(0deg,#29273b 0 2px,#2d2a40 2px 4px);
+  box-shadow: inset 0 0 0 2px #474359, 5px 6px 0 #0d0e18;
+  color: var(--paper);
+}
+.party-lobby section > :is(h1,h2):first-child {
+  position: relative;
+  display: flex;
+  align-items: end;
+  min-height: clamp(100px,19vh,158px);
+  margin: 0 calc(-1 * clamp(14px, 4vw, 28px)) 18px;
+  padding: 16px clamp(14px, 4vw, 28px);
+  border-bottom: 5px double #8f84a6;
+  color: #fff5cd;
+  font: italic 900 clamp(30px,6vw,54px)/.95 "Barlow Condensed", Impact, sans-serif;
+  text-transform: uppercase;
+  text-shadow: 3px 3px 0 var(--ink), -1px -1px 0 var(--ink);
+  background: linear-gradient(0deg,#211b39 0%,#34234b55 70%),url("./assets/game/battle-bg.jpg") center 40% / cover;
+}
+.party-lobby section > :is(h1,h2):first-child::after {
+  content: ""; position: absolute; inset: auto 0 0; height: 5px;
+  background: repeating-linear-gradient(-45deg,var(--signal) 0 5px,var(--ink) 5px 10px);
+}
+.party-lobby p, .party-lobby .psych-choice, .section-label, .turn-badge {
+  font-family: "Courier New", monospace; font-weight: bold;
+}
+.party-lobby p { font-size: 14px; line-height: 1.45; }
+.party-lobby h2 { text-transform: uppercase; color: var(--lcd); }
+.party-list { gap: 6px; }
+.party-list button {
+  border: 2px solid #100f1f;
+  color: var(--paper);
+  background: linear-gradient(135deg,#423d5d 0 72%,#363249 72%);
+  box-shadow: inset 1px 1px #726c87, 2px 2px #100f1f;
+}
+.party-list button strong { font: italic 900 19px/1 "Barlow Condensed",Impact,sans-serif; }
+.party-list button[aria-pressed=true] { border-color: var(--signal); color: var(--signal); }
+.party-lobby .pull-button, .game-over button {
+  color: #171522; background: var(--signal); border: 2px solid var(--ink);
+  box-shadow: inset 0 2px #fff1a7, 3px 3px var(--ink); font-weight: 900;
+}
+.party-lobby .pull-button:disabled { opacity: .65; }
+.psych-choice select { background: #161729; color: var(--lcd); border: 2px solid var(--rim); }
+.party-lobby a { color: var(--signal); }
+.recruit-reveal { border: 3px double var(--lcd); background-color: #191b30; }
+.topbar, .action-dock, .fighter-card, .modal {
+  border: 2px solid var(--ink);
+  background: linear-gradient(155deg,#373248,#232235 75%);
+  box-shadow: inset 1px 1px #625972, 3px 3px var(--ink);
+}
+.arena { border: 3px solid var(--ink); outline: 1px solid var(--rim); }
+.battle-heading h1, .modal h2 { color: var(--paper); text-shadow: 2px 2px #423653; }
+.turn-badge, .section-label { color: var(--lcd); background: #202031; }
+.section-label { border-bottom: 2px solid var(--rim); padding-inline: 8px; }
+.actions button, .reward-grid button { border: 2px solid #665d80; background: #282638; box-shadow: inset 1px 1px #837994; }
+.game-shell :focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
