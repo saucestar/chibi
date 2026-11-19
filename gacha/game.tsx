@@ -942,7 +942,6 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
 
           <section className={`round-planner ${choosing?"choosing-action":""}`} aria-label="Préparer les actions">
             {choosing?<div key={`${choosing.name}-${targetPin||"actions"}`} className="inline-action-menu" aria-label={`Actions de ${choosing.name}`}>
-              <h2>{choosing.name} · {targetPin?"Cible":"Actions"}</h2>
         {targetPin?<>
           <p><b>{psychs[targetPin].name}</b> · Choisir la cible</p>
           <div className="target-menu">{livingEnemies.map((enemy,i)=><button key={enemy.id} onClick={()=>choose({kind:"psych",pin:targetPin,target:enemy.id})}>
@@ -951,13 +950,13 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
 
           <button onClick={()=>setTargetPin(null)}>Retour aux actions</button>
         </>:<>
-          <p>{energy-otherCost} EN disponibles · 1 action pour ce tour</p>
+          <p className="action-energy">{energy-otherCost} EN disponibles</p>
           <div className="psych-action-menu">{(loadout[choosing.name]||[]).map(id=>{
             const pin=psychs[id];return <button key={id} disabled={pin.cost+otherCost>energy} onClick={()=>offensive(id)?setTargetPin(id):choose({kind:"psych",pin:id})}>
               <PinIcon pin={pin}/><b>{pin.name}</b><span>{types[pin.kind]} · {pin.cost} EN</span>
             </button>;
           })}
-          <button onClick={()=>choose({kind:"guard"})}><Icon name="guard"/><b>Défense</b><span>0 EN · Réduit les dégâts reçus après l’action · +1 EN</span></button>
+          <button onClick={()=>choose({kind:"guard"})}><Icon name="guard"/><b>Défense</b><span>0 EN · Protection · +1 EN</span></button>
           {groove>=100&&<button disabled={burstReserved} onClick={()=>choose({kind:"burst"})}><Icon name="bolt"/><b>Sync Burst</b><span>100% Groove · Tous les ennemis</span></button>}
           </div>
           <button onClick={()=>setChooser(null)}>Annuler</button>

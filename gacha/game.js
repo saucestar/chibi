@@ -1654,7 +1654,7 @@ function Battle({
     key: `${choosing.name}-${targetPin || "actions"}`,
     className: "inline-action-menu",
     "aria-label": `Actions de ${choosing.name}`
-  }, React.createElement("h2", null, choosing.name, " \xB7 ", targetPin ? "Cible" : "Actions"), targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
+  }, targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
     className: "target-menu"
   }, livingEnemies.map((enemy, i) => React.createElement("button", {
     key: enemy.id,
@@ -1667,7 +1667,9 @@ function Battle({
     enemy: enemy
   }), React.createElement("b", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("button", {
     onClick: () => setTargetPin(null)
-  }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("p", null, energy - otherCost, " EN disponibles \xB7 1 action pour ce tour"), React.createElement("div", {
+  }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "action-energy"
+  }, energy - otherCost, " EN disponibles"), React.createElement("div", {
     className: "psych-action-menu"
   }, (loadout[choosing.name] || []).map(id => {
     const pin = psychs[id];
@@ -1687,7 +1689,7 @@ function Battle({
     })
   }, React.createElement(Icon, {
     name: "guard"
-  }), React.createElement("b", null, "D\xE9fense"), React.createElement("span", null, "0 EN \xB7 R\xE9duit les d\xE9g\xE2ts re\xE7us apr\xE8s l\u2019action \xB7 +1 EN")), groove >= 100 && React.createElement("button", {
+  }), React.createElement("b", null, "D\xE9fense"), React.createElement("span", null, "0 EN \xB7 Protection \xB7 +1 EN")), groove >= 100 && React.createElement("button", {
     disabled: burstReserved,
     onClick: () => choose({
       kind: "burst"
