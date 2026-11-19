@@ -225,23 +225,55 @@ function Sprite({
     "aria-label": fighter.name
   });
 }
-const psychs = {
-  pyro: {
-    name: "Fiery Spirit",
-    image: fierySpiritPin,
-    cost: 1
-  },
-  shockwave: {
-    name: "Masamune",
-    image: masamunePin,
-    cost: 2
-  },
-  heal: {
-    name: "Konohana",
-    image: konohanaPin,
-    cost: 2
-  }
+const psychs = Object.fromEntries(pinList.map(pin => [pin.id, pin]));
+const types = {
+  physical: "ATK",
+  special: "ATK SPE",
+  heal: "Soin",
+  guard: "Protection",
+  support: "Soutien"
 };
+function PinIcon({
+  pin
+}) {
+  return React.createElement("i", {
+    "aria-hidden": "true",
+    style: {
+      display: "inline-block",
+      width: 28,
+      height: 28,
+      flex: "none",
+      imageRendering: "pixelated",
+      backgroundImage: `url(./assets/pins/row-${pin.row}.webp)`,
+      backgroundPosition: `-${pin.col * 28}px 0`
+    }
+  });
+}
+const portals = {
+  shibuya: "Shibuya",
+  partners: "Partenaires"
+};
+const bases = {
+  NEKU: [24, 32, 14],
+  SHIKI: [22, 26, 20],
+  BEAT: [34, 18, 12],
+  JOSHUA: [19, 36, 16]
+};
+function trained(f, wins, awake) {
+  const n = Math.floor(wins / 3),
+    [atk, mag, speed] = bases[f.name];
+  const maxHp = f.maxHp + n * 5 + (awake ? 20 : 0);
+  return {
+    ...f,
+    wins,
+    level: n + 1,
+    atk: atk + n * 2,
+    mag: mag + n * 2,
+    speed: speed + n,
+    hp: maxHp,
+    maxHp
+  };
+}
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const ranks = ["E", "D", "C", "B", "A", "etoile"];
 function RankBadge({
@@ -262,6 +294,8 @@ function loadProfile() {
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return {
       owned,
       equipped,
+      copies: Object.fromEntries(owned.map(n => [n, saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5, Math.max(0, Math.floor(Number(saved.copies?.[n]) || 0)))])),
+      wins: Object.fromEntries(owned.map(n => [n, Math.max(0, Math.floor(Number(saved.wins?.[n]) || 0))])),
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
       loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))),
@@ -269,6 +303,8 @@ function loadProfile() {
     };
   } catch {}
   return {
+    copies: {},
+    wins: {},
     levels: {},
     awakened: [],
     owned: [],
@@ -280,7 +316,9 @@ function loadProfile() {
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState(null);
-  const [result, setResult] = useState("");
+  const [result, setResult] = useState([]);
+  const [quantity, setQuantity] = useState(1);
+  const [portal, setPortal] = useState("shibuya");
   const [phase, setPhase] = useState("ready");
   const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
@@ -305,37 +343,53 @@ function App() {
     }
     displayProfile(next);
   };
-  const price = profile.owned.length < 2 ? 0 : 100;
-  const complete = characterRoster.every(f => profile.levels[f.name] === 5);
+  const wishCost = p => 100 * Math.max(0, quantity - Math.max(0, 2 - p.owned.length));
+  const remaining = p => characterRoster.reduce((sum, f) => sum + (p.owned.includes(f.name) ? 5 - (p.copies[f.name] || 0) : 6), 0);
+  const price = wishCost(profile),
+    complete = remaining(profile) < quantity;
   const recruit = () => {
     if (turning.current) return;
-    let drawn = "";
+    const draws = [];
     setProfile(p => {
-      const cost = p.owned.length < 2 ? 0 : 100;
-      const missing = characterRoster.filter(f => !p.owned.includes(f.name));
-      const pool = missing.length ? missing : characterRoster.filter(f => p.levels[f.name] < 5);
-      if (!pool.length || p.coins < cost) return p;
-      drawn = pool[Math.floor(Math.random() * pool.length)].name;
-      const roll = Math.random();
-      const rolled = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
-      const level = missing.length ? rolled : Math.max(rolled, p.levels[drawn] + 1);
-      return {
+      if (remaining(p) < quantity || p.coins < wishCost(p)) return p;
+      const next = {
         ...p,
-        coins: p.coins - cost,
-        owned: missing.length ? [...p.owned, drawn] : p.owned,
+        coins: p.coins - wishCost(p),
+        owned: [...p.owned],
         levels: {
-          ...p.levels,
-          [drawn]: level
+          ...p.levels
+        },
+        copies: {
+          ...p.copies
         }
       };
+      for (let i = 0; i < quantity; i++) {
+        const missing = characterRoster.filter(f => !next.owned.includes(f.name));
+        const pool = missing.length ? missing : characterRoster.filter(f => (next.copies[f.name] || 0) < 5);
+        const weighted = portal === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
+        const name = weighted[Math.floor(Math.random() * weighted.length)].name;
+        const roll = Math.random(),
+          rank = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
+        if (next.owned.includes(name)) next.copies[name] = (next.copies[name] || 0) + 1;else {
+          next.owned.push(name);
+          next.copies[name] = 0;
+        }
+        next.levels[name] = next.copies[name] === 5 ? 5 : Math.max(next.levels[name] || 0, rank);
+        draws.push({
+          name,
+          rank,
+          copies: next.copies[name]
+        });
+      }
+      return next;
     });
-    if (drawn) {
+    if (draws.length) {
       turning.current = true;
-      setResult(drawn);
+      setResult(draws);
       setPhase("spin");
     }
   };
-  const awaken = name => setProfile(p => p.levels[name] === 5 && !p.awakened.includes(name) ? {
+  const awaken = name => setProfile(p => p.copies[name] === 5 && !p.awakened.includes(name) ? {
     ...p,
     awakened: [...p.awakened, name]
   } : p);
@@ -351,18 +405,34 @@ function App() {
     initialTeam: party,
     loadout: profile.loadout,
     coins: profile.coins,
-    setCoins: update => setProfile(p => ({
+    onVictory: () => setProfile(p => ({
       ...p,
-      coins: update(p.coins)
+      coins: p.coins + 5,
+      wins: {
+        ...p.wins,
+        ...Object.fromEntries(party.map(f => [f.name, (p.wins[f.name] || 0) + 1]))
+      }
     })),
     leave: () => {
       setParty(null);
-      setResult("");
+      setResult([]);
     }
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("div", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("label", null, "Portail ", React.createElement("select", {
+    value: portal,
+    disabled: phase !== "ready",
+    onChange: e => setPortal(e.target.value)
+  }, Object.entries(portals).map(([id, title]) => React.createElement("option", {
+    key: id,
+    value: id
+  }, title)))), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), React.createElement("div", null, [1, 10].map(n => React.createElement("button", {
+    key: n,
+    disabled: phase !== "ready",
+    "aria-pressed": n === quantity,
+    onClick: () => setQuantity(n)
+  }, n, " v\u0153u", n > 1 ? "x" : ""))), React.createElement("div", {
     className: "bingo-stage"
   }, React.createElement("div", {
     className: "bingo-machine"
@@ -374,7 +444,7 @@ function App() {
     className: `bingo-crank ${phase === "spin" ? "turning" : ""}`,
     onClick: recruit,
     disabled: phase !== "ready" || complete || profile.coins < price,
-    "aria-label": price ? "Tourner la manivelle pour 100 pièces" : "Tourner la manivelle gratuitement",
+    "aria-label": `Faire ${quantity} vœu(x) pour ${price} pièces`,
     onAnimationEnd: e => {
       if (e.animationName === "bingo-turn") setPhase("drop");
     }
@@ -384,21 +454,21 @@ function App() {
       turning.current = false;
       setPhase("ready");
     }
-  }))), React.createElement("p", null, complete ? "Collection au rang étoile." : price > profile.coins ? "Il faut 100 pièces pour tirer." : price ? "Tourne la manivelle · 100 pièces" : "Tourne la manivelle · Tirage gratuit"), React.createElement("div", {
+  }))), React.createElement("p", null, complete ? "Pas assez de recrues ou de doublons disponibles pour ce lot." : price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
     "aria-live": "polite"
-  }, result && phase === "ready" && React.createElement("div", {
-    key: result,
-    className: "recruit-reveal"
+  }, phase === "ready" && result.map((draw, i) => React.createElement("div", {
+    className: "recruit-reveal",
+    key: i
   }, React.createElement(Sprite, {
-    fighter: characterRoster.find(f => f.name === result)
-  }), React.createElement("strong", null, result), React.createElement(RankBadge, {
-    level: profile.levels[result]
-  }))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
+    fighter: characterRoster.find(f => f.name === draw.name)
+  }), React.createElement("strong", null, draw.name), React.createElement(RankBadge, {
+    level: draw.rank
+  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue")))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
     className: "bingo-member",
     key: name
   }, React.createElement(RankBadge, {
     level: profile.levels[name]
-  }), React.createElement("b", null, name), profile.awakened.includes(name) ? React.createElement("span", null, "\xC9veill\xE9 \xB7 +20 PV") : profile.levels[name] === 5 && React.createElement("button", {
+  }), React.createElement("b", null, name), React.createElement("span", null, profile.copies[name] || 0, "/5 doublons"), profile.awakened.includes(name) ? React.createElement("span", null, "\xC9veill\xE9 \xB7 +20 PV") : profile.levels[name] === 5 && React.createElement("button", {
     onClick: () => awaken(name)
   }, "\xC9veiller \xB7 +20 PV"))), saveError && React.createElement("p", {
     role: "alert"
@@ -411,6 +481,7 @@ function App() {
   }, "l\u2019onglet Gacha"), "."), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {
     className: "party-list"
   }, characterRoster.map(f => {
+    const stats = trained(f, profile.wins[f.name] || 0, profile.awakened.includes(f.name));
     const owned = profile.owned.includes(f.name),
       selected = profile.equipped.includes(f.name);
     return React.createElement("button", {
@@ -420,10 +491,16 @@ function App() {
       disabled: !owned || !selected && profile.equipped.length === 2
     }, React.createElement(Sprite, {
       fighter: f
-    }), React.createElement("strong", null, f.name), React.createElement("span", null, owned && React.createElement(RankBadge, {
+    }), React.createElement("strong", null, f.name), owned && React.createElement("small", null, "Niv. ", stats.level, " \xB7 PV ", stats.maxHp, " \xB7 ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed), React.createElement("span", null, owned && React.createElement(RankBadge, {
       level: profile.levels[f.name]
     })), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
-  })), profile.equipped.map(name => React.createElement("label", {
+  })), React.createElement("details", null, React.createElement("summary", null, "Catalogue \xB7 ", pinList.length, " badges"), React.createElement("div", {
+    className: "pin-catalog"
+  }, pinList.map(pin => React.createElement("div", {
+    key: pin.id
+  }, React.createElement(PinIcon, {
+    pin: pin
+  }), " #", pin.number, " ", pin.name, " \xB7 ", types[pin.kind]))), React.createElement("small", null, "Visuels DS \xB7 NightOwl35. Donn\xE9es \xB7 TWEWY Wiki.")), profile.equipped.map(name => React.createElement("label", {
     className: "psych-choice",
     key: name
   }, "Psych de ", name, React.createElement("select", {
@@ -444,16 +521,12 @@ function App() {
   }, "Choisir un psych"), Object.entries(psychs).map(([id, item]) => React.createElement("option", {
     key: id,
     value: id
-  }, item.name, " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
+  }, "#", item.number, " ", item.name, " \xB7 ", types[item.kind], " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
     className: "pull-button",
-    disabled: profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal"),
+    disabled: profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)),
     onClick: () => setParty(profile.equipped.map(name => {
       const f = characterRoster.find(f => f.name === name);
-      return profile.awakened.includes(name) ? {
-        ...f,
-        hp: f.hp + 20,
-        maxHp: f.maxHp + 20
-      } : f;
+      return trained(f, profile.wins[name] || 0, profile.awakened.includes(name));
     }))
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
@@ -463,7 +536,7 @@ function Battle({
   initialTeam,
   loadout,
   coins,
-  setCoins,
+  onVictory,
   leave
 }) {
   const [wave, setWave] = useState(1);
@@ -496,7 +569,24 @@ function Battle({
     const attackers = updatedEnemies.filter(enemy => enemy.hp > 0);
     if (!attackers.length) {
       setTimeout(() => {
-        setCoins(value => value + 45 + wave * 10);
+        onVictory();
+        setTeam(prev => prev.map(f => {
+          const wins = (f.wins || 0) + 1;
+          if (wins % 3) return {
+            ...f,
+            wins
+          };
+          return {
+            ...f,
+            wins,
+            level: f.level + 1,
+            atk: f.atk + 2,
+            mag: f.mag + 2,
+            speed: f.speed + 1,
+            maxHp: f.maxHp + 5,
+            hp: f.hp > 0 ? f.hp + 5 : 0
+          };
+        }));
         setReward(true);
         setBusy(false);
         setActiveAction(null);
@@ -517,7 +607,7 @@ function Battle({
         return;
       }
       const target = livingFighters[Math.floor(Math.random() * livingFighters.length)];
-      const damage = Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
+      const damage = Math.random() < Math.min(.30, target.fighter.speed / 200) ? 0 : Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
       setTeam(current => current.map((fighter, index) => index === target.index ? {
         ...fighter,
         hp: Math.max(0, fighter.hp - damage)
@@ -531,7 +621,7 @@ function Battle({
       setBusy(false);
     }, 650);
   };
-  const dealDamage = (amount, label, cost, grooveGain, action) => {
+  const dealDamage = (amount, label, cost, grooveGain, action, drain = false) => {
     if (busy || reward || energy < cost) return;
     const target = livingEnemies.find(enemy => enemy.id === selected);
     if (!target) return;
@@ -539,28 +629,33 @@ function Battle({
     setActiveAction(action);
     setEnergy(value => value - cost);
     const variance = Math.floor(Math.random() * 7) - 3;
-    const damage = Math.max(1, amount + variance);
+    const boost = team.some(f => f.hp > 0 && psychs[loadout[f.name]].psych.startsWith("Resonance")) ? 1.15 : 1;
+    const damage = Math.max(1, Math.round(amount * boost) + variance);
     const updated = enemies.map(enemy => enemy.id === selected ? {
       ...enemy,
       hp: Math.max(0, enemy.hp - damage)
     } : enemy);
     setEnemies(updated);
+    if (drain) setTeam(current => current.map(f => ({
+      ...f,
+      hp: Math.min(f.maxHp, f.hp + Math.ceil(damage / 4))
+    })));
     setImpact(selected);
     setGroove(value => Math.min(100, value + grooveGain));
     setMessage(`${label} hits ${target.name} for ${damage}!`);
     setTimeout(() => setImpact(null), 380);
     enemyTurn(updated);
   };
-  const heal = () => {
-    if (busy || energy < 2) return;
+  const heal = (amount, cost) => {
+    if (busy || energy < cost) return;
     setBusy(true);
     setActiveAction("heal");
-    setEnergy(value => value - 2);
+    setEnergy(value => value - cost);
     setTeam(current => current.map(fighter => ({
       ...fighter,
-      hp: Math.min(fighter.maxHp, fighter.hp + 30)
+      hp: Math.min(fighter.maxHp, fighter.hp + amount)
     })));
-    setMessage("Konohana activates Cure Drink. Team restored by 30 HP.");
+    setMessage(`Soin du duo · +${amount} PV`);
     enemyTurn(enemies);
   };
   const guard = () => {
@@ -618,7 +713,8 @@ function Battle({
   const retry = () => {
     setWave(1);
     setTurn(1);
-    setTeam(initialTeam);
+    const saved = loadProfile();
+    setTeam(initialTeam.map(f => trained(characterRoster.find(base => base.name === f.name), saved.wins[f.name] || 0, saved.awakened.includes(f.name))));
     setEnemies(makeWave(1));
     setSelected(10);
     setEnergy(3);
@@ -752,13 +848,24 @@ function Battle({
       disabled: busy || f.hp <= 0 || energy < pin.cost,
       onClick: () => {
         setActor(f.name);
-        if (id === "heal") heal();else dealDamage(id === "pyro" ? 24 : 44, pin.name, pin.cost, id === "pyro" ? 18 : 28, id);
+        if (pin.kind === "heal") heal(Math.max(1, Math.round(f.mag * pin.power / 50 * (team.some(ally => psychs[loadout[ally.name]].psych.startsWith("Cure Boost")) ? 1.3 : 1))), pin.cost);else if (pin.kind === "guard" || pin.kind === "support") {
+          setEnergy(v => v - pin.cost);
+          if (pin.kind === "support") {
+            if (/Turbo|Supply/.test(pin.psych)) setEnergy(v => Math.min(3, v + 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) setTeam(old => old.map(ally => ({
+              ...ally,
+              hp: Math.min(ally.maxHp, ally.hp + Math.ceil(f.mag / 2))
+            })));else setGroove(v => Math.min(100, v + 18));
+          }
+          guard();
+        } else {
+          const slash = pin.kind === "physical";
+          dealDamage(Math.round((slash ? f.atk : f.mag) * (0.7 + pin.power / 100)), pin.name, pin.cost, 18, slash ? "shockwave" : "pyro", pin.drain);
+        }
       }
     }, React.createElement("span", {
       className: "action-icon pin-badge"
-    }, React.createElement("img", {
-      src: pin.image,
-      alt: ""
+    }, React.createElement(PinIcon, {
+      pin: pin
     })), React.createElement("b", null, pin.name), React.createElement("small", null, f.name, " \xB7 ", pin.cost, " EN"));
   }), React.createElement("button", {
     disabled: busy,
@@ -788,7 +895,7 @@ function Battle({
     className: "overlay"
   }, React.createElement("div", {
     className: "modal reward-modal"
-  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, "CHOOSE YOUR DROP"), React.createElement("p", null, "Pick one upgrade for the rest of this run."), React.createElement("div", {
+  }, React.createElement("small", null, "WAVE ", String(wave).padStart(2, "0"), " COMPLETE"), React.createElement("h2", null, "CHOOSE YOUR DROP"), React.createElement("p", null, "+5 pi\xE8ces \xB7 +1 XP par personnage. Un niveau tous les 3 XP."), React.createElement("div", {
     className: "reward-grid"
   }, React.createElement("button", {
     onClick: () => nextWave("power")

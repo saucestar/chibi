@@ -24,6 +24,7 @@ type Enemy = {
 };
 
 type Fighter = {
+  wins?:number; level?:number; atk?:number; mag?:number; speed?:number;
   name: string;
   role: string;
   hp: number;
@@ -167,18 +168,27 @@ function Sprite({
   );
 }
 
-const psychs = {
-  pyro: { name: "Fiery Spirit", image: fierySpiritPin, cost: 1 },
-  shockwave: { name: "Masamune", image: masamunePin, cost: 2 },
-  heal: { name: "Konohana", image: konohanaPin, cost: 2 },
-};
-type Psych = keyof typeof psychs;
+type Pin = { id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
+declare const pinList: Pin[];
+const psychs: Record<string, Pin> = Object.fromEntries(pinList.map(pin => [pin.id,pin]));
+type Psych = string;
+const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
+function PinIcon({ pin }: {pin:Pin}) {
+  return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
+}
+const portals = { shibuya:"Shibuya", partners:"Partenaires" };
+const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16] };
+function trained(f:Fighter, wins:number, awake:boolean) {
+  const n = Math.floor(wins/3), [atk,mag,speed] = bases[f.name];
+  const maxHp = f.maxHp + n*5 + (awake ? 20 : 0);
+  return {...f, wins, level:n+1, atk:atk+n*2, mag:mag+n*2, speed:speed+n, hp:maxHp, maxHp};
+}
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const ranks = ["E", "D", "C", "B", "A", "etoile"];
 function RankBadge({ level }: { level: number }) {
   return <img className="rank-badge" src={`./assets/bingo/rang-${ranks[level]}.webp`} alt={`Rang ${level === 5 ? "étoile" : ranks[level]}`} />;
 }
-type Profile = { levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
+type Profile = { copies:Record<string,number>; wins:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function loadProfile(): Profile {
@@ -187,16 +197,21 @@ function loadProfile(): Profile {
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
     const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped,
+      copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
+      wins:Object.fromEntries(owned.map(n=>[n,Math.max(0,Math.floor(Number(saved.wins?.[n])||0))])),
+
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))), coins: saved.coins };
   } catch {}
-  return { levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
+  return { copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
 }
 
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState<Fighter[] | null>(null);
-  const [result, setResult] = useState("");
+  const [result, setResult] = useState<{name:string; rank:number; copies:number}[]>([]);
+  const [quantity,setQuantity]=useState(1);
+  const [portal,setPortal]=useState("shibuya");
   const [phase, setPhase] = useState<"ready" | "spin" | "drop">("ready");
   const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
@@ -216,55 +231,60 @@ function App() {
     displayProfile(next);
   };
 
-  const price = profile.owned.length < 2 ? 0 : 100;
-  const complete = characterRoster.every(f => profile.levels[f.name] === 5);
+  const wishCost = (p:Profile) => 100*Math.max(0,quantity-Math.max(0,2-p.owned.length));
+  const remaining = (p:Profile) => characterRoster.reduce((sum,f)=>sum+(p.owned.includes(f.name)?5-(p.copies[f.name]||0):6),0);
+  const price = wishCost(profile), complete = remaining(profile)<quantity;
   const recruit = () => {
     if (turning.current) return;
-    let drawn = "";
+    const draws = [];
     setProfile(p => {
-      const cost = p.owned.length < 2 ? 0 : 100;
-      const missing = characterRoster.filter(f => !p.owned.includes(f.name));
-      const pool = missing.length ? missing : characterRoster.filter(f => p.levels[f.name] < 5);
-      if (!pool.length || p.coins < cost) return p;
-      drawn = pool[Math.floor(Math.random() * pool.length)].name;
-      const roll = Math.random();
-      const rolled = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
-      const level = missing.length ? rolled : Math.max(rolled, p.levels[drawn] + 1);
-      return { ...p, coins: p.coins - cost, owned: missing.length ? [...p.owned, drawn] : p.owned,
-        levels: { ...p.levels, [drawn]: level } };
+      if (remaining(p)<quantity || p.coins<wishCost(p)) return p;
+      const next={...p,coins:p.coins-wishCost(p),owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
+      for(let i=0;i<quantity;i++){
+        const missing=characterRoster.filter(f=>!next.owned.includes(f.name));
+        const pool=missing.length ? missing : characterRoster.filter(f=>(next.copies[f.name]||0)<5);
+        const weighted=portal==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
+        const name=weighted[Math.floor(Math.random()*weighted.length)].name;
+        const roll=Math.random(), rank=roll<.5?0:roll<.78?1:roll<.92?2:roll<.98?3:4;
+        if(next.owned.includes(name)) next.copies[name]=(next.copies[name]||0)+1;
+        else { next.owned.push(name); next.copies[name]=0; }
+        next.levels[name]=next.copies[name]===5 ? 5 : Math.max(next.levels[name]||0,rank);
+        draws.push({name,rank,copies:next.copies[name]});
+      }
+      return next;
     });
-    if (drawn) { turning.current = true; setResult(drawn); setPhase("spin"); }
+    if(draws.length){turning.current=true;setResult(draws);setPhase("spin");}
   };
-  const awaken = (name: string) => setProfile(p => p.levels[name] === 5 && !p.awakened.includes(name)
-    ? { ...p, awakened: [...p.awakened, name] } : p);
+  const awaken = (name:string) => setProfile(p=>p.copies[name]===5 && !p.awakened.includes(name)
+    ? {...p,awakened:[...p.awakened,name]} : p);
   const equip = (name: string) => {
     const selected = profile.equipped.includes(name);
     if (!profile.owned.includes(name) || (!selected && profile.equipped.length >= 2)) return;
     setProfile(p => ({ ...p, equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2) }));
   };
   if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
-    setCoins={(update) => setProfile(p => ({ ...p, coins: update(p.coins) }))}
-    leave={() => { setParty(null); setResult(""); }} />;
+    onVictory={() => setProfile(p => ({ ...p, coins:p.coins+5, wins:{...p.wins,...Object.fromEntries(party.map(f=>[f.name,(p.wins[f.name]||0)+1]))} }))}
+    leave={() => { setParty(null); setResult([]); }} />;
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Gacha personnages</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
+    <label>Portail <select value={portal} disabled={phase!=="ready"} onChange={e=>setPortal(e.target.value)}>{Object.entries(portals).map(([id,title])=><option key={id} value={id}>{title}</option>)}</select></label>
+    {portal==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
+    <div>{[1,10].map(n=><button key={n} disabled={phase!=="ready"} aria-pressed={n===quantity} onClick={()=>setQuantity(n)}>{n} vœu{n>1?"x":""}</button>)}</div>
     <div className="bingo-stage"><div className="bingo-machine">
       <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai" />
       <button className={`bingo-crank ${phase === "spin" ? "turning" : ""}`} onClick={recruit}
         disabled={phase !== "ready" || complete || profile.coins < price}
-        aria-label={price ? "Tourner la manivelle pour 100 pièces" : "Tourner la manivelle gratuitement"}
+        aria-label={`Faire ${quantity} vœu(x) pour ${price} pièces`}
         onAnimationEnd={e => { if (e.animationName === "bingo-turn") setPhase("drop"); }}/>
       {phase === "drop" && <span className="bingo-ball" onAnimationEnd={() => {
         turning.current = false; setPhase("ready");
       }} />}
     </div></div>
-    <p>{complete ? "Collection au rang étoile." : price > profile.coins ? "Il faut 100 pièces pour tirer." :
-      price ? "Tourne la manivelle · 100 pièces" : "Tourne la manivelle · Tirage gratuit"}</p>
-    <div aria-live="polite">{result && phase === "ready" && <div key={result} className="recruit-reveal">
-      <Sprite fighter={characterRoster.find(f => f.name === result)!}/><strong>{result}</strong><RankBadge level={profile.levels[result]}/>
-    </div>}</div>
+    <p>{complete ? "Pas assez de recrues ou de doublons disponibles pour ce lot." : price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`}</p>
+    <div aria-live="polite">{phase==="ready" && result.map((draw,i)=><div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
-      <RankBadge level={profile.levels[name]}/><b>{name}</b>
+      <RankBadge level={profile.levels[name]}/><b>{name}</b><span>{profile.copies[name]||0}/5 doublons</span>
       {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&
       <button onClick={() => awaken(name)}>Éveiller · +20 PV</button>}
     </div>)}
@@ -274,28 +294,31 @@ function App() {
     {profile.owned.length < 2 && <p>Débloque deux personnages dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
     <h2>Ton duo · {profile.equipped.length} / 2</h2>
     <div className="party-list">{characterRoster.map(f => {
+      const stats=trained(f,profile.wins[f.name]||0,profile.awakened.includes(f.name));
       const owned = profile.owned.includes(f.name), selected = profile.equipped.includes(f.name);
       return <button key={f.name} aria-pressed={selected} onClick={() => equip(f.name)}
         disabled={!owned || (!selected && profile.equipped.length === 2)}>
         <Sprite fighter={f}/><strong>{f.name}</strong>
+        {owned && <small>Niv. {stats.level} · PV {stats.maxHp} · ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small>}
         <span>{owned && <RankBadge level={profile.levels[f.name]}/>}</span><span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
       </button>;
     })}</div>
+    <details><summary>Catalogue · {pinList.length} badges</summary><div className="pin-catalog">{pinList.map(pin=><div key={pin.id}><PinIcon pin={pin}/> #{pin.number} {pin.name} · {types[pin.kind]}</div>)}</div><small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small></details>
     {profile.equipped.map(name => <label className="psych-choice" key={name}>Psych de {name}
       <select value={profile.loadout[name] || ""} onChange={e => {
         const psych = e.target.value as Psych;
         setProfile(p => ({ ...p, loadout: { ...p.loadout, [name]: psych } }));
       }}><option value="" disabled>Choisir un psych</option>
-        {Object.entries(psychs).map(([id, item]) => <option key={id} value={id}>{item.name} · {item.cost} EN</option>)}
+        {Object.entries(psychs).map(([id, item]) => <option key={id} value={id}>#{item.number} {item.name} · {types[item.kind]} · {item.cost} EN</option>)}
       </select></label>)}
-    {profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && <p>Équipe au moins un psych offensif.</p>}
-    <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal")}
-      onClick={() => setParty(profile.equipped.map(name => { const f = characterRoster.find(f => f.name === name)!; return profile.awakened.includes(name) ? { ...f, hp: f.hp + 20, maxHp: f.maxHp + 20 } : f; }))}>Lancer le roguelike</button>
+    {profile.equipped.length === 2 && profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
+    <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
+      onClick={() => setParty(profile.equipped.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.wins[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }
 
-function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; setCoins: (update: (n: number) => number) => void; leave: () => void }) {
+function Battle({ initialTeam, loadout, coins, onVictory, leave }: { initialTeam: Fighter[]; loadout: Record<string, Psych>; coins: number; onVictory: () => void; leave: () => void }) {
   const [wave, setWave] = useState(1);
   const [team, setTeam] = useState(initialTeam);
   const [enemies, setEnemies] = useState(() => makeWave(1));
@@ -330,7 +353,12 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
     const attackers = updatedEnemies.filter((enemy) => enemy.hp > 0);
     if (!attackers.length) {
       setTimeout(() => {
-        setCoins((value) => value + 45 + wave * 10);
+        onVictory();
+        setTeam(prev=>prev.map(f=>{
+          const wins=(f.wins||0)+1;
+          if(wins%3) return {...f,wins};
+          return {...f,wins,level:f.level+1,atk:f.atk+2,mag:f.mag+2,speed:f.speed+1,maxHp:f.maxHp+5,hp:f.hp>0?f.hp+5:0};
+        }));
         setReward(true);
         setBusy(false);
         setActiveAction(null);
@@ -346,7 +374,7 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
         return;
       }
       const target = livingFighters[Math.floor(Math.random() * livingFighters.length)];
-      const damage = Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
+      const damage = Math.random()<Math.min(.30,target.fighter.speed/200) ? 0 : Math.max(3, Math.round(attacker.attack * (wasGuarded ? 0.45 : 1)));
       setTeam((current) =>
         current.map((fighter, index) =>
           index === target.index ? { ...fighter, hp: Math.max(0, fighter.hp - damage) } : fighter,
@@ -367,7 +395,7 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
     label: string,
     cost: number,
     grooveGain: number,
-    action: Action,
+    action: Action, drain = false,
   ) => {
     if (busy || reward || energy < cost) return;
     const target = livingEnemies.find((enemy) => enemy.id === selected);
@@ -376,11 +404,13 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
     setActiveAction(action);
     setEnergy((value) => value - cost);
     const variance = Math.floor(Math.random() * 7) - 3;
-    const damage = Math.max(1, amount + variance);
+    const boost=team.some(f=>f.hp>0 && psychs[loadout[f.name]].psych.startsWith("Resonance")) ? 1.15 : 1;
+    const damage = Math.max(1,Math.round(amount*boost)+variance);
     const updated = enemies.map((enemy) =>
       enemy.id === selected ? { ...enemy, hp: Math.max(0, enemy.hp - damage) } : enemy,
     );
     setEnemies(updated);
+    if(drain) setTeam(current=>current.map(f=>({...f,hp:Math.min(f.maxHp,f.hp+Math.ceil(damage/4))})));
     setImpact(selected);
     setGroove((value) => Math.min(100, value + grooveGain));
     setMessage(`${label} hits ${target.name} for ${damage}!`);
@@ -388,15 +418,15 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
     enemyTurn(updated);
   };
 
-  const heal = () => {
-    if (busy || energy < 2) return;
+  const heal = (amount:number,cost:number) => {
+    if (busy || energy < cost) return;
     setBusy(true);
     setActiveAction("heal");
-    setEnergy((value) => value - 2);
+    setEnergy((value) => value - cost);
     setTeam((current) =>
-      current.map((fighter) => ({ ...fighter, hp: Math.min(fighter.maxHp, fighter.hp + 30) })),
+      current.map((fighter) => ({ ...fighter, hp: Math.min(fighter.maxHp, fighter.hp + amount) })),
     );
-    setMessage("Konohana activates Cure Drink. Team restored by 30 HP.");
+    setMessage(`Soin du duo · +${amount} PV`);
     enemyTurn(enemies);
   };
 
@@ -452,7 +482,8 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
   const retry = () => {
     setWave(1);
     setTurn(1);
-    setTeam(initialTeam);
+    const saved=loadProfile();
+    setTeam(initialTeam.map(f=>trained(characterRoster.find(base=>base.name===f.name)!,saved.wins[f.name]||0,saved.awakened.includes(f.name))));
     setEnemies(makeWave(1));
     setSelected(10);
     setEnergy(3);
@@ -604,10 +635,21 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
                 const id = loadout[f.name], pin = psychs[id];
                 return <button key={f.name} disabled={busy || f.hp <= 0 || energy < pin.cost} onClick={() => {
                   setActor(f.name);
-                  if (id === "heal") heal();
-                  else dealDamage(id === "pyro" ? 24 : 44, pin.name, pin.cost, id === "pyro" ? 18 : 28, id);
+                  if (pin.kind==="heal") heal(Math.max(1,Math.round(f.mag*pin.power/50*(team.some(ally=>psychs[loadout[ally.name]].psych.startsWith("Cure Boost"))?1.3:1))),pin.cost);
+                  else if (pin.kind==="guard" || pin.kind==="support") {
+                    setEnergy(v=>v-pin.cost);
+                    if(pin.kind==="support"){
+                      if (/Turbo|Supply/.test(pin.psych)) setEnergy(v=>Math.min(3,v+2));
+                      else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) setTeam(old=>old.map(ally=>({...ally,hp:Math.min(ally.maxHp,ally.hp+Math.ceil(f.mag/2))})));
+                      else setGroove(v=>Math.min(100,v+18));
+                    }
+                    guard();
+                  } else {
+                    const slash=pin.kind==="physical";
+                    dealDamage(Math.round((slash?f.atk:f.mag)*(0.7+pin.power/100)),pin.name,pin.cost,18,slash?"shockwave":"pyro",pin.drain);
+                  }
                 }}>
-                  <span className="action-icon pin-badge"><img src={pin.image} alt="" /></span>
+                  <span className="action-icon pin-badge"><PinIcon pin={pin}/></span>
                   <b>{pin.name}</b><small>{f.name} · {pin.cost} EN</small>
                 </button>;
               })}
@@ -650,7 +692,7 @@ function Battle({ initialTeam, loadout, coins, setCoins, leave }: { initialTeam:
           <div className="modal reward-modal">
             <small>WAVE {String(wave).padStart(2, "0")} COMPLETE</small>
             <h2>CHOOSE YOUR DROP</h2>
-            <p>Pick one upgrade for the rest of this run.</p>
+            <p>+5 pièces · +1 XP par personnage. Un niveau tous les 3 XP.</p>
             <div className="reward-grid">
               <button onClick={() => nextWave("power")}>
                 <Icon name="bolt" />

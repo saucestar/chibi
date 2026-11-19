@@ -86,3 +86,9 @@
 .bingo-member { display:flex; align-items:center; gap:10px; margin:8px 0; }
 .bingo-member button { margin-left:auto; }
 @media (prefers-reduced-motion:reduce) { .bingo-crank.turning,.bingo-ball { animation-duration:.01s; } }
+
+.pin-catalog { max-height: 16rem; overflow:auto; background:#161522; padding:6px; }
+.pin-catalog > div { display:flex; align-items:center; gap:8px; padding:4px; }
+.party-lobby [aria-pressed="true"] { outline:2px solid var(--signal); }
+.party-lobby .psych-choice select { max-width:65%; }
+.bingo-member { flex-wrap:wrap; }
