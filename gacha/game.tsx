@@ -180,17 +180,25 @@ function EnemySprite({kind,boss}:{kind:EnemyKind;boss:boolean}) {
     style={{width:`${92*spec.frameWidth/spec.frameHeight}px`,height:"92px"}}/>;
 }
 
+function difficultyAt(floor:number) {
+  const wave=Math.max(1,Math.min(100,Math.floor(floor)));
+  const tier=Math.floor((wave-1)/10),step=(wave-1)%10;
+  return {tier:tier+1,hp:1+tier*.44+tier*tier*.028+step*.035,
+    attack:1+tier*.16+tier*tier*.008+step*.012,
+    xp:1+tier*.48+tier*tier*.025+step*.04,speed:tier*2+Math.floor(step/4),
+    bossHp:wave%10===0?2.25:1.7,bossAttack:wave%10===0?1.25:1.12};
+}
 const makeWave = (wave: number): Enemy[] => {
   const bossWave = isBossWave(wave);
-  const count = bossWave ? 2 + Math.min(1, Math.floor(wave / 25)) : Math.min(2 + Math.floor((wave - 1) / 2), 4);
-  const growth = 1 + (wave - 1) * 0.08;
+  const count = bossWave ? (wave>=40?3:2) : wave<=4?2:wave<=19?3:4;
+  const scale=difficultyAt(wave);
   return Array.from({ length: count }, (_, index) => {
     const boss = bossWave && index === 0;
     const kind: EnemyKind = boss
       ? Math.floor(wave / 5) % 2 === 0 ? "psyche-fox" : "shinigami"
       : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length];
     const template = enemyCatalog[kind];
-    const maxHp = Math.round(template.hp * growth * (boss ? 2.5 : 1));
+    const maxHp = Math.round(template.hp * scale.hp * (boss ? scale.bossHp : 1));
     return {
       id: wave * 10 + index,
       name: boss ? `${template.name} // BOSS` : template.name,
@@ -198,9 +206,9 @@ const makeWave = (wave: number): Enemy[] => {
       hp: maxHp,
       maxHp,
       level: wave,
-      speed: ({frog:9,wolf:23,shinigami:19,"jey-pengi":13,"electro-pengi":17,"psyche-fox":21}[kind])+Math.floor((wave-1)/3),
-      xp: Math.round((10+template.hp*.15)*growth*(boss?3:1)),
-      attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
+      speed: ({frog:9,wolf:23,shinigami:19,"jey-pengi":13,"electro-pengi":17,"psyche-fox":21}[kind])+scale.speed,
+      xp: Math.round((10+template.hp*.15)*scale.xp*(boss?3:1)),
+      attack: Math.round(template.attack * scale.attack * (boss ? scale.bossAttack : 1)),
       boss,
     };
   });
@@ -296,7 +304,7 @@ function RankBadge({ level }: { level: number }) {
 type Wish = { pin: Pin } | { name:string; rank:number; copies:number };
 function pick<T,>(items:T[]):T { return items[Math.floor(Math.random()*items.length)]; }
 const offensive = (id:string) => ["physical","special"].includes(psychs[id]?.kind);
-type Profile = { bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
+type Profile = { freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function equippedBy(profile:Profile,name:string,id:string):string|undefined {
@@ -334,14 +342,37 @@ function loadProfile(): Profile {
     });
     const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]?.row>=0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({ bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies:Object.fromEntries(owned.map(n=>[n,saved.awakened?.includes(n) || saved.levels?.[n] === 5 ? 5 : Math.min(5,Math.max(0,Math.floor(Number(saved.copies?.[n])||0)))])),
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: saved.loadout || {}, coins: saved.coins });
   } catch {}
-  return {bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
+  return {freeWishes:0,lastFreeWishDay:"",bestFloor:0,claimedQuests:[],floorRecoveryAvailable:false,pins:[], wishStep:0, copies:{}, xp:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
+}
+
+// First mobile game integration: 2026-11-18 (repository history).
+const freeWishStartDay="2026-11-18";
+function parisDay(now:Date=new Date()):string {
+ const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now);
+ return ["year","month","day"].map(key=>parts.find(p=>p.type===key)!.value).join("-");
+}
+function dayIndex(day:string):number {return /^\d{4}-\d{2}-\d{2}$/.test(day)?Date.parse(day+"T00:00:00Z")/86400000:NaN;}
+function accrueDailyWishes(p:Profile,now:Date=new Date()):Profile {
+ const today=parisDay(now),end=dayIndex(today),start=dayIndex(freeWishStartDay);
+ if(end<start)return p;
+ const previous=dayIndex(p.lastFreeWishDay);
+ const days=Number.isFinite(previous)?Math.max(0,end-Math.max(previous,start-1)):end-start+1;
+ return days>0?{...p,freeWishes:p.freeWishes+days*3,lastFreeWishDay:today}:p;
+}
+function starterProfile(p:Profile):boolean {
+ return p.owned.length<2 || !(p.pins.some(offensive)||p.owned.some(name=>offensive(basePsych[name])));
+}
+function wishQuote(p:Profile,count:number) {
+ if(count===1&&starterProfile(p))return {free:0,paid:0,cost:0,starter:true};
+ const free=Math.min(count,p.freeWishes),paid=count-free;
+ return {free,paid,cost:paid*100,starter:false};
 }
 
 const characterChance = 0.10;
@@ -349,12 +380,10 @@ function portalRoster(id:string):Fighter[] {
   const names=id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
   return characterRoster.filter(f=>names.includes(f.name));
 }
-function portalPool(id:string, profile:Profile) {
+function portalPool(id:string, _profile?:Profile) {
   const roster=portalRoster(id);
-  const missing=roster.filter(f=>!profile.owned.includes(f.name));
-  const available=roster.filter(f=>(profile.copies[f.name]||0)<5);
-  const pool=missing.length ? missing : available.length ? available : roster;
-  return id==="partners" ? [...pool,...pool.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : pool;
+  // Fixed weights: ownership, duplicates and awakening never change the odds.
+  return id==="partners" ? [...roster,...roster.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : roster;
 }
 function PortalVideo({src,poster}:{src:string;poster:string}) {
   const ref=React.useRef<HTMLVideoElement>(null);
@@ -554,7 +583,7 @@ function App() {
     const sync = (event: StorageEvent) => {
       if (event.key === profileKey) displayProfile(loadProfile());
     };
-    const cloudLoaded=()=>{displayProfile(loadProfile());setParty(null);setResult([]);setPhase("ready");};
+    const cloudLoaded=()=>{displayProfile(loadProfile());setParty(null);setResult([]);setPhase("ready");turning.current=false;};
     window.addEventListener("chibi:save-loaded",cloudLoaded);
     window.addEventListener("storage", sync);
     return () => {window.removeEventListener("storage", sync);window.removeEventListener("chibi:save-loaded",cloudLoaded);};
@@ -563,15 +592,22 @@ function App() {
     if(window.ChibiGameSync && !window.ChibiGameSync.state.ready)return;
     let current = profile;
     try { if (localStorage.getItem(profileKey)) current = loadProfile(); } catch {}
-    const next = assignBasePsychs(update(current));
+    const next = assignBasePsychs(update(accrueDailyWishes(current)));
+    if(JSON.stringify(next)===JSON.stringify(current))return;
     try { localStorage.setItem(profileKey, JSON.stringify(next)); setSaveError(false); }
     catch { setSaveError(true); }
     displayProfile(next);
     window.ChibiGameSync?.save(next);
   };
 
-  const starter = (p:Profile) => p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name=>offensive(basePsych[name])));
-  const wishCost = (p:Profile,n=quantity) => n === 1 && starter(p) ? 0 : 100 * n;
+  useEffect(()=>{
+    const credit=()=>setProfile(p=>accrueDailyWishes(p));
+    credit();
+    const timer=window.setInterval(credit,60000);
+    window.addEventListener("focus",credit);document.addEventListener("visibilitychange",credit);
+    return ()=>{clearInterval(timer);window.removeEventListener("focus",credit);document.removeEventListener("visibilitychange",credit);};
+  },[]);
+  const wishCost = (p:Profile,n=quantity) => wishQuote(p,n).cost;
   const price = wishCost(profile);
   const openWish=(id:string,count:number)=>{
     setQuantity(count); setPortal(id); setPhase("confirm");
@@ -586,7 +622,8 @@ function App() {
     const draws:Wish[] = [];
     setProfile(p => {
       if (p.coins!==profile.coins || wishCost(p,count)!==price || p.coins<price) return p;
-      const next={...p,pins:[...p.pins],coins:p.coins-wishCost(p,count),owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
+      const quote=wishQuote(p,count);
+      const next={...p,freeWishes:p.freeWishes-quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<count;i++){
         next.wishStep=(next.wishStep+1)%10;
         if(next.wishStep!==0 && Math.random()>=characterChance){
@@ -628,6 +665,7 @@ function App() {
     <h2>Bingo Kai</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
     <div className="lobby-tools"><BadgeCatalogue owned={profile.pins}/><QuestMenu profile={profile} save={setProfile}/></div>
+    <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>+3 par jour · Cumulés depuis le 18/11/2026</small></p>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
@@ -645,6 +683,7 @@ function App() {
         <div className="wish-commands">{[1,10].map(n=><div key={n} className="wish-option">
           <button aria-describedby={`wish-price-${id}-${n}`} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString("fr-FR")}</span></span>
+          {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} gratuit{wishQuote(profile,n).free>1?"s":""} inclus</small>}
         </div>)}</div>
         <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
@@ -655,11 +694,11 @@ function App() {
       <h3>Prochain vœu{guaranteed?" · garanti":""}</h3>
       <ul>{portalRoster(portal).map(f=><li key={f.name}>{f.name}<b>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</b></li>)}
       <li>Badges psych<b>{percent(guaranteed?0:1-characterChance)}</b></li></ul>
-      <p>Les {pinList.length} badges sont équiprobables. Les personnages manquants ont priorité. Les taux sont recalculés après chaque vœu du lot.</p>
+      <p>Les {pinList.length} badges sont équiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l’éveiller ne modifie pas sa probabilité.</p>
       <button onClick={closeDialog}>Fermer</button></WishDialog>}
     {phase==="confirm" && <WishDialog key="confirm" title="Confirmer l’invocation" close={closeDialog}>
       <p>Invoquer sur {portalName} pour {quantity} {quantity===1?"vœu":"vœux"} ?</p>
-      <dl><dt>Solde actuel</dt><dd>{profile.coins} pièces</dd><dt>Coût</dt><dd>{price} pièces</dd><dt>Solde après invocation</dt><dd>{price<=profile.coins?`${profile.coins-price} pièces`:"Solde insuffisant"}</dd></dl>
+      <dl><dt>Vœux gratuits utilisés</dt><dd>{wishQuote(profile,quantity).free}</dd><dt>Vœux gratuits restants</dt><dd>{profile.freeWishes-wishQuote(profile,quantity).free}</dd><dt>Solde actuel</dt><dd>{profile.coins} pièces</dd><dt>Coût</dt><dd>{price} pièces</dd><dt>Solde après invocation</dt><dd>{price<=profile.coins?`${profile.coins-price} pièces`:"Solde insuffisant"}</dd></dl>
       <div className="dialog-actions"><button onClick={closeDialog}>Annuler</button><button disabled={profile.coins<price} onClick={()=>recruit(portal,quantity)}>Confirmer</button></div>
     </WishDialog>}
     {["crank","spin","drop","reveal"].includes(phase) && <WishDialog key="invocation" title={phase==="reveal"?"Résultat de l’invocation":portalName} close={phase==="reveal"?closeDialog:undefined}>
@@ -1041,7 +1080,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onReach, o
           <div className="battle-heading">
             <div>
               <small>ENCOUNTER</small>
-              <h1>WAVE {String(wave).padStart(2, "0")}</h1>
+              <h1>ÉTAGE {String(wave).padStart(2, "0")} <small className="tier-label">Palier {difficultyAt(wave).tier} / 10</small></h1>
             </div>
             <div className={`threat threat-${threat.toLowerCase()}`}>
               <span>THREAT</span>

@@ -320,17 +320,31 @@ function EnemySprite({
     }
   });
 }
+function difficultyAt(floor) {
+  const wave = Math.max(1, Math.min(100, Math.floor(floor)));
+  const tier = Math.floor((wave - 1) / 10),
+    step = (wave - 1) % 10;
+  return {
+    tier: tier + 1,
+    hp: 1 + tier * .44 + tier * tier * .028 + step * .035,
+    attack: 1 + tier * .16 + tier * tier * .008 + step * .012,
+    xp: 1 + tier * .48 + tier * tier * .025 + step * .04,
+    speed: tier * 2 + Math.floor(step / 4),
+    bossHp: wave % 10 === 0 ? 2.25 : 1.7,
+    bossAttack: wave % 10 === 0 ? 1.25 : 1.12
+  };
+}
 const makeWave = wave => {
   const bossWave = isBossWave(wave);
-  const count = bossWave ? 2 + Math.min(1, Math.floor(wave / 25)) : Math.min(2 + Math.floor((wave - 1) / 2), 4);
-  const growth = 1 + (wave - 1) * 0.08;
+  const count = bossWave ? wave >= 40 ? 3 : 2 : wave <= 4 ? 2 : wave <= 19 ? 3 : 4;
+  const scale = difficultyAt(wave);
   return Array.from({
     length: count
   }, (_, index) => {
     const boss = bossWave && index === 0;
     const kind = boss ? Math.floor(wave / 5) % 2 === 0 ? "psyche-fox" : "shinigami" : enemyKinds[(wave * 3 + index * 2 + Math.floor(wave / 5)) % enemyKinds.length];
     const template = enemyCatalog[kind];
-    const maxHp = Math.round(template.hp * growth * (boss ? 2.5 : 1));
+    const maxHp = Math.round(template.hp * scale.hp * (boss ? scale.bossHp : 1));
     return {
       id: wave * 10 + index,
       name: boss ? `${template.name} // BOSS` : template.name,
@@ -345,9 +359,9 @@ const makeWave = wave => {
         "jey-pengi": 13,
         "electro-pengi": 17,
         "psyche-fox": 21
-      }[kind] + Math.floor((wave - 1) / 3),
-      xp: Math.round((10 + template.hp * .15) * growth * (boss ? 3 : 1)),
-      attack: Math.round(template.attack * growth * (boss ? 1.55 : 1)),
+      }[kind] + scale.speed,
+      xp: Math.round((10 + template.hp * .15) * scale.xp * (boss ? 3 : 1)),
+      attack: Math.round(template.attack * scale.attack * (boss ? scale.bossAttack : 1)),
       boss
     };
   });
@@ -611,6 +625,8 @@ function loadProfile() {
     const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
+      freeWishes: Number.isSafeInteger(saved.freeWishes) && saved.freeWishes >= 0 ? saved.freeWishes : 0,
+      lastFreeWishDay: typeof saved.lastFreeWishDay === "string" ? saved.lastFreeWishDay : "",
       bestFloor: Math.min(100, Math.max(0, Math.floor(Number(saved.bestFloor ?? saved.highestFloor ?? 0) || 0))),
       claimedQuests: Array.isArray(saved.claimedQuests) ? [...new Set(saved.claimedQuests.filter(id => typeof id === "string"))] : [],
       floorRecoveryAvailable: saved.floorRecoveryAvailable === true || saved.floorRecoveryAvailable !== false && saved.bestFloor === undefined && owned.length > 0,
@@ -627,6 +643,8 @@ function loadProfile() {
     });
   } catch {}
   return {
+    freeWishes: 0,
+    lastFreeWishDay: "",
     bestFloor: 0,
     claimedQuests: [],
     floorRecoveryAvailable: false,
@@ -642,17 +660,59 @@ function loadProfile() {
     coins: 180
   };
 }
+const freeWishStartDay = "2026-11-18";
+function parisDay(now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(now);
+  return ["year", "month", "day"].map(key => parts.find(p => p.type === key).value).join("-");
+}
+function dayIndex(day) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? Date.parse(day + "T00:00:00Z") / 86400000 : NaN;
+}
+function accrueDailyWishes(p, now = new Date()) {
+  const today = parisDay(now),
+    end = dayIndex(today),
+    start = dayIndex(freeWishStartDay);
+  if (end < start) return p;
+  const previous = dayIndex(p.lastFreeWishDay);
+  const days = Number.isFinite(previous) ? Math.max(0, end - Math.max(previous, start - 1)) : end - start + 1;
+  return days > 0 ? {
+    ...p,
+    freeWishes: p.freeWishes + days * 3,
+    lastFreeWishDay: today
+  } : p;
+}
+function starterProfile(p) {
+  return p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name => offensive(basePsych[name])));
+}
+function wishQuote(p, count) {
+  if (count === 1 && starterProfile(p)) return {
+    free: 0,
+    paid: 0,
+    cost: 0,
+    starter: true
+  };
+  const free = Math.min(count, p.freeWishes),
+    paid = count - free;
+  return {
+    free,
+    paid,
+    cost: paid * 100,
+    starter: false
+  };
+}
 const characterChance = 0.10;
 function portalRoster(id) {
   const names = id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
   return characterRoster.filter(f => names.includes(f.name));
 }
-function portalPool(id, profile) {
+function portalPool(id, _profile) {
   const roster = portalRoster(id);
-  const missing = roster.filter(f => !profile.owned.includes(f.name));
-  const available = roster.filter(f => (profile.copies[f.name] || 0) < 5);
-  const pool = missing.length ? missing : available.length ? available : roster;
-  return id === "partners" ? [...pool, ...pool.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : pool;
+  return id === "partners" ? [...roster, ...roster.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : roster;
 }
 function PortalVideo({
   src,
@@ -1121,6 +1181,7 @@ function App() {
       setParty(null);
       setResult([]);
       setPhase("ready");
+      turning.current = false;
     };
     window.addEventListener("chibi:save-loaded", cloudLoaded);
     window.addEventListener("storage", sync);
@@ -1135,7 +1196,8 @@ function App() {
     try {
       if (localStorage.getItem(profileKey)) current = loadProfile();
     } catch {}
-    const next = assignBasePsychs(update(current));
+    const next = assignBasePsychs(update(accrueDailyWishes(current)));
+    if (JSON.stringify(next) === JSON.stringify(current)) return;
     try {
       localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
@@ -1145,8 +1207,19 @@ function App() {
     displayProfile(next);
     window.ChibiGameSync?.save(next);
   };
-  const starter = p => p.owned.length < 2 || !(p.pins.some(offensive) || p.owned.some(name => offensive(basePsych[name])));
-  const wishCost = (p, n = quantity) => n === 1 && starter(p) ? 0 : 100 * n;
+  useEffect(() => {
+    const credit = () => setProfile(p => accrueDailyWishes(p));
+    credit();
+    const timer = window.setInterval(credit, 60000);
+    window.addEventListener("focus", credit);
+    document.addEventListener("visibilitychange", credit);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", credit);
+      document.removeEventListener("visibilitychange", credit);
+    };
+  }, []);
+  const wishCost = (p, n = quantity) => wishQuote(p, n).cost;
   const price = wishCost(profile);
   const openWish = (id, count) => {
     setQuantity(count);
@@ -1166,10 +1239,12 @@ function App() {
     const draws = [];
     setProfile(p => {
       if (p.coins !== profile.coins || wishCost(p, count) !== price || p.coins < price) return p;
+      const quote = wishQuote(p, count);
       const next = {
         ...p,
+        freeWishes: p.freeWishes - quote.free,
         pins: [...p.pins],
-        coins: p.coins - wishCost(p, count),
+        coins: p.coins - quote.cost,
         owned: [...p.owned],
         levels: {
           ...p.levels
@@ -1269,7 +1344,9 @@ function App() {
   }), React.createElement(QuestMenu, {
     profile: profile,
     save: setProfile
-  })), React.createElement("div", {
+  })), React.createElement("p", {
+    className: "daily-wishes"
+  }, "V\u0153ux gratuits \xB7 ", React.createElement("b", null, profile.freeWishes), React.createElement("small", null, "+3 par jour \xB7 Cumul\xE9s depuis le 18/11/2026")), React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -1319,7 +1396,9 @@ function App() {
     "aria-label": `${wishCost(profile, n)} pièces requises`
   }, React.createElement(Icon, {
     name: "coin"
-  }), React.createElement("span", null, "\xD7 ", wishCost(profile, n).toLocaleString("fr-FR")))))), React.createElement("p", {
+  }), React.createElement("span", null, "\xD7 ", wishCost(profile, n).toLocaleString("fr-FR"))), wishQuote(profile, n).free > 0 && React.createElement("small", {
+    className: "wish-free"
+  }, wishQuote(profile, n).free, " gratuit", wishQuote(profile, n).free > 1 ? "s" : "", " inclus")))), React.createElement("p", {
     className: "portal-caption"
   }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
@@ -1327,13 +1406,13 @@ function App() {
     close: closeDialog
   }, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("ul", null, portalRoster(portal).map(f => React.createElement("li", {
     key: f.name
-  }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les personnages manquants ont priorit\xE9. Les taux sont recalcul\xE9s apr\xE8s chaque v\u0153u du lot."), React.createElement("button", {
+  }, f.name, React.createElement("b", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))))), React.createElement("li", null, "Badges psych", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance)))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l\u2019\xE9veiller ne modifie pas sa probabilit\xE9."), React.createElement("button", {
     onClick: closeDialog
   }, "Fermer")), phase === "confirm" && React.createElement(WishDialog, {
     key: "confirm",
     title: "Confirmer l\u2019invocation",
     close: closeDialog
-  }, React.createElement("p", null, "Invoquer sur ", portalName, " pour ", quantity, " ", quantity === 1 ? "vœu" : "vœux", " ?"), React.createElement("dl", null, React.createElement("dt", null, "Solde actuel"), React.createElement("dd", null, profile.coins, " pi\xE8ces"), React.createElement("dt", null, "Co\xFBt"), React.createElement("dd", null, price, " pi\xE8ces"), React.createElement("dt", null, "Solde apr\xE8s invocation"), React.createElement("dd", null, price <= profile.coins ? `${profile.coins - price} pièces` : "Solde insuffisant")), React.createElement("div", {
+  }, React.createElement("p", null, "Invoquer sur ", portalName, " pour ", quantity, " ", quantity === 1 ? "vœu" : "vœux", " ?"), React.createElement("dl", null, React.createElement("dt", null, "V\u0153ux gratuits utilis\xE9s"), React.createElement("dd", null, wishQuote(profile, quantity).free), React.createElement("dt", null, "V\u0153ux gratuits restants"), React.createElement("dd", null, profile.freeWishes - wishQuote(profile, quantity).free), React.createElement("dt", null, "Solde actuel"), React.createElement("dd", null, profile.coins, " pi\xE8ces"), React.createElement("dt", null, "Co\xFBt"), React.createElement("dd", null, price, " pi\xE8ces"), React.createElement("dt", null, "Solde apr\xE8s invocation"), React.createElement("dd", null, price <= profile.coins ? `${profile.coins - price} pièces` : "Solde insuffisant")), React.createElement("div", {
     className: "dialog-actions"
   }, React.createElement("button", {
     onClick: closeDialog
@@ -1983,7 +2062,9 @@ function Battle({
     className: "battle-column"
   }, React.createElement("div", {
     className: "battle-heading"
-  }, React.createElement("div", null, React.createElement("small", null, "ENCOUNTER"), React.createElement("h1", null, "WAVE ", String(wave).padStart(2, "0"))), React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("small", null, "ENCOUNTER"), React.createElement("h1", null, "\xC9TAGE ", String(wave).padStart(2, "0"), " ", React.createElement("small", {
+    className: "tier-label"
+  }, "Palier ", difficultyAt(wave).tier, " / 10"))), React.createElement("div", {
     className: `threat threat-${threat.toLowerCase()}`
   }, React.createElement("span", null, "THREAT"), React.createElement("b", null, threat))), React.createElement("nav", {
     className: "turn-order",
