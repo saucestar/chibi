@@ -936,14 +936,12 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
                 </div>
               ))}
             </div>
-            <div className="message-strip">
-              <span>{busy ? "EN COURS" : "À TOI"}</span>
-              <p role="status">{message}</p>
-            </div>
+            <p className="combat-status" role="status">{message}</p>
+
           </div>
 
           <section className={`round-planner ${choosing?"choosing-action":""}`} aria-label="Préparer les actions">
-            {choosing?<div className="inline-action-menu" aria-label={`Actions de ${choosing.name}`}>
+            {choosing?<div key={`${choosing.name}-${targetPin||"actions"}`} className="inline-action-menu" aria-label={`Actions de ${choosing.name}`}>
               <h2>{choosing.name} · {targetPin?"Cible":"Actions"}</h2>
         {targetPin?<>
           <p><b>{psychs[targetPin].name}</b> · Choisir la cible</p>
@@ -1059,4 +1057,10 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
 }
 
 
+// Delegated feedback also applies to future game and gacha buttons.
+document.addEventListener("click",event=>{
+  const button=(event.target as Element)?.closest?.("button");
+  if(!button || button.disabled || matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  button.animate([{filter:"brightness(1.23)"},{filter:"brightness(1)"}],{duration:240,easing:"ease-out"});
+},true);
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));

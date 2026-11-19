@@ -1644,14 +1644,14 @@ function Battle({
     fighter: fighter,
     action: activeAction === "burst" || fighter.name === actor ? activeAction : null,
     combat: true
-  }), React.createElement("span", null, fighter.name)))), React.createElement("div", {
-    className: "message-strip"
-  }, React.createElement("span", null, busy ? "EN COURS" : "À TOI"), React.createElement("p", {
+  }), React.createElement("span", null, fighter.name)))), React.createElement("p", {
+    className: "combat-status",
     role: "status"
-  }, message))), React.createElement("section", {
+  }, message)), React.createElement("section", {
     className: `round-planner ${choosing ? "choosing-action" : ""}`,
     "aria-label": "Pr\xE9parer les actions"
   }, choosing ? React.createElement("div", {
+    key: `${choosing.name}-${targetPin || "actions"}`,
     className: "inline-action-menu",
     "aria-label": `Actions de ${choosing.name}`
   }, React.createElement("h2", null, choosing.name, " \xB7 ", targetPin ? "Cible" : "Actions"), targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
@@ -1785,4 +1785,16 @@ function Battle({
     onClick: leave
   }, "Changer de duo"))));
 }
+document.addEventListener("click", event => {
+  const button = event.target?.closest?.("button");
+  if (!button || button.disabled || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  button.animate([{
+    filter: "brightness(1.23)"
+  }, {
+    filter: "brightness(1)"
+  }], {
+    duration: 240,
+    easing: "ease-out"
+  });
+}, true);
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
