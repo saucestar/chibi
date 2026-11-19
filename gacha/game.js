@@ -1617,7 +1617,11 @@ function Battle({
   }, enemies.map(enemy => React.createElement("button", {
     key: enemy.id,
     className: `enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`,
-    onClick: () => selectEnemy(enemy),
+    onClick: () => targetPin && !busy ? choose({
+      kind: "psych",
+      pin: targetPin,
+      target: enemy.id
+    }) : selectEnemy(enemy),
     onDoubleClick: () => enemy.hp > 0 && setInspectedId(enemy.id),
     "aria-label": `${enemy.name} · ${enemy.hp} / ${enemy.maxHp} PV. Deux appuis pour les statistiques.`,
     title: "Deux appuis pour les statistiques"
@@ -1645,49 +1649,12 @@ function Battle({
   }, React.createElement("span", null, busy ? "EN COURS" : "À TOI"), React.createElement("p", {
     role: "status"
   }, message))), React.createElement("section", {
-    className: "round-planner",
+    className: `round-planner ${choosing ? "choosing-action" : ""}`,
     "aria-label": "Pr\xE9parer les actions"
-  }, React.createElement("div", {
-    className: "planning-budget"
-  }, React.createElement("b", null, energy, " EN"), React.createElement("span", null, busy ? "Tour en cours" : `${reserved} EN réservée${reserved > 1 ? "s" : ""} · +2 EN en fin de tour`)), React.createElement("div", {
-    className: "planned-actions"
-  }, team.map(f => {
-    const plan = plans[f.name],
-      target = enemies.find(e => e.id === plan?.target);
-    return React.createElement("button", {
-      key: f.name,
-      disabled: busy || reward || f.hp <= 0,
-      onClick: () => openChooser(f.name)
-    }, React.createElement("b", null, f.name), React.createElement("span", null, f.hp <= 0 ? "K.O." : planName(plan)), React.createElement("small", null, plan ? target ? `→ ${target.name}` : plan.kind === "guard" ? "Protection personnelle" : "Duo / tous les ennemis" : "Choisir"), plan && React.createElement("small", null, planCost(plan), " EN \xB7 Modifier"));
-  })), React.createElement("button", {
-    className: "resolve-round",
-    disabled: busy || reward || !ready || teamDefeated,
-    onClick: resolveRound
-  }, busy ? "Tour en cours…" : "Lancer le tour"))), React.createElement("aside", {
-    className: "route-panel"
-  }, React.createElement("div", {
-    className: "section-label"
-  }, React.createElement("span", null, "RUN PROGRESS"), React.createElement("b", null, "SECTOR ", String(sector).padStart(2, "0"))), React.createElement("div", {
-    className: "route"
-  }, Array.from({
-    length: 5
-  }, (_, index) => routeStart + index).map(node => React.createElement("div", {
-    className: node < wave ? "complete" : node === wave ? "current" : "",
-    key: node
-  }, React.createElement("span", null, node < wave ? "✓" : String(node).padStart(2, "0")), React.createElement("p", null, isBossWave(node) ? "BOSS SIGNAL" : node === wave ? "CURRENT WAVE" : "NOISE WAVE")))), React.createElement("div", {
-    className: "tip-card"
-  }, React.createElement("small", null, "REAPER TIP"), React.createElement("p", null, "Pr\xE9pare les actions du duo et leurs cibles. La SPE d\xE9termine l\u2019ordre. \xC0 100% de Groove, choisis Sync Burst dans les actions."), React.createElement("a", {
-    href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
-    target: "_blank",
-    rel: "noreferrer"
-  }, "PIN DATABASE \u2197")))), choosing && React.createElement(WishDialog, {
-    className: "action-menu",
-    title: `Action · ${choosing.name}`,
-    close: () => {
-      setChooser(null);
-      setTargetPin(null);
-    }
-  }, targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
+  }, choosing ? React.createElement("div", {
+    className: "inline-action-menu",
+    "aria-label": `Actions de ${choosing.name}`
+  }, React.createElement("h2", null, choosing.name, " \xB7 ", targetPin ? "Cible" : "Actions"), targetPin ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, psychs[targetPin].name), " \xB7 Choisir la cible"), React.createElement("div", {
     className: "target-menu"
   }, livingEnemies.map((enemy, i) => React.createElement("button", {
     key: enemy.id,
@@ -1696,10 +1663,9 @@ function Battle({
       pin: targetPin,
       target: enemy.id
     })
-  }, React.createElement(EnemySprite, {
-    kind: enemy.kind,
-    boss: enemy.boss
-  }), React.createElement("b", null, enemy.name), React.createElement("span", null, "Cible ", i + 1, " \xB7 ", enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("p", null, "Si la cible est vaincue avant l\u2019action, le prochain ennemi vivant sera vis\xE9."), React.createElement("button", {
+  }, React.createElement(HudPortrait, {
+    enemy: enemy
+  }), React.createElement("b", null, enemy.name), React.createElement("span", null, enemy.hp, " / ", enemy.maxHp, " PV")))), React.createElement("button", {
     onClick: () => setTargetPin(null)
   }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("p", null, energy - otherCost, " EN disponibles \xB7 1 action pour ce tour"), React.createElement("div", {
     className: "psych-action-menu"
@@ -1730,7 +1696,40 @@ function Battle({
     name: "bolt"
   }), React.createElement("b", null, "Sync Burst"), React.createElement("span", null, "100% Groove \xB7 Tous les ennemis"))), React.createElement("button", {
     onClick: () => setChooser(null)
-  }, "Annuler"))), orderDetail && React.createElement(WishDialog, {
+  }, "Annuler"))) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "planning-budget"
+  }, React.createElement("b", null, energy, " EN"), React.createElement("span", null, busy ? "Tour en cours" : `${reserved} EN réservée${reserved > 1 ? "s" : ""} · +2 EN en fin de tour`)), React.createElement("div", {
+    className: "planned-actions"
+  }, team.map(f => {
+    const plan = plans[f.name],
+      target = enemies.find(e => e.id === plan?.target);
+    return React.createElement("button", {
+      key: f.name,
+      disabled: busy || reward || f.hp <= 0,
+      onClick: () => openChooser(f.name)
+    }, React.createElement("b", null, f.name), React.createElement("span", null, f.hp <= 0 ? "K.O." : planName(plan)), React.createElement("small", null, plan ? target ? `→ ${target.name}` : plan.kind === "guard" ? "Protection personnelle" : "Duo / tous les ennemis" : "Choisir"), plan && React.createElement("small", null, planCost(plan), " EN \xB7 Modifier"));
+  })), React.createElement("button", {
+    className: "resolve-round",
+    disabled: busy || reward || !ready || teamDefeated,
+    onClick: resolveRound
+  }, busy ? "Tour en cours…" : "Lancer le tour")))), React.createElement("aside", {
+    className: "route-panel"
+  }, React.createElement("div", {
+    className: "section-label"
+  }, React.createElement("span", null, "RUN PROGRESS"), React.createElement("b", null, "SECTOR ", String(sector).padStart(2, "0"))), React.createElement("div", {
+    className: "route"
+  }, Array.from({
+    length: 5
+  }, (_, index) => routeStart + index).map(node => React.createElement("div", {
+    className: node < wave ? "complete" : node === wave ? "current" : "",
+    key: node
+  }, React.createElement("span", null, node < wave ? "✓" : String(node).padStart(2, "0")), React.createElement("p", null, isBossWave(node) ? "BOSS SIGNAL" : node === wave ? "CURRENT WAVE" : "NOISE WAVE")))), React.createElement("div", {
+    className: "tip-card"
+  }, React.createElement("small", null, "REAPER TIP"), React.createElement("p", null, "Pr\xE9pare les actions du duo et leurs cibles. La SPE d\xE9termine l\u2019ordre. \xC0 100% de Groove, choisis Sync Burst dans les actions."), React.createElement("a", {
+    href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
+    target: "_blank",
+    rel: "noreferrer"
+  }, "PIN DATABASE \u2197")))), orderDetail && React.createElement(WishDialog, {
     title: "Ordre du tour",
     close: () => setOrderDetail(null)
   }, (() => {

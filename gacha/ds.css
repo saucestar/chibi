@@ -571,3 +571,30 @@
 @media(prefers-reduced-motion:no-preference) {
  .combat-hud .round-planner button,.combat-hud .action-menu button { transition:transform 180ms var(--ease),box-shadow 220ms var(--ease),border-color 180ms ease; }
 }
+/* Reserve the right-hand lane for commands in wide battles. */
+@media(orientation:landscape) {
+ .combat-hud .enemy-line { right:39%; width:20%; top:24%; bottom:37%; }
+ .combat-hud .round-planner { width:30%; }
+}
+.combat-hud .round-planner.choosing-action { display:block; height:min(64dvh,390px); }
+.combat-hud .inline-action-menu { height:100%; display:flex; flex-direction:column; gap:6px; min-height:0; }
+.combat-hud .inline-action-menu h2,.combat-hud .inline-action-menu>p { margin:0; padding:4px 10px; border:1px solid #b7a1df; border-radius:12px; background:#21163deb; color:#fff2d7; font:600 11px/1.3 'Segoe UI',sans-serif; }
+.combat-hud .inline-action-menu h2 { font-size:12px; }
+.combat-hud .inline-action-menu .psych-action-menu,.combat-hud .inline-action-menu .target-menu { flex:1; min-height:0; overflow:auto; margin:0; display:grid; grid-template-columns:1fr; gap:5px; align-content:start; padding:2px; }
+.combat-hud .inline-action-menu button { min-height:38px; flex-shrink:0; }
+.combat-hud .inline-action-menu .psych-action-menu button { padding:6px 10px; grid-template-columns:28px minmax(0,1fr); }
+.combat-hud .inline-action-menu .psych-action-menu button span { color:#e5dcfa; font-size:9px; margin-top:0; }
+.combat-hud .inline-action-menu .psych-action-menu button:disabled span { color:#646071; }
+.combat-hud .inline-action-menu .psych-action-menu button b { font-size:11px; }
+.combat-hud .inline-action-menu .target-menu button { display:grid; grid-template-columns:30px minmax(0,1fr); gap:2px 6px; padding:5px 10px; }
+.combat-hud .inline-action-menu .target-menu canvas { grid-column:1; grid-row:1 / 3; width:30px; height:30px; image-rendering:pixelated; }
+.combat-hud .inline-action-menu .target-menu b,.combat-hud .inline-action-menu .target-menu span { grid-column:2; font-size:10px; }
+@media(orientation:portrait) {
+ .combat-hud .round-planner.choosing-action { height:175px; }
+ .combat-hud .inline-action-menu { gap:4px; }
+ .combat-hud .inline-action-menu .psych-action-menu,.combat-hud .inline-action-menu .target-menu { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .combat-hud .squad-panel:has(~ .battle-column .choosing-action) { bottom:200px; }
+ .combat-hud:has(.choosing-action) .message-strip { bottom:292px; }
+ .combat-hud:has(.choosing-action) .player-line { bottom:49%; }
+ .combat-hud:has(.choosing-action) .enemy-line { bottom:52%; }
+}

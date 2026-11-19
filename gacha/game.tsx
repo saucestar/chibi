@@ -914,7 +914,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
                 <button
                   key={enemy.id}
                   className={`enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`}
-                  onClick={()=>selectEnemy(enemy)}
+                  onClick={()=>targetPin&&!busy?choose({kind:"psych",pin:targetPin,target:enemy.id}):selectEnemy(enemy)}
                   onDoubleClick={()=>enemy.hp>0 && setInspectedId(enemy.id)}
                   aria-label={`${enemy.name} · ${enemy.hp} / ${enemy.maxHp} PV. Deux appuis pour les statistiques.`}
                   title="Deux appuis pour les statistiques"
@@ -942,7 +942,29 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
             </div>
           </div>
 
-          <section className="round-planner" aria-label="Préparer les actions">
+          <section className={`round-planner ${choosing?"choosing-action":""}`} aria-label="Préparer les actions">
+            {choosing?<div className="inline-action-menu" aria-label={`Actions de ${choosing.name}`}>
+              <h2>{choosing.name} · {targetPin?"Cible":"Actions"}</h2>
+        {targetPin?<>
+          <p><b>{psychs[targetPin].name}</b> · Choisir la cible</p>
+          <div className="target-menu">{livingEnemies.map((enemy,i)=><button key={enemy.id} onClick={()=>choose({kind:"psych",pin:targetPin,target:enemy.id})}>
+            <HudPortrait enemy={enemy}/><b>{enemy.name}</b><span>{enemy.hp} / {enemy.maxHp} PV</span>
+          </button>)}</div>
+
+          <button onClick={()=>setTargetPin(null)}>Retour aux actions</button>
+        </>:<>
+          <p>{energy-otherCost} EN disponibles · 1 action pour ce tour</p>
+          <div className="psych-action-menu">{(loadout[choosing.name]||[]).map(id=>{
+            const pin=psychs[id];return <button key={id} disabled={pin.cost+otherCost>energy} onClick={()=>offensive(id)?setTargetPin(id):choose({kind:"psych",pin:id})}>
+              <PinIcon pin={pin}/><b>{pin.name}</b><span>{types[pin.kind]} · {pin.cost} EN</span>
+            </button>;
+          })}
+          <button onClick={()=>choose({kind:"guard"})}><Icon name="guard"/><b>Défense</b><span>0 EN · Réduit les dégâts reçus après l’action · +1 EN</span></button>
+          {groove>=100&&<button disabled={burstReserved} onClick={()=>choose({kind:"burst"})}><Icon name="bolt"/><b>Sync Burst</b><span>100% Groove · Tous les ennemis</span></button>}
+          </div>
+          <button onClick={()=>setChooser(null)}>Annuler</button>
+        </>}
+            </div>:<>
             <div className="planning-budget"><b>{energy} EN</b><span>{busy?"Tour en cours":`${reserved} EN réservée${reserved>1?"s":""} · +2 EN en fin de tour`}</span></div>
             <div className="planned-actions">{team.map(f=>{
               const plan=plans[f.name],target=enemies.find(e=>e.id===plan?.target);
@@ -953,6 +975,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
               </button>;
             })}</div>
             <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={resolveRound}>{busy?"Tour en cours…":"Lancer le tour"}</button>
+            </>}
           </section>
         </section>
 
@@ -979,27 +1002,6 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onVictory,
         </aside>
       </section>
 
-      {choosing && <WishDialog className="action-menu" title={`Action · ${choosing.name}`} close={()=>{setChooser(null);setTargetPin(null);}}>
-        {targetPin?<>
-          <p><b>{psychs[targetPin].name}</b> · Choisir la cible</p>
-          <div className="target-menu">{livingEnemies.map((enemy,i)=><button key={enemy.id} onClick={()=>choose({kind:"psych",pin:targetPin,target:enemy.id})}>
-            <EnemySprite kind={enemy.kind} boss={enemy.boss}/><b>{enemy.name}</b><span>Cible {i+1} · {enemy.hp} / {enemy.maxHp} PV</span>
-          </button>)}</div>
-          <p>Si la cible est vaincue avant l’action, le prochain ennemi vivant sera visé.</p>
-          <button onClick={()=>setTargetPin(null)}>Retour aux actions</button>
-        </>:<>
-          <p>{energy-otherCost} EN disponibles · 1 action pour ce tour</p>
-          <div className="psych-action-menu">{(loadout[choosing.name]||[]).map(id=>{
-            const pin=psychs[id];return <button key={id} disabled={pin.cost+otherCost>energy} onClick={()=>offensive(id)?setTargetPin(id):choose({kind:"psych",pin:id})}>
-              <PinIcon pin={pin}/><b>{pin.name}</b><span>{types[pin.kind]} · {pin.cost} EN</span>
-            </button>;
-          })}
-          <button onClick={()=>choose({kind:"guard"})}><Icon name="guard"/><b>Défense</b><span>0 EN · Réduit les dégâts reçus après l’action · +1 EN</span></button>
-          {groove>=100&&<button disabled={burstReserved} onClick={()=>choose({kind:"burst"})}><Icon name="bolt"/><b>Sync Burst</b><span>100% Groove · Tous les ennemis</span></button>}
-          </div>
-          <button onClick={()=>setChooser(null)}>Annuler</button>
-        </>}
-      </WishDialog>}
       {orderDetail && <WishDialog title="Ordre du tour" close={()=>setOrderDetail(null)}>
         {(()=>{const entry=order.find(e=>e.key===orderDetail);return entry?<p><b>{entry.name}</b> · SPE {entry.speed}<br/>{entry.side==="enemy"?`Attaque → ${entry.target}`:planName(plans[entry.name])}</p>:<p>Cette action est terminée.</p>;})()}
         <button className="fullscreen-button" onClick={()=>setOrderDetail(null)}>Fermer</button>
