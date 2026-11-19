@@ -263,6 +263,15 @@ function Sprite({
 }
 
 type Pin = { element?:ElementType; grade?:string; id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
+// Rank scales the effect once; base wiki power and saved inventories stay unchanged.
+const pinRankScales:Record<string,number>={E:.8,D:.9,C:1,B:1.15,A:1.3,Reaper:1.45,Angel:1.6};
+function pinRankMultiplier(pin:Pin):number {return pinRankScales[pin.grade||""]??1;}
+function scaledPinEffect(pin:Pin,base:number):number {return base>0?Math.max(1,Math.round(base*pinRankMultiplier(pin))):0;}
+function pinShieldReduction(pin:Pin):number {return Math.min(.75,.55*pinRankMultiplier(pin));}
+function PinRankInfo({pin}:{pin:Pin}) {
+ const label=pin.grade&&pin.grade!=="---"?`Classe ${pin.grade}`:"Sans classe";
+ return <span>{label} · Effets ×{pinRankMultiplier(pin).toLocaleString("fr-FR")}</span>;
+}
 declare const pinList: Pin[];
 const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn"};
 const partnerPsychs:Pin[] = [
@@ -541,7 +550,7 @@ function RewardReveal({draws,close}:{draws:Wish[];close:()=>void}) {
       <h3>{pin ? pin.name.replace(" (Pin)","") : fighter?.name}</h3>
       <div className="reward-object">{pin?<PinIcon pin={pin}/>:fighter && <Sprite fighter={fighter}/>}</div>
       <div className="reward-facts">{pin ? <>
-        <b>{pin.grade==="---"?"Sans classe":`Classe ${pin.grade}`}</b>
+        <b><PinRankInfo pin={pin}/></b>
         <span>{uses[pin.kind]} · {pin.cost} EN</span>
       </> : "rank" in draw && <>
         <RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"} · {psychs[basePsych[draw.name]].name.replace(" (Pin)","")}</span>
@@ -584,7 +593,7 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
         const id=available[page*16+i],pin=psychs[id];
         return pin?<button key={id} className="badge-slot" aria-label={`${pin.name}${equippedBy(profile,name,id)?` · Équipé par ${equippedBy(profile,name,id)}`:""}`} disabled={Boolean(equippedBy(profile,name,id))} aria-pressed={draft.includes(id)} onClick={()=>toggle(id)}><BadgeArt pin={pin}/>{equippedBy(profile,name,id)&&<small className="badge-owner">{equippedBy(profile,name,id)}</small>}</button>:<span key={i} className="badge-slot" aria-hidden="true"/>;
       })}</div>
-      {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {inspect.cost} EN <TypeChips elements={[inspect.element||badgeElement(inspect)]}/>{equippedBy(profile,name,inspect.id)&&<span> · Équipé par {equippedBy(profile,name,inspect.id)}</span>}</p>}
+      {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {inspect.cost} EN · <PinRankInfo pin={inspect}/> <TypeChips elements={[inspect.element||badgeElement(inspect)]}/>{equippedBy(profile,name,inspect.id)&&<span> · Équipé par {equippedBy(profile,name,inspect.id)}</span>}</p>}
       {draft.length===3 && <p className="equipment-help">Retire un psych équipé pour le remplacer.</p>}
       {!draft.length && <p className="equipment-help">Équipe au moins 1 psych.</p>}
       <nav aria-label="Pages des psychs"><button disabled={!page} onClick={()=>setPage(page-1)} aria-label="Page précédente">‹</button><span>{page+1} / {pages}</span><button disabled={page+1>=pages} onClick={()=>setPage(page+1)} aria-label="Page suivante">›</button></nav>
@@ -612,7 +621,7 @@ function BadgeCatalogue({owned}:{owned:string[]}) {
           </button>;
         })}
       </div>
-      {selected && <p className="badge-info" aria-live="polite"><b>#{selected.number} {selected.name}</b> · {types[selected.kind]} · {selected.cost} EN <TypeChips elements={[selected.element||badgeElement(selected)]}/></p>}
+      {selected && <p className="badge-info" aria-live="polite"><b>#{selected.number} {selected.name}</b> · {types[selected.kind]} · {selected.cost} EN · <PinRankInfo pin={selected}/> <TypeChips elements={[selected.element||badgeElement(selected)]}/></p>}
       <nav aria-label="Pages du catalogue"><button disabled={!page} aria-label="Page précédente" onClick={()=>move(-1)}>‹</button><span aria-live="polite">{page+1} / {pages}</span><button disabled={page+1>=pages} aria-label="Page suivante" onClick={()=>move(1)}>›</button></nav>
       <button onClick={()=>setOpen(false)}>Fermer</button>
       <small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small>
@@ -999,14 +1008,14 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onReach, o
     const steps=turnOrder(team,enemies,turn);
     const choices={...plans};
     let fighters=team.map(f=>({...f})),monsters=enemies.map(e=>({...e})),en=energy-reserved,sync=groove;
-    const shields=new Set<string>();
+    const shields=new Map<string,number>();
     const performed=new Set<string>();
     const drops:Pin[]=[];
     let xp=0;
     const pause=()=>new Promise(resolve=>setTimeout(resolve,700));
     const publish=()=>{setTeam([...fighters]);setEnemies([...monsters]);setEnergy(en);setGroove(sync);};
     const healParty=(amount:number)=>{fighters=fighters.map(f=>f.hp>0?{...f,hp:Math.min(f.maxHp,f.hp+amount)}:f);};
-    const hasPassive=(pattern:RegExp)=>fighters.some(f=>f.hp>0&&(loadout[f.name]||[]).some(id=>pattern.test(psychs[id].psych)));
+    const passiveBonus=(pattern:RegExp,base:number)=>Math.max(0,...fighters.filter(f=>f.hp>0).flatMap(f=>(loadout[f.name]||[]).map(id=>psychs[id]).filter(pin=>pattern.test(pin.psych)).map(pin=>base*pinRankMultiplier(pin))));
     setBusy(true);setQueue(steps);setEnergy(en);
     for(let index=0;index<steps.length;index++){
       if(token!==generation.current)return;
@@ -1018,7 +1027,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onReach, o
         if(attacker.hp<=0)continue;
         const target=fighters.find(f=>f.name===step.target&&f.hp>0)||fighters.find(f=>f.hp>0)!;
         const attackType=enemyElements[attacker.kind][0],scale=effectiveness(attackType,characterElements[target.name]);
-        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:typedDamage(Math.max(3,Math.round(attacker.attack*(shields.has(target.name)?.45:1))),attackType,characterElements[target.name]);
+        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:typedDamage(Math.max(3,Math.round(attacker.attack*(1-(shields.get(target.name)||0)))),attackType,characterElements[target.name]);
         setHitFeedback({side:"ally",target:target.name,label:scale===0?"Sans effet":`${damage} PV · ${affinityText(scale)}`});
         fighters=fighters.map(f=>f.name===target.name?{...f,hp:Math.max(0,f.hp-damage)}:f);
         sync=Math.min(100,sync+12);
@@ -1030,7 +1039,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onReach, o
         performed.add(fighter.name);
         setActor(fighter.name);
         if(plan.kind==="guard"){
-          shields.add(fighter.name);en=Math.min(3,en+1);setActiveAction("guard");
+          shields.set(fighter.name,Math.max(shields.get(fighter.name)||0,.55));en=Math.min(3,en+1);setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         }else if(plan.kind==="burst"){
           sync=0;monsters=monsters.map(e=>({...e,hp:Math.max(0,e.hp-typedDamage(58,"normal",enemyElements[e.kind]))}));setActiveAction("burst");
@@ -1038,22 +1047,22 @@ function Battle({ initialTeam, loadout, coins, onDrops, onExperience, onReach, o
         }else{
           const pin=psychs[plan.pin!];
           if(pin.kind==="heal"){
-            const amount=Math.max(1,Math.round((fighter.mag||1)*pin.power/50*(hasPassive(/^Cure Boost/)?1.3:1)));
+            const amount=scaledPinEffect(pin,(fighter.mag||1)*pin.power/50*(1+passiveBonus(/^Cure Boost/,.3)));
             healParty(amount);setActiveAction("heal");setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
           }else if(pin.kind==="guard"||pin.kind==="support"){
-            fighters.filter(f=>f.hp>0).forEach(f=>shields.add(f.name));
+            fighters.filter(f=>f.hp>0).forEach(f=>shields.set(f.name,Math.max(shields.get(f.name)||0,pinShieldReduction(pin))));
             if(pin.kind==="support"){
-              if(/Turbo|Supply/.test(pin.psych))en=Math.min(3,en+2);
-              else if(/Cure Boost|Subconscious|Life/.test(pin.psych))healParty(Math.ceil((fighter.mag||1)/2));
-              else sync=Math.min(100,sync+18);
+              if(/Turbo|Supply/.test(pin.psych))en=Math.min(3,en+scaledPinEffect(pin,2));
+              else if(/Cure Boost|Subconscious|Life/.test(pin.psych))healParty(scaledPinEffect(pin,(fighter.mag||1)/2));
+              else sync=Math.min(100,sync+scaledPinEffect(pin,18));
             }
             setActiveAction("guard");setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           }else{
             const target=monsters.find(e=>e.id===plan.target&&e.hp>0)||monsters.find(e=>e.hp>0)!;
             const physical=pin.kind==="physical";
-            const amount=Math.round((physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100));
+            const amount=scaledPinEffect(pin,(physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100));
             const scale=effectiveness(pin.element!,enemyElements[target.kind]);
-            const damage=typedDamage(Math.max(1,Math.round(amount*(hasPassive(/^Resonance/)?1.15:1))+Math.floor(Math.random()*7)-3),pin.element!,enemyElements[target.kind]);
+            const damage=typedDamage(Math.max(1,Math.round(amount*(1+passiveBonus(/^Resonance/,.15)))+Math.floor(Math.random()*7)-3),pin.element!,enemyElements[target.kind]);
             setHitFeedback({side:"enemy",target:String(target.id),label:scale===0?"Sans effet":`${damage} dégâts · ${affinityText(scale)}`});
             monsters=monsters.map(e=>e.id===target.id?{...e,hp:Math.max(0,e.hp-damage)}:e);
             if(pin.drain)healParty(Math.ceil(damage/4));

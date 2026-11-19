@@ -472,6 +472,30 @@ function Sprite({
     "aria-label": fighter.name
   });
 }
+const pinRankScales = {
+  E: .8,
+  D: .9,
+  C: 1,
+  B: 1.15,
+  A: 1.3,
+  Reaper: 1.45,
+  Angel: 1.6
+};
+function pinRankMultiplier(pin) {
+  return pinRankScales[pin.grade || ""] ?? 1;
+}
+function scaledPinEffect(pin, base) {
+  return base > 0 ? Math.max(1, Math.round(base * pinRankMultiplier(pin))) : 0;
+}
+function pinShieldReduction(pin) {
+  return Math.min(.75, .55 * pinRankMultiplier(pin));
+}
+function PinRankInfo({
+  pin
+}) {
+  const label = pin.grade && pin.grade !== "---" ? `Classe ${pin.grade}` : "Sans classe";
+  return React.createElement("span", null, label, " \xB7 Effets \xD7", pinRankMultiplier(pin).toLocaleString("fr-FR"));
+}
 const basePsych = {
   NEKU: "pin266",
   SHIKI: "groove-pawn",
@@ -1158,7 +1182,9 @@ function RewardReveal({
     fighter: fighter
   })), React.createElement("div", {
     className: "reward-facts"
-  }, pin ? React.createElement(React.Fragment, null, React.createElement("b", null, pin.grade === "---" ? "Sans classe" : `Classe ${pin.grade}`), React.createElement("span", null, uses[pin.kind], " \xB7 ", pin.cost, " EN")) : "rank" in draw && React.createElement(React.Fragment, null, React.createElement(RankBadge, {
+  }, pin ? React.createElement(React.Fragment, null, React.createElement("b", null, React.createElement(PinRankInfo, {
+    pin: pin
+  })), React.createElement("span", null, uses[pin.kind], " \xB7 ", pin.cost, " EN")) : "rank" in draw && React.createElement(React.Fragment, null, React.createElement(RankBadge, {
     level: draw.rank
   }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue", " \xB7 ", psychs[basePsych[draw.name]].name.replace(" (Pin)", ""))))), React.createElement("div", {
     className: "reveal-footer"
@@ -1259,7 +1285,9 @@ function PsychEquipment({
     });
   })), inspect && React.createElement("p", {
     className: "badge-info"
-  }, React.createElement("b", null, inspect.name.replace(" (Pin)", "")), " \xB7 ", types[inspect.kind], " \xB7 ", inspect.cost, " EN ", React.createElement(TypeChips, {
+  }, React.createElement("b", null, inspect.name.replace(" (Pin)", "")), " \xB7 ", types[inspect.kind], " \xB7 ", inspect.cost, " EN \xB7 ", React.createElement(PinRankInfo, {
+    pin: inspect
+  }), " ", React.createElement(TypeChips, {
     elements: [inspect.element || badgeElement(inspect)]
   }), equippedBy(profile, name, inspect.id) && React.createElement("span", null, " \xB7 \xC9quip\xE9 par ", equippedBy(profile, name, inspect.id))), draft.length === 3 && React.createElement("p", {
     className: "equipment-help"
@@ -1335,7 +1363,9 @@ function BadgeCatalogue({
   })), selected && React.createElement("p", {
     className: "badge-info",
     "aria-live": "polite"
-  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN ", React.createElement(TypeChips, {
+  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN \xB7 ", React.createElement(PinRankInfo, {
+    pin: selected
+  }), " ", React.createElement(TypeChips, {
     elements: [selected.element || badgeElement(selected)]
   })), React.createElement("nav", {
     "aria-label": "Pages du catalogue"
@@ -2152,7 +2182,7 @@ function Battle({
       })),
       en = energy - reserved,
       sync = groove;
-    const shields = new Set();
+    const shields = new Map();
     const performed = new Set();
     const drops = [];
     let xp = 0;
@@ -2169,7 +2199,7 @@ function Battle({
         hp: Math.min(f.maxHp, f.hp + amount)
       } : f);
     };
-    const hasPassive = pattern => fighters.some(f => f.hp > 0 && (loadout[f.name] || []).some(id => pattern.test(psychs[id].psych)));
+    const passiveBonus = (pattern, base) => Math.max(0, ...fighters.filter(f => f.hp > 0).flatMap(f => (loadout[f.name] || []).map(id => psychs[id]).filter(pin => pattern.test(pin.psych)).map(pin => base * pinRankMultiplier(pin))));
     setBusy(true);
     setQueue(steps);
     setEnergy(en);
@@ -2188,7 +2218,7 @@ function Battle({
         const target = fighters.find(f => f.name === step.target && f.hp > 0) || fighters.find(f => f.hp > 0);
         const attackType = enemyElements[attacker.kind][0],
           scale = effectiveness(attackType, characterElements[target.name]);
-        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(attacker.attack * (shields.has(target.name) ? .45 : 1))), attackType, characterElements[target.name]);
+        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(attacker.attack * (1 - (shields.get(target.name) || 0)))), attackType, characterElements[target.name]);
         setHitFeedback({
           side: "ally",
           target: target.name,
@@ -2207,7 +2237,7 @@ function Battle({
         performed.add(fighter.name);
         setActor(fighter.name);
         if (plan.kind === "guard") {
-          shields.add(fighter.name);
+          shields.set(fighter.name, Math.max(shields.get(fighter.name) || 0, .55));
           en = Math.min(3, en + 1);
           setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
@@ -2222,23 +2252,23 @@ function Battle({
         } else {
           const pin = psychs[plan.pin];
           if (pin.kind === "heal") {
-            const amount = Math.max(1, Math.round((fighter.mag || 1) * pin.power / 50 * (hasPassive(/^Cure Boost/) ? 1.3 : 1)));
+            const amount = scaledPinEffect(pin, (fighter.mag || 1) * pin.power / 50 * (1 + passiveBonus(/^Cure Boost/, .3)));
             healParty(amount);
             setActiveAction("heal");
             setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
           } else if (pin.kind === "guard" || pin.kind === "support") {
-            fighters.filter(f => f.hp > 0).forEach(f => shields.add(f.name));
+            fighters.filter(f => f.hp > 0).forEach(f => shields.set(f.name, Math.max(shields.get(f.name) || 0, pinShieldReduction(pin))));
             if (pin.kind === "support") {
-              if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + 2);else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(Math.ceil((fighter.mag || 1) / 2));else sync = Math.min(100, sync + 18);
+              if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + scaledPinEffect(pin, 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(scaledPinEffect(pin, (fighter.mag || 1) / 2));else sync = Math.min(100, sync + scaledPinEffect(pin, 18));
             }
             setActiveAction("guard");
             setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           } else {
             const target = monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0);
             const physical = pin.kind === "physical";
-            const amount = Math.round((physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
+            const amount = scaledPinEffect(pin, (physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
             const scale = effectiveness(pin.element, enemyElements[target.kind]);
-            const damage = typedDamage(Math.max(1, Math.round(amount * (hasPassive(/^Resonance/) ? 1.15 : 1)) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]);
+            const damage = typedDamage(Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]);
             setHitFeedback({
               side: "enemy",
               target: String(target.id),
