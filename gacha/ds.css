@@ -1,4 +1,4 @@
-/* Shibuya handheld display */
+﻿/* Shibuya handheld display */
 .game-shell {
   --ink: #131527;
   --rim: #655a8b;
@@ -71,3 +71,18 @@
 .section-label { border-bottom: 2px solid var(--rim); padding-inline: 8px; }
 .actions button, .reward-grid button { border: 2px solid #665d80; background: #282638; box-shadow: inset 1px 1px #837994; }
 .game-shell :focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+
+.bingo-stage { display:grid; place-items:center; padding:12px 0 34px; background:radial-gradient(ellipse at center,#50465d,#161523 72%); }
+.bingo-machine { position:relative; width:clamp(112px,24vw,160px); }
+.bingo-body { display:block; width:100%; }
+.bingo-crank { position:absolute; left:28.125%; top:60.55%; width:43.75%; aspect-ratio:1; padding:0; border:0; border-radius:50%; background:transparent url("./assets/bingo/crank.webp") center / contain no-repeat; cursor:pointer; }
+.bingo-crank:enabled:hover { filter:brightness(1.25); }
+.bingo-crank.turning { animation:bingo-turn 1.65s ease-in-out both; }
+@keyframes bingo-turn { to { transform:rotate(1080deg); } }
+.bingo-ball { position:absolute; width:21%; aspect-ratio:1; left:39.5%; top:84%; border-radius:50%; background:linear-gradient(165deg,transparent 45%,#322332 46% 52%,#f5e4c0 53%),radial-gradient(circle at 33% 25%,#fff0bd,#ed7138 48%,#85334d); box-shadow:inset -2px -3px 4px #221b354d; animation:bingo-drop .65s ease-in both; }
+@keyframes bingo-drop { from { transform:translateY(-10%) scale(.35); opacity:0; } 25% { opacity:1; } 78% { transform:translateY(113%) scale(1); } 89% { transform:translateY(92%); } to { transform:translateY(110%); } }
+.rank-badge { height:32px; width:32px; object-fit:contain; }
+.bingo-member { display:flex; align-items:center; gap:10px; margin:8px 0; }
+.bingo-member button { margin-left:auto; }
+@media (prefers-reduced-motion:reduce) { .bingo-crank.turning,.bingo-ball { animation-duration:.01s; } }

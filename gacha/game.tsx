@@ -174,7 +174,11 @@ const psychs = {
 };
 type Psych = keyof typeof psychs;
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
-type Profile = { owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
+const ranks = ["E", "D", "C", "B", "A", "etoile"];
+function RankBadge({ level }: { level: number }) {
+  return <img className="rank-badge" src={`./assets/bingo/rang-${ranks[level]}.webp`} alt={`Rang ${level === 5 ? "étoile" : ranks[level]}`} />;
+}
+type Profile = { levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function loadProfile(): Profile {
@@ -182,15 +186,19 @@ function loadProfile(): Profile {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
     const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped, loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))), coins: saved.coins };
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return { owned, equipped,
+      levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
+      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))), coins: saved.coins };
   } catch {}
-  return { owned: [], equipped: [], loadout: {}, coins: 180 };
+  return { levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
 }
 
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState("");
+  const [phase, setPhase] = useState<"ready" | "spin" | "drop">("ready");
+  const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
     const sync = (event: StorageEvent) => {
@@ -200,23 +208,35 @@ function App() {
     return () => window.removeEventListener("storage", sync);
   }, []);
   const setProfile = (update: (old: Profile) => Profile) => {
-    let next = update(profile);
-    try {
-      next = update(localStorage.getItem(profileKey) ? loadProfile() : profile);
-      localStorage.setItem(profileKey, JSON.stringify(next));
-      setSaveError(false);
-    } catch { setSaveError(true); }
+    let current = profile;
+    try { if (localStorage.getItem(profileKey)) current = loadProfile(); } catch {}
+    const next = update(current);
+    try { localStorage.setItem(profileKey, JSON.stringify(next)); setSaveError(false); }
+    catch { setSaveError(true); }
     displayProfile(next);
   };
 
-  const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
   const price = profile.owned.length < 2 ? 0 : 100;
+  const complete = characterRoster.every(f => profile.levels[f.name] === 5);
   const recruit = () => {
-    if (!missing.length || profile.coins < price) return;
-    const recruit = missing[Math.floor(Math.random() * missing.length)];
-    setProfile(p => p.owned.includes(recruit.name) || p.coins < price ? p : ({ ...p, coins: p.coins - price, owned: [...p.owned, recruit.name] }));
-    setResult(recruit.name);
+    if (turning.current) return;
+    let drawn = "";
+    setProfile(p => {
+      const cost = p.owned.length < 2 ? 0 : 100;
+      const missing = characterRoster.filter(f => !p.owned.includes(f.name));
+      const pool = missing.length ? missing : characterRoster.filter(f => p.levels[f.name] < 5);
+      if (!pool.length || p.coins < cost) return p;
+      drawn = pool[Math.floor(Math.random() * pool.length)].name;
+      const roll = Math.random();
+      const rolled = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
+      const level = missing.length ? rolled : Math.max(rolled, p.levels[drawn] + 1);
+      return { ...p, coins: p.coins - cost, owned: missing.length ? [...p.owned, drawn] : p.owned,
+        levels: { ...p.levels, [drawn]: level } };
+    });
+    if (drawn) { turning.current = true; setResult(drawn); setPhase("spin"); }
   };
+  const awaken = (name: string) => setProfile(p => p.levels[name] === 5 && !p.awakened.includes(name)
+    ? { ...p, awakened: [...p.awakened, name] } : p);
   const equip = (name: string) => {
     const selected = profile.equipped.includes(name);
     if (!profile.owned.includes(name) || (!selected && profile.equipped.length >= 2)) return;
@@ -228,12 +248,26 @@ function App() {
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Gacha personnages</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
-    {missing.length > 0 && <><p>Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits.</p>
-      <button className="pull-button" disabled={profile.coins < price} onClick={recruit}>
-        {price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces"}</button></>}
-    <div aria-live="polite">{result && <div key={result} className="recruit-reveal">
-      <Sprite fighter={characterRoster.find(f => f.name === result)!}/><strong>{result}</strong><span>Recrue débloquée</span>
+    <div className="bingo-stage"><div className="bingo-machine">
+      <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai" />
+      <button className={`bingo-crank ${phase === "spin" ? "turning" : ""}`} onClick={recruit}
+        disabled={phase !== "ready" || complete || profile.coins < price}
+        aria-label={price ? "Tourner la manivelle pour 100 pièces" : "Tourner la manivelle gratuitement"}
+        onAnimationEnd={e => { if (e.animationName === "bingo-turn") setPhase("drop"); }}/>
+      {phase === "drop" && <span className="bingo-ball" onAnimationEnd={() => {
+        turning.current = false; setPhase("ready");
+      }} />}
+    </div></div>
+    <p>{complete ? "Collection au rang étoile." : price > profile.coins ? "Il faut 100 pièces pour tirer." :
+      price ? "Tourne la manivelle · 100 pièces" : "Tourne la manivelle · Tirage gratuit"}</p>
+    <div aria-live="polite">{result && phase === "ready" && <div key={result} className="recruit-reveal">
+      <Sprite fighter={characterRoster.find(f => f.name === result)!}/><strong>{result}</strong><RankBadge level={profile.levels[result]}/>
     </div>}</div>
+    {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
+      <RankBadge level={profile.levels[name]}/><b>{name}</b>
+      {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&
+      <button onClick={() => awaken(name)}>Éveiller · +20 PV</button>}
+    </div>)}
     {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
   </section></main>;
   return <main className="game-shell party-lobby"><section><h1>Préparer le duo</h1>
@@ -244,7 +278,7 @@ function App() {
       return <button key={f.name} aria-pressed={selected} onClick={() => equip(f.name)}
         disabled={!owned || (!selected && profile.equipped.length === 2)}>
         <Sprite fighter={f}/><strong>{f.name}</strong>
-        <span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
+        <span>{owned && <RankBadge level={profile.levels[f.name]}/>}</span><span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
       </button>;
     })}</div>
     {profile.equipped.map(name => <label className="psych-choice" key={name}>Psych de {name}
@@ -256,7 +290,7 @@ function App() {
       </select></label>)}
     {profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && <p>Équipe au moins un psych offensif.</p>}
     <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal")}
-      onClick={() => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)!))}>Lancer le roguelike</button>
+      onClick={() => setParty(profile.equipped.map(name => { const f = characterRoster.find(f => f.name === name)!; return profile.awakened.includes(name) ? { ...f, hp: f.hp + 20, maxHp: f.maxHp + 20 } : f; }))}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }

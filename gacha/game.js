@@ -243,6 +243,16 @@ const psychs = {
   }
 };
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
+const ranks = ["E", "D", "C", "B", "A", "etoile"];
+function RankBadge({
+  level
+}) {
+  return React.createElement("img", {
+    className: "rank-badge",
+    src: `./assets/bingo/rang-${ranks[level]}.webp`,
+    alt: `Rang ${level === 5 ? "étoile" : ranks[level]}`
+  });
+}
 const profileKey = "chibi.reapers-run.party.v1";
 function loadProfile() {
   try {
@@ -252,11 +262,15 @@ function loadProfile() {
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return {
       owned,
       equipped,
+      levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
+      awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)),
       loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([, id]) => Object.hasOwn(psychs, String(id)))),
       coins: saved.coins
     };
   } catch {}
   return {
+    levels: {},
+    awakened: [],
     owned: [],
     equipped: [],
     loadout: {},
@@ -267,6 +281,8 @@ function App() {
   const [profile, displayProfile] = useState(loadProfile);
   const [party, setParty] = useState(null);
   const [result, setResult] = useState("");
+  const [phase, setPhase] = useState("ready");
+  const turning = React.useRef(false);
   const [saveError, setSaveError] = useState(false);
   useEffect(() => {
     const sync = event => {
@@ -276,9 +292,12 @@ function App() {
     return () => window.removeEventListener("storage", sync);
   }, []);
   const setProfile = update => {
-    let next = update(profile);
+    let current = profile;
     try {
-      next = update(localStorage.getItem(profileKey) ? loadProfile() : profile);
+      if (localStorage.getItem(profileKey)) current = loadProfile();
+    } catch {}
+    const next = update(current);
+    try {
       localStorage.setItem(profileKey, JSON.stringify(next));
       setSaveError(false);
     } catch {
@@ -286,18 +305,40 @@ function App() {
     }
     displayProfile(next);
   };
-  const missing = characterRoster.filter(f => !profile.owned.includes(f.name));
   const price = profile.owned.length < 2 ? 0 : 100;
+  const complete = characterRoster.every(f => profile.levels[f.name] === 5);
   const recruit = () => {
-    if (!missing.length || profile.coins < price) return;
-    const recruit = missing[Math.floor(Math.random() * missing.length)];
-    setProfile(p => p.owned.includes(recruit.name) || p.coins < price ? p : {
-      ...p,
-      coins: p.coins - price,
-      owned: [...p.owned, recruit.name]
+    if (turning.current) return;
+    let drawn = "";
+    setProfile(p => {
+      const cost = p.owned.length < 2 ? 0 : 100;
+      const missing = characterRoster.filter(f => !p.owned.includes(f.name));
+      const pool = missing.length ? missing : characterRoster.filter(f => p.levels[f.name] < 5);
+      if (!pool.length || p.coins < cost) return p;
+      drawn = pool[Math.floor(Math.random() * pool.length)].name;
+      const roll = Math.random();
+      const rolled = roll < .5 ? 0 : roll < .78 ? 1 : roll < .92 ? 2 : roll < .98 ? 3 : 4;
+      const level = missing.length ? rolled : Math.max(rolled, p.levels[drawn] + 1);
+      return {
+        ...p,
+        coins: p.coins - cost,
+        owned: missing.length ? [...p.owned, drawn] : p.owned,
+        levels: {
+          ...p.levels,
+          [drawn]: level
+        }
+      };
     });
-    setResult(recruit.name);
+    if (drawn) {
+      turning.current = true;
+      setResult(drawn);
+      setPhase("spin");
+    }
   };
+  const awaken = name => setProfile(p => p.levels[name] === 5 && !p.awakened.includes(name) ? {
+    ...p,
+    awakened: [...p.awakened, name]
+  } : p);
   const equip = name => {
     const selected = profile.equipped.includes(name);
     if (!profile.owned.includes(name) || !selected && profile.equipped.length >= 2) return;
@@ -321,18 +362,45 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), missing.length > 0 && React.createElement(React.Fragment, null, React.createElement("p", null, "Tire un personnage parmi ceux qui te manquent. Les deux premiers tirages sont gratuits."), React.createElement("button", {
-    className: "pull-button",
-    disabled: profile.coins < price,
-    onClick: recruit
-  }, price === 0 ? "Tirage gratuit" : "Tirer · 100 pièces")), React.createElement("div", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Gacha personnages"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement("div", {
+    className: "bingo-stage"
+  }, React.createElement("div", {
+    className: "bingo-machine"
+  }, React.createElement("img", {
+    className: "bingo-body",
+    src: "./assets/bingo/machine.webp",
+    alt: "Bingo Kai"
+  }), React.createElement("button", {
+    className: `bingo-crank ${phase === "spin" ? "turning" : ""}`,
+    onClick: recruit,
+    disabled: phase !== "ready" || complete || profile.coins < price,
+    "aria-label": price ? "Tourner la manivelle pour 100 pièces" : "Tourner la manivelle gratuitement",
+    onAnimationEnd: e => {
+      if (e.animationName === "bingo-turn") setPhase("drop");
+    }
+  }), phase === "drop" && React.createElement("span", {
+    className: "bingo-ball",
+    onAnimationEnd: () => {
+      turning.current = false;
+      setPhase("ready");
+    }
+  }))), React.createElement("p", null, complete ? "Collection au rang étoile." : price > profile.coins ? "Il faut 100 pièces pour tirer." : price ? "Tourne la manivelle · 100 pièces" : "Tourne la manivelle · Tirage gratuit"), React.createElement("div", {
     "aria-live": "polite"
-  }, result && React.createElement("div", {
+  }, result && phase === "ready" && React.createElement("div", {
     key: result,
     className: "recruit-reveal"
   }, React.createElement(Sprite, {
     fighter: characterRoster.find(f => f.name === result)
-  }), React.createElement("strong", null, result), React.createElement("span", null, "Recrue d\xE9bloqu\xE9e"))), saveError && React.createElement("p", {
+  }), React.createElement("strong", null, result), React.createElement(RankBadge, {
+    level: profile.levels[result]
+  }))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
+    className: "bingo-member",
+    key: name
+  }, React.createElement(RankBadge, {
+    level: profile.levels[name]
+  }), React.createElement("b", null, name), profile.awakened.includes(name) ? React.createElement("span", null, "\xC9veill\xE9 \xB7 +20 PV") : profile.levels[name] === 5 && React.createElement("button", {
+    onClick: () => awaken(name)
+  }, "\xC9veiller \xB7 +20 PV"))), saveError && React.createElement("p", {
     role: "alert"
   }, "Sauvegarde locale indisponible.")));
   return React.createElement("main", {
@@ -352,7 +420,9 @@ function App() {
       disabled: !owned || !selected && profile.equipped.length === 2
     }, React.createElement(Sprite, {
       fighter: f
-    }), React.createElement("strong", null, f.name), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
+    }), React.createElement("strong", null, f.name), React.createElement("span", null, owned && React.createElement(RankBadge, {
+      level: profile.levels[f.name]
+    })), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
   })), profile.equipped.map(name => React.createElement("label", {
     className: "psych-choice",
     key: name
@@ -377,7 +447,14 @@ function App() {
   }, item.name, " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => profile.loadout[n] === "heal") && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
     className: "pull-button",
     disabled: profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => profile.loadout[n] === "heal"),
-    onClick: () => setParty(profile.equipped.map(name => characterRoster.find(f => f.name === name)))
+    onClick: () => setParty(profile.equipped.map(name => {
+      const f = characterRoster.find(f => f.name === name);
+      return profile.awakened.includes(name) ? {
+        ...f,
+        hp: f.hp + 20,
+        maxHp: f.maxHp + 20
+      } : f;
+    }))
   }, "Lancer le roguelike"), saveError && React.createElement("p", {
     role: "alert"
   }, "La sauvegarde locale est indisponible dans ce navigateur.")));
