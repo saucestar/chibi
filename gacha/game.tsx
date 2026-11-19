@@ -179,14 +179,14 @@ function PinIcon({ pin }: {pin:Pin}) {
 const portals = { shibuya:"Shibuya", partners:"Partenaires" };
 function PortalCarousel({value,onChange,locked}: {value:string; onChange:(id:string)=>void; locked:boolean}) {
   const track=React.useRef<HTMLDivElement>(null);
-  const drag=React.useRef<{x:number; left:number; index:number}|null>(null);
+  const drag=React.useRef<{y:number; top:number; index:number}|null>(null);
   const entries=Object.entries(portals);
   const index=entries.findIndex(([id])=>id===value);
   function choose(target:number) {
     const el=track.current;
     if(locked || !el) return;
     const next=Math.max(0,Math.min(entries.length-1,target));
-    el.scrollTo({left:next*el.clientWidth,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
+    el.scrollTo({top:next*el.clientHeight,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
   }
   function endDrag(e:React.PointerEvent<HTMLDivElement>) {
     if(!drag.current) return;
@@ -194,35 +194,38 @@ function PortalCarousel({value,onChange,locked}: {value:string; onChange:(id:str
     drag.current=null;
     const el=e.currentTarget;
     delete el.dataset.dragging;
-    const distance=start.x-e.clientX;
-    const step=e.type==="pointerup" && Math.abs(distance)>Math.min(50,el.clientWidth*.15)?Math.sign(distance):0;
+    const distance=start.y-e.clientY;
+    const step=e.type==="pointerup" && Math.abs(distance)>Math.min(50,el.clientHeight*.15)?Math.sign(distance):0;
     choose(start.index+step);
   }
   return <div className="portal-carousel" role="region" aria-label="Portails gacha">
     <div className="portal-track" ref={track} data-locked={locked} tabIndex={locked?-1:0} aria-label="Choisir un portail"
-      onKeyDown={e=>{if(e.key==="ArrowLeft" || e.key==="ArrowRight"){e.preventDefault();choose(index+(e.key==="ArrowLeft"?-1:1));}}}
+      onKeyDown={e=>{if(e.key==="ArrowUp" || e.key==="ArrowDown"){e.preventDefault();choose(index+(e.key==="ArrowUp"?-1:1));}}}
       onPointerDown={e=>{
         if(locked || e.pointerType!=="mouse" || e.button!==0) return;
         const el=e.currentTarget;
-        drag.current={x:e.clientX,left:el.scrollLeft,index};
+        drag.current={y:e.clientY,top:el.scrollTop,index};
         el.dataset.dragging="true";
         el.setPointerCapture(e.pointerId);
       }}
-      onPointerMove={e=>{if(drag.current)e.currentTarget.scrollLeft=drag.current.left+drag.current.x-e.clientX;}}
+      onPointerMove={e=>{if(drag.current)e.currentTarget.scrollTop=drag.current.top+drag.current.y-e.clientY;}}
       onPointerUp={endDrag} onPointerCancel={endDrag}
       onScroll={e=>{
-        const el=e.currentTarget,active=entries[Math.round(el.scrollLeft/el.clientWidth)];
+        const el=e.currentTarget,active=entries[Math.round(el.scrollTop/el.clientHeight)];
         if(!locked && active) onChange(active[0]);
       }}>
       {entries.map(([id,title])=><div key={id} className={"portal-banner portal-"+id}>
+        {id==="shibuya" && <img className="first-week-cast" alt="" src="./assets/bingo/first-week-cast.webp"/>}
+        {id==="shibuya" && value===id && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+          <video className="portal-entrance" src="./assets/bingo/first-week-entrance.mp4" poster="./assets/bingo/first-week-art.webp" autoPlay muted playsInline onEnded={e=>{e.currentTarget.hidden=true;}} aria-hidden="true"/>}
         {id==="partners" && <div className="portal-cast" aria-hidden="true">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
         <strong>{id==="shibuya"?"First Week #1":title}</strong>
       </div>)}
     </div>
     <div className="portal-nav">
-      <button disabled={locked || index===0} aria-label="Portail précédent" onClick={()=>choose(index-1)}>‹</button>
+      <button disabled={locked || index===0} aria-label="Portail précédent" onClick={()=>choose(index-1)}>↑</button>
       <span aria-live="polite">{portals[value]} · {index+1} / {entries.length}</span>
-      <button disabled={locked || index===entries.length-1} aria-label="Portail suivant" onClick={()=>choose(index+1)}>›</button>
+      <button disabled={locked || index===entries.length-1} aria-label="Portail suivant" onClick={()=>choose(index+1)}>↓</button>
     </div>
   </div>;
 }

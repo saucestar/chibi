@@ -93,7 +93,7 @@
 .portal-nav span { font-size:14px; }
 .portal-nav button { min-width:42px; min-height:36px; font-size:20px; line-height:1; }
 .portal-nav button:disabled { opacity:.45; }
-.portal-track { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; overscroll-behavior-x:contain; scrollbar-width:thin; scrollbar-color:#897eae #eeecf3; border:1px solid var(--line); }
+.portal-track { display:flex; flex-direction:column; overflow-x:hidden; overflow-y:auto; scroll-snap-type:y mandatory; touch-action:pan-y; height:clamp(165px,44vw,285px); scrollbar-width:thin; scrollbar-color:#897eae #eeecf3; border:1px solid var(--line); }
 .portal-track[data-locked=true] { overflow:hidden; }
 .portal-banner { position:relative; isolation:isolate; overflow:hidden; flex:0 0 100%; min-width:0; height:132px; scroll-snap-align:start; display:flex; align-items:end; padding:14px; color:white; background:linear-gradient(90deg,#191632ec,#38335c99),url(./assets/game/battle-bg.jpg) center/cover; }
 .portal-partners { background:linear-gradient(108deg,#30203f,#60557e 63%,#b6a8c7); }
@@ -104,11 +104,11 @@
 
 .party-lobby section:has(.portal-carousel) { display:block; max-width:650px; }
 
-.portal-track { scrollbar-width:none; cursor:grab; user-select:none; }
-.portal-track::-webkit-scrollbar { display:none; }
+.portal-track { scrollbar-width:thin; cursor:grab; user-select:none; }
+.portal-track::-webkit-scrollbar { width:5px; }
 .portal-track[data-dragging=true] { scroll-snap-type:none; cursor:grabbing; }
-.portal-banner { box-sizing:border-box; height:auto; aspect-ratio:2/1; scroll-snap-stop:always; padding:clamp(12px,4vw,25px); }
-.portal-shibuya { background:linear-gradient(0deg,#17112ae6,transparent 55%),url(./assets/bingo/first-week-art.webp) center/cover; }
+.portal-banner { box-sizing:border-box; height:100%; min-height:100%; scroll-snap-stop:always; padding:clamp(12px,4vw,25px); }
+.portal-shibuya { background:linear-gradient(0deg,#17112ae6,transparent 55%),url(./assets/bingo/shibuya-city.webp) center/cover; }
 .portal-partners { background:linear-gradient(26deg,#17112a,#403357bf),url(./assets/game/battle-bg.jpg) center/cover; }
 .portal-banner strong { font:italic 500 clamp(26px,6vw,42px)/1 var(--title); color:#fff9eb; }
 .portal-cast { right:12%!important; bottom:16%!important; transform:scale(1.5); }
@@ -121,3 +121,9 @@
 .wish-commands strong { font:600 18px var(--title); }
 .wish-commands small { font-size:12px; }
 .wish-commands button:disabled { color:#646071; background:#e2dfe8; }
+
+.portal-entrance { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.portal-shibuya::after { content:""; position:absolute; inset:55% 0 0; background:linear-gradient(transparent,#17112acc); pointer-events:none; }
+.first-week-cast { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; animation:portal-breathe 3s ease-in-out .74s infinite alternate; }
+@keyframes portal-breathe { from { transform:scale(1); } to { transform:scale(1.012) translateY(-.65%); } }
+@media(prefers-reduced-motion:reduce){.first-week-cast { animation:none; }}

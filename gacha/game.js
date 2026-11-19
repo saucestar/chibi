@@ -267,7 +267,7 @@ function PortalCarousel({
     if (locked || !el) return;
     const next = Math.max(0, Math.min(entries.length - 1, target));
     el.scrollTo({
-      left: next * el.clientWidth,
+      top: next * el.clientHeight,
       behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
     });
   }
@@ -277,8 +277,8 @@ function PortalCarousel({
     drag.current = null;
     const el = e.currentTarget;
     delete el.dataset.dragging;
-    const distance = start.x - e.clientX;
-    const step = e.type === "pointerup" && Math.abs(distance) > Math.min(50, el.clientWidth * .15) ? Math.sign(distance) : 0;
+    const distance = start.y - e.clientY;
+    const step = e.type === "pointerup" && Math.abs(distance) > Math.min(50, el.clientHeight * .15) ? Math.sign(distance) : 0;
     choose(start.index + step);
   }
   return React.createElement("div", {
@@ -292,36 +292,51 @@ function PortalCarousel({
     tabIndex: locked ? -1 : 0,
     "aria-label": "Choisir un portail",
     onKeyDown: e => {
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
         e.preventDefault();
-        choose(index + (e.key === "ArrowLeft" ? -1 : 1));
+        choose(index + (e.key === "ArrowUp" ? -1 : 1));
       }
     },
     onPointerDown: e => {
       if (locked || e.pointerType !== "mouse" || e.button !== 0) return;
       const el = e.currentTarget;
       drag.current = {
-        x: e.clientX,
-        left: el.scrollLeft,
+        y: e.clientY,
+        top: el.scrollTop,
         index
       };
       el.dataset.dragging = "true";
       el.setPointerCapture(e.pointerId);
     },
     onPointerMove: e => {
-      if (drag.current) e.currentTarget.scrollLeft = drag.current.left + drag.current.x - e.clientX;
+      if (drag.current) e.currentTarget.scrollTop = drag.current.top + drag.current.y - e.clientY;
     },
     onPointerUp: endDrag,
     onPointerCancel: endDrag,
     onScroll: e => {
       const el = e.currentTarget,
-        active = entries[Math.round(el.scrollLeft / el.clientWidth)];
+        active = entries[Math.round(el.scrollTop / el.clientHeight)];
       if (!locked && active) onChange(active[0]);
     }
   }, entries.map(([id, title]) => React.createElement("div", {
     key: id,
     className: "portal-banner portal-" + id
-  }, id === "partners" && React.createElement("div", {
+  }, id === "shibuya" && React.createElement("img", {
+    className: "first-week-cast",
+    alt: "",
+    src: "./assets/bingo/first-week-cast.webp"
+  }), id === "shibuya" && value === id && !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement("video", {
+    className: "portal-entrance",
+    src: "./assets/bingo/first-week-entrance.mp4",
+    poster: "./assets/bingo/first-week-art.webp",
+    autoPlay: true,
+    muted: true,
+    playsInline: true,
+    onEnded: e => {
+      e.currentTarget.hidden = true;
+    },
+    "aria-hidden": "true"
+  }), id === "partners" && React.createElement("div", {
     className: "portal-cast",
     "aria-hidden": "true"
   }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
@@ -333,13 +348,13 @@ function PortalCarousel({
     disabled: locked || index === 0,
     "aria-label": "Portail pr\xE9c\xE9dent",
     onClick: () => choose(index - 1)
-  }, "\u2039"), React.createElement("span", {
+  }, "\u2191"), React.createElement("span", {
     "aria-live": "polite"
   }, portals[value], " \xB7 ", index + 1, " / ", entries.length), React.createElement("button", {
     disabled: locked || index === entries.length - 1,
     "aria-label": "Portail suivant",
     onClick: () => choose(index + 1)
-  }, "\u203A")));
+  }, "\u2193")));
 }
 const bases = {
   NEKU: [24, 32, 14],
