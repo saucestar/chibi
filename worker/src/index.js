@@ -2,7 +2,7 @@
 //
 // POST /session  { accessToken }  ->  { firebaseToken, user }
 // POST /yt/search { q }            ->  { items: [{ id, title, channel, length, sec }] }   (members only, see below)
-// POST /spotify   { ref }          ->  { name, tracks: [{ t, a, d }] }                     (members only)
+// POST /spotify   { ref }          ->  { name, tracks: [{ t, a, d }] }  Spotify or Apple Music (members only)
 //   The phone app (PWA) can't read YouTube / Spotify pages itself (the browser blocks it): the worker does.
 //   Both need "Authorization: Bearer <Firebase ID token>" of a signed-in member, checked with Google's keys.
 //   1. asks Discord who owns the OAuth access token            (GET /users/@me)
@@ -133,6 +133,7 @@ async function ytSearch(q) {
 
 // ---- public Spotify playlist / album: title + artists + duration of each track (from the embed page)
 async function spotify(ref) {
+  if (ref.indexOf('am/') === 0) return appleMusic(ref);
   const m = /^(playlist|album)\/([A-Za-z0-9]{10,40})$/.exec(ref);
   if (!m) throw new Error('lien Spotify non reconnu');
   const r = await fetch('https://open.spotify.com/embed/' + m[1] + '/' + m[2], { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
@@ -145,6 +146,34 @@ async function spotify(ref) {
   const tracks = (e.trackList || []).filter(t => t && t.title).slice(0, 300)
     .map(t => ({ t: t.title, a: String(t.subtitle || '').replace(/\u00a0/g, ' '), d: Math.round((t.duration || 0) / 1000) }));
   return { name: e.name || e.title || 'Spotify', tracks };
+}
+
+// ---- public Apple Music playlist / album ("am/<country>/<playlist|album>/<id>"): the page carries its tracks
+async function appleMusic(ref) {
+  const m = /^am\/([a-z]{2})\/(playlist|album)\/((?:pl\.)?[A-Za-z0-9.\-]{4,60})$/.exec(ref);
+  if (!m) throw new Error('lien Apple Music non reconnu');
+  const r = await fetch('https://music.apple.com/' + m[1] + '/' + m[2] + '/x/' + m[3], { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
+  if (!r.ok) throw new Error('Apple Music ' + r.status);
+  const html = await r.text();
+  const j = /<script type="application\/json" id="serialized-server-data">([\s\S]*?)<\/script>/.exec(html);
+  if (!j) throw new Error('playlist Apple Music illisible (privée ?)');
+  const tracks = [], seen = new Set();
+  const walk = o => {
+    if (!o || typeof o !== 'object' || tracks.length >= 300) return;
+    if (Array.isArray(o)) { for (const x of o) walk(x); return; }
+    if (o.title && o.artistName && typeof o.duration === 'number') {
+      const k = o.artistName + '|' + o.title;
+      if (!seen.has(k)) { seen.add(k); tracks.push({ t: String(o.title), a: String(o.artistName).replace(/ & /g, ', '), d: Math.round(o.duration / 1000) }); }
+      return;
+    }
+    for (const k in o) walk(o[k]);
+  };
+  walk(JSON.parse(j[1]));
+  const n = /<script[^>]*id="?schema:music-(?:playlist|album)"?[^>]*>([\s\S]*?)<\/script>/.exec(html);
+  let name = 'Apple Music';
+  try { if (n) name = JSON.parse(n[1]).name || name; } catch {}
+  if (!tracks.length) throw new Error('aucun titre lisible dans cette playlist Apple Music');
+  return { name, tracks };
 }
 
 function list(s) { return String(s || '').split(',').map(x => x.trim()).filter(Boolean); }
