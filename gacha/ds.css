@@ -224,13 +224,46 @@
   display:grid; grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center; justify-items:center; gap:8px; padding:16px;
   min-height:235px; aspect-ratio:1; text-align:center; isolation:isolate; position:relative; overflow:hidden;
-  border-radius:16px; border:1px solid #cbab74; color:#211c31;
-  background:radial-gradient(circle,#fff4 0%,transparent 68%),repeating-conic-gradient(from -5deg,#fff8e8 0 10deg,#f1bb54 10deg 20deg);
+  --reveal-ink:#181329;
+  --reveal-light:#fff7da;
+  border-radius:16px; border:1px solid #bc9c67; color:var(--reveal-light);
+  background:radial-gradient(ellipse at center,#fff2b5 0%,#f9c06a 8%,#a26449 20%,#48304c 40%,#211b34 68%,#110e20 100%);
+  box-shadow:inset 0 0 0 1px #ffebba28;
 }
-.reward-sun h3 { align-self:end; margin:0; font:700 clamp(22px,6vw,36px)/1.05 var(--title); text-shadow:0 2px 6px #fff; overflow-wrap:anywhere; }
-.reward-object { display:grid; place-items:center; width:100px; height:108px; filter:drop-shadow(0 3px 3px #4b315c42); }
+.reward-sun::before,.reward-sun::after {
+  content:""; position:absolute; pointer-events:none; z-index:-1;
+}
+.reward-sun::before {
+  inset:-26%; opacity:.85; filter:blur(1.8px);
+  background:repeating-conic-gradient(from 5deg,transparent 0deg 7deg,#ffc76629 9deg,#fff0bcbd 11deg,#ffd27a55 13deg,transparent 16deg 22deg);
+  mask-image:radial-gradient(circle,#000 3%,#000c 24%,#0004 43%,transparent 62%);
+}
+.reward-sun::after {
+  inset:0;
+  background:radial-gradient(ellipse at center,#fffbe3 0%,#fff4bcaa 5%,#ffd78442 14%,transparent 33%);
+}
+.reward-sun h3 {
+  align-self:end; margin:0; max-width:100%; padding:5px 16px 7px;
+  color:var(--reveal-light); background:var(--reveal-ink); border-radius:12px;
+  font:750 clamp(23px,6vw,34px)/1.12 "Segoe UI",Arial,sans-serif;
+  letter-spacing:.025em; text-wrap:balance; overflow-wrap:anywhere;
+  text-shadow:0 0 7px #ffe6a982,0 0 16px #ffc26042;
+  box-shadow:inset 0 -1px #e8ca8a8a,0 4px 16px #130d23a3;
+}
+.reward-object { display:grid; place-items:center; width:100px; height:108px; filter:drop-shadow(0 1px 2px #23152b) drop-shadow(0 0 6px #ffda81aa); }
 .reward-object > i { transform:scale(2.8); }
-.reward-facts { align-self:start; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px; background:#fff8eced; border-radius:12px; padding:5px 11px; font-size:14px; }
+.reward-facts {
+  align-self:start; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px;
+  color:#fcfaff; background:var(--reveal-ink); border:1px solid #98839b;
+  border-radius:12px; padding:6px 12px; font:600 14px/1.35 "Segoe UI",Arial,sans-serif;
+}
+.reward-facts b { color:#ffe3a1; }
+@media(prefers-reduced-motion:no-preference) {
+  .reward-sun::before { animation:reward-rays 32s linear infinite; }
+  .reward-sun::after { animation:reward-halo 2.6s ease-in-out infinite alternate; }
+  @keyframes reward-rays { to { transform:rotate(360deg); } }
+  @keyframes reward-halo { from { opacity:.56; } to { opacity:1; } }
+}
 .reveal-footer { display:flex; justify-content:center; align-items:center; gap:12px; margin-top:12px; }
 .reveal-footer button { padding:8px 20px; border:1px solid var(--line); border-radius:12px; background:var(--silver); color:var(--ink); }
 @media(prefers-reduced-motion:no-preference){.reward-object { animation:prize-arrive .35s var(--ease) both; } @keyframes prize-arrive { from { opacity:0; scale:.82; } to { opacity:1; scale:1; } }}
