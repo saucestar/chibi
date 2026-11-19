@@ -196,3 +196,26 @@
 .actions button .action-icon {
   grid-row:auto; justify-self:center; margin:0; width:28px; height:28px;
 }
+
+.party-lobby .badge-book {
+  width:min(92vw,460px); color:white; text-align:center;
+  background:linear-gradient(180deg,#1a173966,#131125bb),url(./assets/pins/shibuya-catalogue.jpg) center / cover;
+}
+.party-lobby .badge-book h2 { color:white; font:900 clamp(32px,8vw,48px)/1 sans-serif; text-transform:uppercase; letter-spacing:.04em; margin:0 0 6px; text-shadow:0 2px 8px #171327; }
+.badge-counter,.badge-book small { text-shadow:0 1px 4px #171327; }
+.badge-slots { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:clamp(4px,1.2vw,10px); padding:clamp(8px,2vw,16px); margin:12px 0; border-radius:16px; background:#cbc6de81; border:1px solid #ddd7eb90; }
+.badge-book .badge-slot,.party-lobby .badge-book button.badge-slot {
+  position:relative; display:grid; place-items:center; container-type:inline-size; aspect-ratio:1; min-width:0; padding:0; border:1px solid #b5acc452; border-radius:9px; background:#211e32df;
+}
+.badge-book .badge-slot[aria-pressed=true]::before { content:none; }
+.party-lobby .badge-book .badge-slot[aria-pressed=true] { border-color:#e4d8ff; box-shadow:var(--halo); }
+.badge-art { width:84cqw; height:84cqw; background-size:auto 100%; background-repeat:no-repeat; image-rendering:pixelated; }
+.badge-book nav { display:flex; align-items:center; justify-content:center; gap:1em; margin:10px 0; }
+.badge-book nav button { min-width:40px; }
+.party-lobby .badge-book .badge-info { color:white; background:#201c37e8; border-radius:8px; padding:8px; }
+.badge-book small { display:block; margin-top:8px; font-size:10px; }
+
+.team-slots { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+.party-lobby .team-slots button { display:grid; position:relative; place-content:center; justify-items:center; min-height:125px; gap:4px; }
+.team-slots button > span:only-child { font:32px var(--title); color:#62568c; }
+.team-slots .rank-badge { position:absolute; top:8px; right:8px; width:23px; height:23px; }

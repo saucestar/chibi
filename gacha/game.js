@@ -358,7 +358,10 @@ function loadProfile() {
   try {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
-    const equipped = [...new Set(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
+    const equipped = [0, 1].map(i => {
+      const name = saved.equipped?.[i];
+      return owned.includes(name) && (i === 0 || name !== saved.equipped[0]) ? name : "";
+    });
     const pins = [...new Set(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id => psychs[id]?.row >= 0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({
@@ -382,7 +385,7 @@ function loadProfile() {
     levels: {},
     awakened: [],
     owned: [],
-    equipped: [],
+    equipped: ["", ""],
     loadout: {},
     coins: 180
   };
@@ -429,7 +432,8 @@ function Capsule() {
 function WishDialog({
   title,
   close,
-  children
+  children,
+  className = ""
 }) {
   const ref = React.useRef(null);
   useEffect(() => {
@@ -438,7 +442,7 @@ function WishDialog({
     return () => dialog.close();
   }, []);
   return React.createElement("dialog", {
-    className: "wish-dialog",
+    className: `wish-dialog ${className}`,
     ref: ref,
     "aria-labelledby": "wish-title",
     onCancel: e => {
@@ -449,8 +453,78 @@ function WishDialog({
     id: "wish-title"
   }, title), children);
 }
+function BadgeCatalogue({
+  owned
+}) {
+  const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const collected = pinList.filter(pin => owned.includes(pin.id));
+  const pages = Math.ceil(pinList.length / 16);
+  const move = delta => {
+    setPage(page + delta);
+    setSelected(null);
+  };
+  return React.createElement(React.Fragment, null, React.createElement("button", {
+    onClick: () => {
+      setPage(0);
+      setSelected(null);
+      setOpen(true);
+    }
+  }, "Catalogue des badges"), open && React.createElement(WishDialog, {
+    className: "badge-book",
+    title: "Badges",
+    close: () => setOpen(false)
+  }, React.createElement("div", {
+    className: "badge-counter"
+  }, collected.length, " / ", pinList.length, " obtenus"), React.createElement("div", {
+    className: "badge-slots"
+  }, Array.from({
+    length: 16
+  }, (_, i) => {
+    const index = page * 16 + i,
+      pin = collected[index];
+    if (!pin) return React.createElement("span", {
+      key: index,
+      className: "badge-slot",
+      "aria-hidden": "true"
+    });
+    return React.createElement("button", {
+      key: pin.id,
+      className: "badge-slot",
+      "aria-label": pin.name,
+      "aria-pressed": selected?.id === pin.id,
+      onClick: () => setSelected(pin)
+    }, React.createElement("span", {
+      "aria-hidden": "true",
+      className: "badge-art",
+      style: {
+        backgroundImage: `url(./assets/pins/row-${pin.row}.webp)`,
+        backgroundPosition: `-${pin.col * 84}cqw 0`
+      }
+    }));
+  })), selected && React.createElement("p", {
+    className: "badge-info",
+    "aria-live": "polite"
+  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN"), React.createElement("nav", {
+    "aria-label": "Pages du catalogue"
+  }, React.createElement("button", {
+    disabled: !page,
+    "aria-label": "Page pr\xE9c\xE9dente",
+    onClick: () => move(-1)
+  }, "\u2039"), React.createElement("span", {
+    "aria-live": "polite"
+  }, page + 1, " / ", pages), React.createElement("button", {
+    disabled: page + 1 >= pages,
+    "aria-label": "Page suivante",
+    onClick: () => move(1)
+  }, "\u203A")), React.createElement("button", {
+    onClick: () => setOpen(false)
+  }, "Fermer"), React.createElement("small", null, "Visuels DS \xB7 NightOwl35. Donn\xE9es \xB7 TWEWY Wiki.")));
+}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
+  const [editingSlot, setEditingSlot] = useState(null);
   const [party, setParty] = useState(null);
   const [result, setResult] = useState([]);
   const [quantity, setQuantity] = useState(1);
@@ -550,14 +624,20 @@ function App() {
     ...p,
     awakened: [...p.awakened, name]
   } : p);
-  const equip = name => {
-    const selected = profile.equipped.includes(name);
-    if (!profile.owned.includes(name) || !selected && profile.equipped.length >= 2) return;
-    setProfile(p => ({
-      ...p,
-      equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2)
-    }));
-  };
+  const fighters = profile.equipped.filter(Boolean);
+  function chooseFighter(name) {
+    if (editingSlot === null) return;
+    setProfile(p => {
+      if (name && (!p.owned.includes(name) || p.equipped[1 - editingSlot] === name)) return p;
+      const equipped = [...p.equipped];
+      equipped[editingSlot] = name;
+      return {
+        ...p,
+        equipped
+      };
+    });
+    setEditingSlot(null);
+  }
   if (party) return React.createElement(Battle, {
     initialTeam: party,
     loadout: profile.loadout,
@@ -581,7 +661,9 @@ function App() {
   });
   if (gachaView) return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement("div", {
+  }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), React.createElement(BadgeCatalogue, {
+    owned: profile.pins
+  }), React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -704,32 +786,45 @@ function App() {
   }, "Sauvegarde locale indisponible.")));
   return React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h1", null, "Pr\xE9parer le duo"), profile.owned.length < 2 && React.createElement("p", null, "D\xE9bloque 2 personnages dans ", React.createElement("a", {
+  }, React.createElement("section", null, React.createElement("h1", null, "Team"), React.createElement("div", {
+    className: "team-slots"
+  }, profile.equipped.map((name, index) => {
+    const fighter = characterRoster.find(f => f.name === name);
+    const stats = fighter && trained(fighter, profile.wins[name] || 0, profile.awakened.includes(name));
+    return React.createElement("button", {
+      key: index,
+      "aria-label": `Emplacement ${index + 1} · ${name || "Choisir un personnage"}`,
+      onClick: () => setEditingSlot(index)
+    }, fighter && stats ? React.createElement(React.Fragment, null, React.createElement(Sprite, {
+      fighter: fighter
+    }), React.createElement("strong", null, name), React.createElement(RankBadge, {
+      level: profile.levels[name]
+    }), React.createElement("small", null, "Niv. ", stats.level, " \xB7 PV ", stats.maxHp, React.createElement("br", null), "ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed)) : React.createElement("span", {
+      "aria-hidden": "true"
+    }, "+"));
+  })), editingSlot !== null && React.createElement(WishDialog, {
+    title: `Choisir un personnage · ${editingSlot + 1} / 2`,
+    close: () => setEditingSlot(null)
+  }, profile.owned.length === 0 && React.createElement("p", null, "D\xE9bloque ton premier personnage dans ", React.createElement("a", {
     href: "../app.html#gacha",
     target: "_top"
-  }, "l\u2019onglet Gacha"), "."), React.createElement("h2", null, "Ton duo \xB7 ", profile.equipped.length, " / 2"), React.createElement("div", {
+  }, "l\u2019onglet Gacha"), "."), React.createElement("div", {
     className: "party-list"
-  }, characterRoster.map(f => {
-    const stats = trained(f, profile.wins[f.name] || 0, profile.awakened.includes(f.name));
-    const owned = profile.owned.includes(f.name),
-      selected = profile.equipped.includes(f.name);
-    return React.createElement("button", {
-      key: f.name,
-      "aria-pressed": selected,
-      onClick: () => equip(f.name),
-      disabled: !owned || !selected && profile.equipped.length === 2
-    }, React.createElement(Sprite, {
-      fighter: f
-    }), React.createElement("strong", null, f.name), owned && React.createElement("small", null, "Niv. ", stats.level, " \xB7 PV ", stats.maxHp, " \xB7 ATK ", stats.atk, " \xB7 ATK SPE ", stats.mag, " \xB7 SPE ", stats.speed), React.createElement("span", null, owned && React.createElement(RankBadge, {
-      level: profile.levels[f.name]
-    })), React.createElement("span", null, selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"));
-  })), React.createElement("details", null, React.createElement("summary", null, "Catalogue \xB7 ", profile.pins.length, " / ", pinList.length, " badges obtenus"), React.createElement("div", {
-    className: "pin-catalog"
-  }, pinList.map(pin => React.createElement("div", {
-    key: pin.id
-  }, React.createElement(PinIcon, {
-    pin: pin
-  }), " #", pin.number, " ", pin.name, " \xB7 ", types[pin.kind], " \xB7 ", profile.pins.includes(pin.id) ? "Obtenu" : "À découvrir"))), React.createElement("small", null, "Visuels DS \xB7 NightOwl35. Donn\xE9es \xB7 TWEWY Wiki.")), profile.equipped.map(name => React.createElement("label", {
+  }, characterRoster.filter(f => profile.owned.includes(f.name)).map(f => React.createElement("button", {
+    key: f.name,
+    disabled: profile.equipped[1 - editingSlot] === f.name,
+    onClick: () => chooseFighter(f.name)
+  }, React.createElement(Sprite, {
+    fighter: f
+  }), React.createElement("strong", null, f.name), profile.equipped[1 - editingSlot] === f.name && React.createElement("small", null, "D\xE9j\xE0 \xE9quip\xE9")))), React.createElement("div", {
+    className: "dialog-actions"
+  }, profile.equipped[editingSlot] && React.createElement("button", {
+    onClick: () => chooseFighter("")
+  }, "Retirer"), React.createElement("button", {
+    onClick: () => setEditingSlot(null)
+  }, "Fermer"))), React.createElement(BadgeCatalogue, {
+    owned: profile.pins
+  }), fighters.map(name => React.createElement("label", {
     className: "psych-choice",
     key: name
   }, "Psych de ", name, React.createElement("select", {
@@ -752,10 +847,10 @@ function App() {
   }, psychs[basePsych[name]].name.replace(" (Pin)", ""), " \xB7 Psych de base \xB7 ", psychs[basePsych[name]].cost, " EN"), profile.pins.filter(id => id !== basePsych[name]).map(id => [id, psychs[id]]).map(([id, item]) => React.createElement("option", {
     key: id,
     value: id
-  }, "#", item.number, " ", item.name, " \xB7 ", types[item.kind], " \xB7 ", item.cost, " EN"))))), profile.equipped.length === 2 && profile.equipped.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
+  }, "#", item.number, " ", item.name, " \xB7 ", types[item.kind], " \xB7 ", item.cost, " EN"))))), fighters.length === 2 && fighters.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement("button", {
     className: "pull-button",
-    disabled: profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)),
-    onClick: () => setParty(profile.equipped.map(name => {
+    disabled: fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical", "special"].includes(psychs[profile.loadout[n]]?.kind)),
+    onClick: () => setParty(fighters.map(name => {
       const f = characterRoster.find(f => f.name === name);
       return trained(f, profile.wins[name] || 0, profile.awakened.includes(name));
     }))

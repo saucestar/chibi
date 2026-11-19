@@ -213,7 +213,10 @@ function loadProfile(): Profile {
   try {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
-    const equipped = [...new Set<string>(saved.equipped)].filter(name => owned.includes(name)).slice(0, 2);
+    const equipped=[0,1].map(i=>{
+      const name=saved.equipped?.[i];
+      return owned.includes(name) && (i===0 || name!==saved.equipped[0]) ? name : "";
+    });
     const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}))].filter(id=>psychs[id]?.row>=0);
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return assignBasePsychs({ owned, equipped, pins, wishStep,
@@ -223,7 +226,7 @@ function loadProfile(): Profile {
       levels: Object.fromEntries(owned.map(name => [name, ranks[saved.levels?.[name]] ? Number(saved.levels[name]) : 0])),
       awakened: owned.filter(name => saved.levels?.[name] === 5 && saved.awakened?.includes(name)), loadout: Object.fromEntries(Object.entries(saved.loadout || {}).filter(([name,id])=>owned.includes(name) && (pins.includes(String(id)) || basePsych[name]===id))), coins: saved.coins });
   } catch {}
-  return { pins:[], wishStep:0, copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: [], loadout: {}, coins: 180 };
+  return { pins:[], wishStep:0, copies:{}, wins:{}, levels: {}, awakened: [], owned: [], equipped: ["",""], loadout: {}, coins: 180 };
 }
 
 const characterChance = 0.10;
@@ -258,15 +261,43 @@ function Capsule() {
   },[]);
   return <canvas width={96} height={96} ref={canvas} aria-hidden="true"/>;
 }
-function WishDialog({title,close,children}:{title:string;close?:()=>void;children:React.ReactNode}) {
+function WishDialog({title,close,children,className=""}:{className?:string;title:string;close?:()=>void;children:React.ReactNode}) {
   const ref=React.useRef<HTMLDialogElement>(null);
   useEffect(()=>{const dialog=ref.current!; dialog.showModal(); return ()=>dialog.close();},[]);
-  return <dialog className="wish-dialog" ref={ref} aria-labelledby="wish-title" onCancel={e=>{e.preventDefault();close?.();}}>
+  return <dialog className={`wish-dialog ${className}`} ref={ref} aria-labelledby="wish-title" onCancel={e=>{e.preventDefault();close?.();}}>
     <h2 id="wish-title">{title}</h2>{children}
   </dialog>;
 }
+function BadgeCatalogue({owned}:{owned:string[]}) {
+  const [open,setOpen]=useState(false);
+  const [page,setPage]=useState(0);
+  const [selected,setSelected]=useState<Pin|null>(null);
+  const collected=pinList.filter(pin=>owned.includes(pin.id));
+  const pages=Math.ceil(pinList.length/16);
+  const move=(delta:number)=>{setPage(page+delta);setSelected(null);};
+  return <>
+    <button onClick={()=>{setPage(0);setSelected(null);setOpen(true);}}>Catalogue des badges</button>
+    {open && <WishDialog className="badge-book" title="Badges" close={()=>setOpen(false)}>
+      <div className="badge-counter">{collected.length} / {pinList.length} obtenus</div>
+      <div className="badge-slots">
+        {Array.from({length:16},(_,i)=>{
+          const index=page*16+i, pin=collected[index];
+          if(!pin) return <span key={index} className="badge-slot" aria-hidden="true"/>;
+          return <button key={pin.id} className="badge-slot" aria-label={pin.name} aria-pressed={selected?.id===pin.id} onClick={()=>setSelected(pin)}>
+            <span aria-hidden="true" className="badge-art" style={{backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*84}cqw 0`}}/>
+          </button>;
+        })}
+      </div>
+      {selected && <p className="badge-info" aria-live="polite"><b>#{selected.number} {selected.name}</b> · {types[selected.kind]} · {selected.cost} EN</p>}
+      <nav aria-label="Pages du catalogue"><button disabled={!page} aria-label="Page précédente" onClick={()=>move(-1)}>‹</button><span aria-live="polite">{page+1} / {pages}</span><button disabled={page+1>=pages} aria-label="Page suivante" onClick={()=>move(1)}>›</button></nav>
+      <button onClick={()=>setOpen(false)}>Fermer</button>
+      <small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small>
+    </WishDialog>}
+  </>;
+}
 function App() {
   const [profile, displayProfile] = useState(loadProfile);
+  const [editingSlot,setEditingSlot]=useState<number|null>(null);
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
@@ -328,11 +359,16 @@ function App() {
   };
   const awaken = (name:string) => setProfile(p=>p.copies[name]===5 && !p.awakened.includes(name)
     ? {...p,awakened:[...p.awakened,name]} : p);
-  const equip = (name: string) => {
-    const selected = profile.equipped.includes(name);
-    if (!profile.owned.includes(name) || (!selected && profile.equipped.length >= 2)) return;
-    setProfile(p => ({ ...p, equipped: selected ? p.equipped.filter(n => n !== name) : [...p.equipped, name].slice(0, 2) }));
-  };
+  const fighters=profile.equipped.filter(Boolean);
+  function chooseFighter(name:string) {
+    if(editingSlot===null) return;
+    setProfile(p=>{
+      if(name && (!p.owned.includes(name) || p.equipped[1-editingSlot]===name)) return p;
+      const equipped=[...p.equipped]; equipped[editingSlot]=name;
+      return {...p,equipped};
+    });
+    setEditingSlot(null);
+  }
   if (party) return <Battle initialTeam={party} loadout={profile.loadout} coins={profile.coins}
     onDrops={(ids) => setProfile(p => ({...p,pins:[...new Set([...p.pins,...ids])]}))}
     onVictory={() => setProfile(p => ({ ...p, coins:p.coins+5, wins:{...p.wins,...Object.fromEntries(party.map(f=>[f.name,(p.wins[f.name]||0)+1]))} }))}
@@ -340,6 +376,7 @@ function App() {
   if (gachaView) return <main className="game-shell party-lobby"><section>
     <h2>Bingo Kai</h2>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
+    <BadgeCatalogue owned={profile.pins}/>
     <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
@@ -384,21 +421,23 @@ function App() {
     </div>)}
     {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
   </section></main>;
-  return <main className="game-shell party-lobby"><section><h1>Préparer le duo</h1>
-    {profile.owned.length < 2 && <p>Débloque 2 personnages dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
-    <h2>Ton duo · {profile.equipped.length} / 2</h2>
-    <div className="party-list">{characterRoster.map(f => {
-      const stats=trained(f,profile.wins[f.name]||0,profile.awakened.includes(f.name));
-      const owned = profile.owned.includes(f.name), selected = profile.equipped.includes(f.name);
-      return <button key={f.name} aria-pressed={selected} onClick={() => equip(f.name)}
-        disabled={!owned || (!selected && profile.equipped.length === 2)}>
-        <Sprite fighter={f}/><strong>{f.name}</strong>
-        {owned && <small>Niv. {stats.level} · PV {stats.maxHp} · ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small>}
-        <span>{owned && <RankBadge level={profile.levels[f.name]}/>}</span><span>{selected ? "Équipé · Retirer" : owned ? "Équiper" : "À débloquer"}</span>
+  return <main className="game-shell party-lobby"><section><h1>Team</h1>
+    <div className="team-slots">{profile.equipped.map((name,index)=>{
+      const fighter=characterRoster.find(f=>f.name===name);
+      const stats=fighter && trained(fighter,profile.wins[name]||0,profile.awakened.includes(name));
+      return <button key={index} aria-label={`Emplacement ${index+1} · ${name||"Choisir un personnage"}`} onClick={()=>setEditingSlot(index)}>
+        {fighter && stats ? <><Sprite fighter={fighter}/><strong>{name}</strong><RankBadge level={profile.levels[name]}/><small>Niv. {stats.level} · PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small></> : <span aria-hidden="true">+</span>}
       </button>;
     })}</div>
-    <details><summary>Catalogue · {profile.pins.length} / {pinList.length} badges obtenus</summary><div className="pin-catalog">{pinList.map(pin=><div key={pin.id}><PinIcon pin={pin}/> #{pin.number} {pin.name} · {types[pin.kind]} · {profile.pins.includes(pin.id) ? "Obtenu" : "À découvrir"}</div>)}</div><small>Visuels DS · NightOwl35. Données · TWEWY Wiki.</small></details>
-    {profile.equipped.map(name => <label className="psych-choice" key={name}>Psych de {name}
+    {editingSlot!==null && <WishDialog title={`Choisir un personnage · ${editingSlot+1} / 2`} close={()=>setEditingSlot(null)}>
+      {profile.owned.length===0 && <p>Débloque ton premier personnage dans <a href="../app.html#gacha" target="_top">l’onglet Gacha</a>.</p>}
+      <div className="party-list">{characterRoster.filter(f=>profile.owned.includes(f.name)).map(f=><button key={f.name} disabled={profile.equipped[1-editingSlot]===f.name} onClick={()=>chooseFighter(f.name)}>
+        <Sprite fighter={f}/><strong>{f.name}</strong>{profile.equipped[1-editingSlot]===f.name && <small>Déjà équipé</small>}
+      </button>)}</div>
+      <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
+    </WishDialog>}
+    <BadgeCatalogue owned={profile.pins}/>
+    {fighters.map(name => <label className="psych-choice" key={name}>Psych de {name}
       <select value={profile.loadout[name] || ""} onChange={e => {
         const psych = e.target.value as Psych;
         setProfile(p => (p.pins.includes(psych) || basePsych[name]===psych) ? { ...p, loadout: { ...p.loadout, [name]: psych } } : p);
@@ -406,9 +445,9 @@ function App() {
         <option value={basePsych[name]}>{psychs[basePsych[name]].name.replace(" (Pin)","")} · Psych de base · {psychs[basePsych[name]].cost} EN</option>
         {profile.pins.filter(id=>id!==basePsych[name]).map(id=>[id,psychs[id]] as const).map(([id, item]) => <option key={id} value={id}>#{item.number} {item.name} · {types[item.kind]} · {item.cost} EN</option>)}
       </select></label>)}
-    {profile.equipped.length === 2 && profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
-    <button className="pull-button" disabled={profile.equipped.length !== 2 || !profile.equipped.every(n => profile.loadout[n]) || profile.equipped.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
-      onClick={() => setParty(profile.equipped.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.wins[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
+    {fighters.length === 2 && fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind)) && <p>Équipe au moins un psych offensif.</p>}
+    <button className="pull-button" disabled={fighters.length !== 2 || !fighters.every(n => profile.loadout[n]) || fighters.every(n => !["physical","special"].includes(psychs[profile.loadout[n]]?.kind))}
+      onClick={() => setParty(fighters.map(name => { const f = characterRoster.find(f => f.name === name)!; return trained(f,profile.wins[name]||0,profile.awakened.includes(name)); }))}>Lancer le roguelike</button>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>;
 }
