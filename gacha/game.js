@@ -453,6 +453,43 @@ function WishDialog({
     id: "wish-title"
   }, title), children);
 }
+function RewardReveal({
+  draws,
+  close
+}) {
+  const [index, setIndex] = useState(0);
+  const draw = draws[index],
+    pin = "pin" in draw ? draw.pin : null;
+  const fighter = "name" in draw ? characterRoster.find(f => f.name === draw.name) : null;
+  const uses = {
+    physical: "Attaque physique",
+    special: "Attaque spéciale",
+    heal: "Soin",
+    guard: "Protection",
+    support: "Soutien"
+  };
+  return React.createElement("div", {
+    className: "reward-reveal"
+  }, React.createElement("div", {
+    key: index,
+    className: "reward-sun",
+    "aria-live": "polite"
+  }, React.createElement("h3", null, pin ? pin.name.replace(" (Pin)", "") : fighter?.name), React.createElement("div", {
+    className: "reward-object"
+  }, pin ? React.createElement(PinIcon, {
+    pin: pin
+  }) : fighter && React.createElement(Sprite, {
+    fighter: fighter
+  })), React.createElement("div", {
+    className: "reward-facts"
+  }, pin ? React.createElement(React.Fragment, null, React.createElement("b", null, pin.grade === "---" ? "Sans classe" : `Classe ${pin.grade}`), React.createElement("span", null, uses[pin.kind], " \xB7 ", pin.cost, " EN")) : "rank" in draw && React.createElement(React.Fragment, null, React.createElement(RankBadge, {
+    level: draw.rank
+  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue", " \xB7 ", psychs[basePsych[draw.name]].name.replace(" (Pin)", ""))))), React.createElement("div", {
+    className: "reveal-footer"
+  }, draws.length > 1 && React.createElement("span", null, index + 1, " / ", draws.length), React.createElement("button", {
+    onClick: () => index + 1 < draws.length ? setIndex(index + 1) : close()
+  }, index + 1 < draws.length ? "Suivant" : "Fermer")));
+}
 function BadgeCatalogue({
   owned
 }) {
@@ -731,23 +768,10 @@ function App() {
     key: "invocation",
     title: phase === "reveal" ? "Résultat de l’invocation" : portalName,
     close: phase === "reveal" ? closeDialog : undefined
-  }, phase === "reveal" ? React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "wish-rewards"
-  }, result.map((draw, i) => "pin" in draw ? React.createElement("div", {
-    className: "recruit-reveal",
-    key: i
-  }, React.createElement(PinIcon, {
-    pin: draw.pin
-  }), React.createElement("strong", null, draw.pin.name), React.createElement("span", null, "Psych \xB7 ", types[draw.pin.kind])) : React.createElement("div", {
-    className: "recruit-reveal",
-    key: i
-  }, React.createElement(Sprite, {
-    fighter: characterRoster.find(f => f.name === draw.name)
-  }), React.createElement("strong", null, draw.name), React.createElement(RankBadge, {
-    level: draw.rank
-  }), React.createElement("span", null, draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue")))), React.createElement("button", {
-    onClick: closeDialog
-  }, "Fermer")) : React.createElement(React.Fragment, null, React.createElement("div", {
+  }, phase === "reveal" ? React.createElement(RewardReveal, {
+    draws: result,
+    close: closeDialog
+  }) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "invocation-stage"
   }, React.createElement("div", {
     className: "bingo-machine"
@@ -877,6 +901,7 @@ function Battle({
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState(null);
   const [loot, setLoot] = useState([]);
+  const [dropReveal, setDropReveal] = useState([]);
   const [reward, setReward] = useState(false);
   const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
@@ -897,6 +922,9 @@ function Battle({
     const defeated = updatedEnemies.filter((enemy, i) => enemy.hp === 0 && enemies[i].hp > 0);
     const drops = defeated.filter(() => Math.random() < 0.25).map(() => pick(pinList));
     if (drops.length) {
+      setDropReveal(drops.map(pin => ({
+        pin
+      })));
       onDrops(drops.map(pin => pin.id));
       setLoot(old => [...old, ...drops.map(pin => pin.name)]);
     }
@@ -1227,7 +1255,13 @@ function Battle({
     href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
     target: "_blank",
     rel: "noreferrer"
-  }, "PIN DATABASE \u2197")))), loot.length > 0 && React.createElement("p", {
+  }, "PIN DATABASE \u2197")))), dropReveal.length > 0 && React.createElement(WishDialog, {
+    title: "Butin de combat",
+    close: () => setDropReveal([])
+  }, React.createElement(RewardReveal, {
+    draws: dropReveal,
+    close: () => setDropReveal([])
+  })), loot.length > 0 && React.createElement("p", {
     role: "status"
   }, "Psychs r\xE9cup\xE9r\xE9s \xB7 ", loot.join(", ")), reward && React.createElement("div", {
     className: "overlay"

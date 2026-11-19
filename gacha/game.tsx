@@ -168,7 +168,7 @@ function Sprite({
   );
 }
 
-type Pin = { id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
+type Pin = { grade?:string; id:string; number:string; name:string; psych:string; kind:string; power:number; drain:boolean; row:number; col:number; cost:number };
 declare const pinList: Pin[];
 const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone"};
 const partnerPsychs:Pin[] = [
@@ -267,6 +267,27 @@ function WishDialog({title,close,children,className=""}:{className?:string;title
   return <dialog className={`wish-dialog ${className}`} ref={ref} aria-labelledby="wish-title" onCancel={e=>{e.preventDefault();close?.();}}>
     <h2 id="wish-title">{title}</h2>{children}
   </dialog>;
+}
+function RewardReveal({draws,close}:{draws:Wish[];close:()=>void}) {
+  const [index,setIndex]=useState(0);
+  const draw=draws[index], pin="pin" in draw ? draw.pin : null;
+  const fighter="name" in draw ? characterRoster.find(f=>f.name===draw.name) : null;
+  const uses={physical:"Attaque physique", special:"Attaque spéciale", heal:"Soin", guard:"Protection", support:"Soutien"};
+  return <div className="reward-reveal">
+    <div key={index} className="reward-sun" aria-live="polite">
+      <h3>{pin ? pin.name.replace(" (Pin)","") : fighter?.name}</h3>
+      <div className="reward-object">{pin?<PinIcon pin={pin}/>:fighter && <Sprite fighter={fighter}/>}</div>
+      <div className="reward-facts">{pin ? <>
+        <b>{pin.grade==="---"?"Sans classe":`Classe ${pin.grade}`}</b>
+        <span>{uses[pin.kind]} · {pin.cost} EN</span>
+      </> : "rank" in draw && <>
+        <RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"} · {psychs[basePsych[draw.name]].name.replace(" (Pin)","")}</span>
+      </>}</div>
+    </div>
+    <div className="reveal-footer">{draws.length>1 && <span>{index+1} / {draws.length}</span>}
+      <button onClick={()=>index+1<draws.length?setIndex(index+1):close()}>{index+1<draws.length?"Suivant":"Fermer"}</button>
+    </div>
+  </div>;
 }
 function BadgeCatalogue({owned}:{owned:string[]}) {
   const [open,setOpen]=useState(false);
@@ -407,7 +428,7 @@ function App() {
       <div className="dialog-actions"><button onClick={closeDialog}>Annuler</button><button disabled={profile.coins<price} onClick={()=>recruit(portal,quantity)}>Confirmer</button></div>
     </WishDialog>}
     {["crank","spin","drop","reveal"].includes(phase) && <WishDialog key="invocation" title={phase==="reveal"?"Résultat de l’invocation":portalName} close={phase==="reveal"?closeDialog:undefined}>
-      {phase==="reveal"?<><div className="wish-rewards">{result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div><button onClick={closeDialog}>Fermer</button></>:<>
+      {phase==="reveal"?<RewardReveal draws={result} close={closeDialog}/>:<>
         <div className="invocation-stage"><div className="bingo-machine"><img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
           <button autoFocus aria-label="Tourner la manivelle" className={"bingo-crank "+(phase==="spin"?"turning":"")} disabled={phase!=="crank"} onClick={()=>setPhase("spin")}
             onAnimationEnd={e=>{if(e.animationName==="bingo-turn")setPhase("drop");}}/>
@@ -465,6 +486,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
   const [busy, setBusy] = useState(false);
   const [impact, setImpact] = useState<number | null>(null);
   const [loot,setLoot]=useState<string[]>([]);
+  const [dropReveal,setDropReveal]=useState<Wish[]>([]);
   const [reward, setReward] = useState(false);
   const [actor, setActor] = useState("");
   const [guarded, setGuarded] = useState(false);
@@ -488,6 +510,7 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
     const defeated=updatedEnemies.filter((enemy,i)=>enemy.hp===0 && enemies[i].hp>0);
     const drops=defeated.filter(()=>Math.random()<0.25).map(()=>pick(pinList));
     if(drops.length){
+      setDropReveal(drops.map(pin=>({pin})));
       onDrops(drops.map(pin=>pin.id));
       setLoot(old=>[...old,...drops.map(pin=>pin.name)]);
     }
@@ -830,6 +853,9 @@ function Battle({ initialTeam, loadout, coins, onDrops, onVictory, leave }: { in
         </aside>
       </section>
 
+      {dropReveal.length>0 && <WishDialog title="Butin de combat" close={()=>setDropReveal([])}>
+        <RewardReveal draws={dropReveal} close={()=>setDropReveal([])}/>
+      </WishDialog>}
       {loot.length>0 && <p role="status">Psychs récupérés · {loot.join(", ")}</p>}
       {reward && (
         <div className="overlay">
