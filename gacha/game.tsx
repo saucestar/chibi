@@ -177,38 +177,52 @@ function PinIcon({ pin }: {pin:Pin}) {
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
 const portals = { shibuya:"Shibuya", partners:"Partenaires" };
-function PortalCarousel({value, onChange, phase, onWish, canWish, quantity, advance}: {value:string; onChange:(id:string)=>void; phase:string; onWish:(n:number)=>void; canWish:(n:number)=>boolean; quantity:number; advance:()=>void}) {
-  const locked=phase!=="ready";
+function PortalCarousel({value,onChange,locked}: {value:string; onChange:(id:string)=>void; locked:boolean}) {
   const track=React.useRef<HTMLDivElement>(null);
+  const drag=React.useRef<{x:number; left:number; index:number}|null>(null);
   const entries=Object.entries(portals);
   const index=entries.findIndex(([id])=>id===value);
-  const choose=(target:number)=>{
-    if(locked || !track.current || target<0 || target>=entries.length) return;
-    track.current.scrollTo({left:target*track.current.clientWidth,behavior:"instant"});
-    onChange(entries[target][0]);
-  };
+  function choose(target:number) {
+    const el=track.current;
+    if(locked || !el) return;
+    const next=Math.max(0,Math.min(entries.length-1,target));
+    el.scrollTo({left:next*el.clientWidth,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});
+  }
+  function endDrag(e:React.PointerEvent<HTMLDivElement>) {
+    if(!drag.current) return;
+    const start=drag.current;
+    drag.current=null;
+    const el=e.currentTarget;
+    delete el.dataset.dragging;
+    const distance=start.x-e.clientX;
+    const step=e.type==="pointerup" && Math.abs(distance)>Math.min(50,el.clientWidth*.15)?Math.sign(distance):0;
+    choose(start.index+step);
+  }
   return <div className="portal-carousel" role="region" aria-label="Portails gacha">
-    <div className="portal-nav">
-      <button aria-label="Portail précédent" disabled={locked || index===0} onClick={()=>choose(index-1)}>‹</button>
-      <span aria-live="polite">{portals[value]} · {index+1} / {entries.length}</span>
-      <button aria-label="Portail suivant" disabled={locked || index===entries.length-1} onClick={()=>choose(index+1)}>›</button>
-    </div>
     <div className="portal-track" ref={track} data-locked={locked} tabIndex={locked?-1:0} aria-label="Choisir un portail"
       onKeyDown={e=>{if(e.key==="ArrowLeft" || e.key==="ArrowRight"){e.preventDefault();choose(index+(e.key==="ArrowLeft"?-1:1));}}}
+      onPointerDown={e=>{
+        if(locked || e.pointerType!=="mouse" || e.button!==0) return;
+        const el=e.currentTarget;
+        drag.current={x:e.clientX,left:el.scrollLeft,index};
+        el.dataset.dragging="true";
+        el.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={e=>{if(drag.current)e.currentTarget.scrollLeft=drag.current.left+drag.current.x-e.clientX;}}
+      onPointerUp={endDrag} onPointerCancel={endDrag}
       onScroll={e=>{
-        if(locked) return;
-        const el=e.currentTarget, active=entries[Math.round(el.scrollLeft/el.clientWidth)];
-        if(active) onChange(active[0]);
+        const el=e.currentTarget,active=entries[Math.round(el.scrollLeft/el.clientWidth)];
+        if(!locked && active) onChange(active[0]);
       }}>
-      {entries.map(([id,title])=><div key={id} className={'portal-banner portal-'+id}>
-        {id==="shibuya" ? <>
-          {value===id && <video className="portal-film" autoPlay muted playsInline preload="auto" poster="./assets/bingo/first-week.webp" src="./assets/bingo/first-week.mp4"/>}
-          {[1,10].map(n=><button className={"film-wish wish-"+n} key={n} tabIndex={value===id?0:-1} disabled={locked || !canWish(n)} aria-label={n===1?"Faire un vœu":"Faire dix vœux"} onClick={()=>onWish(n)}/>)}
-          <button className={"film-crank bingo-crank "+(value===id && phase==="spin"?"turning":"")} disabled={locked || !canWish(quantity)} tabIndex={value===id?0:-1} aria-label="Tourner la manivelle" onClick={()=>onWish(quantity)} onAnimationEnd={advance}/>
-          {value===id && phase==="drop" && <span className="film-ball bingo-ball" onAnimationEnd={advance}/>}
-        </> : <><strong>{title}</strong>
-        <div aria-hidden="true">{characterRoster.filter(f=>(id==="partners"?["BEAT","JOSHUA"]:["NEKU","SHIKI"]).includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div></>}
+      {entries.map(([id,title])=><div key={id} className={"portal-banner portal-"+id}>
+        {id==="partners" && <div className="portal-cast" aria-hidden="true">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><Sprite key={f.name} fighter={f}/>)}</div>}
+        <strong>{id==="shibuya"?"First Week #1":title}</strong>
       </div>)}
+    </div>
+    <div className="portal-nav">
+      <button disabled={locked || index===0} aria-label="Portail précédent" onClick={()=>choose(index-1)}>‹</button>
+      <span aria-live="polite">{portals[value]} · {index+1} / {entries.length}</span>
+      <button disabled={locked || index===entries.length-1} aria-label="Portail suivant" onClick={()=>choose(index+1)}>›</button>
     </div>
   </div>;
 }
@@ -319,9 +333,7 @@ function App() {
     <p>10 % de chance de tirer un personnage. Chaque dixième vœu garantit un personnage, tous portails confondus. Garantie dans {10-profile.wishStep} vœu(x).</p>
     {starter(profile) && <p>Les vœux simples sont gratuits jusqu’à obtenir deux personnages et un psych offensif.</p>}
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués</p>
-    <PortalCarousel value={portal} onChange={setPortal} phase={phase} quantity={quantity} canWish={n=>wishCost(profile,n)<=profile.coins} onWish={n=>{setQuantity(n);recruit(n);}} advance={()=>{if(phase==="spin") setPhase("drop"); else if(phase==="drop"){turning.current=false;setPhase("ready");}}}/>
-    {portal==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
-    {portal==="partners" && <><div>{[1,10].map(n=><button key={n} disabled={phase!=="ready"} aria-pressed={n===quantity} onClick={()=>setQuantity(n)}>{n} vœu{n>1?"x":""}</button>)}</div>
+    <PortalCarousel value={portal} onChange={setPortal} locked={phase!=="ready"}/>
     <div className="bingo-stage"><div className="bingo-machine">
       <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai" />
       <button className={`bingo-crank ${phase === "spin" ? "turning" : ""}`} onClick={()=>recruit()}
@@ -331,7 +343,10 @@ function App() {
       {phase === "drop" && <span className="bingo-ball" onAnimationEnd={() => {
         turning.current = false; setPhase("ready");
       }} />}
-    </div></div></>}
+    </div></div>
+    <div className="wish-commands">{[1,10].map(n=><button key={n} disabled={phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>{setQuantity(n);recruit(n);}}>
+      <strong>{n===1?"Un vœu":"Dix vœux"}</strong><small>{wishCost(profile,n)} pièces</small></button>)}</div>
+    {portal==="partners" && <p>Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles.</p>}
     <p>{price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`}</p>
     <div aria-live="polite">{phase==="ready" && result.map((draw,i)=> "pin" in draw ? <div className="recruit-reveal" key={i}><PinIcon pin={draw.pin}/><strong>{draw.pin.name}</strong><span>Psych · {types[draw.pin.kind]}</span></div> : <div className="recruit-reveal" key={i}><Sprite fighter={characterRoster.find(f=>f.name===draw.name)!}/><strong>{draw.name}</strong><RankBadge level={draw.rank}/><span>{draw.copies ? `Doublon ${draw.copies}/5` : "Nouvelle recrue"}</span></div>)}</div>
     {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>

@@ -256,41 +256,36 @@ const portals = {
 function PortalCarousel({
   value,
   onChange,
-  phase,
-  onWish,
-  canWish,
-  quantity,
-  advance
+  locked
 }) {
-  const locked = phase !== "ready";
   const track = React.useRef(null);
+  const drag = React.useRef(null);
   const entries = Object.entries(portals);
   const index = entries.findIndex(([id]) => id === value);
-  const choose = target => {
-    if (locked || !track.current || target < 0 || target >= entries.length) return;
-    track.current.scrollTo({
-      left: target * track.current.clientWidth,
-      behavior: "instant"
+  function choose(target) {
+    const el = track.current;
+    if (locked || !el) return;
+    const next = Math.max(0, Math.min(entries.length - 1, target));
+    el.scrollTo({
+      left: next * el.clientWidth,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth"
     });
-    onChange(entries[target][0]);
-  };
+  }
+  function endDrag(e) {
+    if (!drag.current) return;
+    const start = drag.current;
+    drag.current = null;
+    const el = e.currentTarget;
+    delete el.dataset.dragging;
+    const distance = start.x - e.clientX;
+    const step = e.type === "pointerup" && Math.abs(distance) > Math.min(50, el.clientWidth * .15) ? Math.sign(distance) : 0;
+    choose(start.index + step);
+  }
   return React.createElement("div", {
     className: "portal-carousel",
     role: "region",
     "aria-label": "Portails gacha"
   }, React.createElement("div", {
-    className: "portal-nav"
-  }, React.createElement("button", {
-    "aria-label": "Portail pr\xE9c\xE9dent",
-    disabled: locked || index === 0,
-    onClick: () => choose(index - 1)
-  }, "\u2039"), React.createElement("span", {
-    "aria-live": "polite"
-  }, portals[value], " \xB7 ", index + 1, " / ", entries.length), React.createElement("button", {
-    "aria-label": "Portail suivant",
-    disabled: locked || index === entries.length - 1,
-    onClick: () => choose(index + 1)
-  }, "\u203A")), React.createElement("div", {
     className: "portal-track",
     ref: track,
     "data-locked": locked,
@@ -302,46 +297,49 @@ function PortalCarousel({
         choose(index + (e.key === "ArrowLeft" ? -1 : 1));
       }
     },
+    onPointerDown: e => {
+      if (locked || e.pointerType !== "mouse" || e.button !== 0) return;
+      const el = e.currentTarget;
+      drag.current = {
+        x: e.clientX,
+        left: el.scrollLeft,
+        index
+      };
+      el.dataset.dragging = "true";
+      el.setPointerCapture(e.pointerId);
+    },
+    onPointerMove: e => {
+      if (drag.current) e.currentTarget.scrollLeft = drag.current.left + drag.current.x - e.clientX;
+    },
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
     onScroll: e => {
-      if (locked) return;
       const el = e.currentTarget,
         active = entries[Math.round(el.scrollLeft / el.clientWidth)];
-      if (active) onChange(active[0]);
+      if (!locked && active) onChange(active[0]);
     }
   }, entries.map(([id, title]) => React.createElement("div", {
     key: id,
-    className: 'portal-banner portal-' + id
-  }, id === "shibuya" ? React.createElement(React.Fragment, null, value === id && React.createElement("video", {
-    className: "portal-film",
-    autoPlay: true,
-    muted: true,
-    playsInline: true,
-    preload: "auto",
-    poster: "./assets/bingo/first-week.webp",
-    src: "./assets/bingo/first-week.mp4"
-  }), [1, 10].map(n => React.createElement("button", {
-    className: "film-wish wish-" + n,
-    key: n,
-    tabIndex: value === id ? 0 : -1,
-    disabled: locked || !canWish(n),
-    "aria-label": n === 1 ? "Faire un vœu" : "Faire dix vœux",
-    onClick: () => onWish(n)
-  })), React.createElement("button", {
-    className: "film-crank bingo-crank " + (value === id && phase === "spin" ? "turning" : ""),
-    disabled: locked || !canWish(quantity),
-    tabIndex: value === id ? 0 : -1,
-    "aria-label": "Tourner la manivelle",
-    onClick: () => onWish(quantity),
-    onAnimationEnd: advance
-  }), value === id && phase === "drop" && React.createElement("span", {
-    className: "film-ball bingo-ball",
-    onAnimationEnd: advance
-  })) : React.createElement(React.Fragment, null, React.createElement("strong", null, title), React.createElement("div", {
+    className: "portal-banner portal-" + id
+  }, id === "partners" && React.createElement("div", {
+    className: "portal-cast",
     "aria-hidden": "true"
-  }, characterRoster.filter(f => (id === "partners" ? ["BEAT", "JOSHUA"] : ["NEKU", "SHIKI"]).includes(f.name)).map(f => React.createElement(Sprite, {
+  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(Sprite, {
     key: f.name,
     fighter: f
-  }))))))));
+  }))), React.createElement("strong", null, id === "shibuya" ? "First Week #1" : title)))), React.createElement("div", {
+    className: "portal-nav"
+  }, React.createElement("button", {
+    disabled: locked || index === 0,
+    "aria-label": "Portail pr\xE9c\xE9dent",
+    onClick: () => choose(index - 1)
+  }, "\u2039"), React.createElement("span", {
+    "aria-live": "polite"
+  }, portals[value], " \xB7 ", index + 1, " / ", entries.length), React.createElement("button", {
+    disabled: locked || index === entries.length - 1,
+    "aria-label": "Portail suivant",
+    onClick: () => choose(index + 1)
+  }, "\u203A")));
 }
 const bases = {
   NEKU: [24, 32, 14],
@@ -537,25 +535,8 @@ function App() {
   }, React.createElement("section", null, React.createElement("h2", null, "Bingo Kai"), React.createElement("p", null, "10 % de chance de tirer un personnage. Chaque dixi\xE8me v\u0153u garantit un personnage, tous portails confondus. Garantie dans ", 10 - profile.wishStep, " v\u0153u(x)."), starter(profile) && React.createElement("p", null, "Les v\u0153ux simples sont gratuits jusqu\u2019\xE0 obtenir deux personnages et un psych offensif."), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s"), React.createElement(PortalCarousel, {
     value: portal,
     onChange: setPortal,
-    phase: phase,
-    quantity: quantity,
-    canWish: n => wishCost(profile, n) <= profile.coins,
-    onWish: n => {
-      setQuantity(n);
-      recruit(n);
-    },
-    advance: () => {
-      if (phase === "spin") setPhase("drop");else if (phase === "drop") {
-        turning.current = false;
-        setPhase("ready");
-      }
-    }
-  }), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), portal === "partners" && React.createElement(React.Fragment, null, React.createElement("div", null, [1, 10].map(n => React.createElement("button", {
-    key: n,
-    disabled: phase !== "ready",
-    "aria-pressed": n === quantity,
-    onClick: () => setQuantity(n)
-  }, n, " v\u0153u", n > 1 ? "x" : ""))), React.createElement("div", {
+    locked: phase !== "ready"
+  }), React.createElement("div", {
     className: "bingo-stage"
   }, React.createElement("div", {
     className: "bingo-machine"
@@ -577,7 +558,16 @@ function App() {
       turning.current = false;
       setPhase("ready");
     }
-  })))), React.createElement("p", null, price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
+  }))), React.createElement("div", {
+    className: "wish-commands"
+  }, [1, 10].map(n => React.createElement("button", {
+    key: n,
+    disabled: phase !== "ready" || profile.coins < wishCost(profile, n),
+    onClick: () => {
+      setQuantity(n);
+      recruit(n);
+    }
+  }, React.createElement("strong", null, n === 1 ? "Un vœu" : "Dix vœux"), React.createElement("small", null, wishCost(profile, n), " pi\xE8ces")))), portal === "partners" && React.createElement("p", null, "Beat et Joshua ont deux fois plus de chances parmi les personnages disponibles."), React.createElement("p", null, price > profile.coins ? `Il faut ${price} pièces pour ce tirage.` : `Manivelle · ${quantity} vœu(x) · ${price} pièces`), React.createElement("div", {
     "aria-live": "polite"
   }, phase === "ready" && result.map((draw, i) => "pin" in draw ? React.createElement("div", {
     className: "recruit-reveal",

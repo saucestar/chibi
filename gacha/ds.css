@@ -103,18 +103,21 @@
 @media(prefers-reduced-motion:reduce){.portal-banner .hero-sprite { animation:none; }}
 
 .party-lobby section:has(.portal-carousel) { display:block; max-width:650px; }
-.portal-track { box-sizing:content-box; }
-.portal-banner { box-sizing:border-box; height:auto; aspect-ratio:1; }
-.portal-shibuya { background:#191824 url(./assets/bingo/first-week.webp) center/cover; }
-.portal-shibuya::before { content:none; }
-.portal-film { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.portal-banner .film-wish { position:absolute; top:64%; height:12%; width:31%; opacity:0; cursor:pointer; }
-.portal-banner .film-wish:focus-visible { opacity:1; background:transparent; }
-.portal-banner .wish-1 { left:5%; }
-.portal-banner .wish-10 { left:63%; }
-.portal-banner .film-crank { left:45.4%; top:70%; width:9.2%; opacity:0; }
-.portal-banner .film-crank:is(.turning,:focus-visible) { opacity:1; }
-.portal-banner .film-ball { left:47%; top:81%; width:6%; }
-.portal-partners strong { font-size:clamp(30px,7vw,58px); }
-.portal-partners > div { right:12%; bottom:20%; transform:scale(1.65); }
-@media(prefers-reduced-motion:reduce){.portal-film { visibility:hidden; }}
+
+.portal-track { scrollbar-width:none; cursor:grab; user-select:none; }
+.portal-track::-webkit-scrollbar { display:none; }
+.portal-track[data-dragging=true] { scroll-snap-type:none; cursor:grabbing; }
+.portal-banner { box-sizing:border-box; height:auto; aspect-ratio:2/1; scroll-snap-stop:always; padding:clamp(12px,4vw,25px); }
+.portal-shibuya { background:linear-gradient(0deg,#17112ae6,transparent 55%),url(./assets/bingo/first-week-art.webp) center/cover; }
+.portal-partners { background:linear-gradient(26deg,#17112a,#403357bf),url(./assets/game/battle-bg.jpg) center/cover; }
+.portal-banner strong { font:italic 500 clamp(26px,6vw,42px)/1 var(--title); color:#fff9eb; }
+.portal-cast { right:12%!important; bottom:16%!important; transform:scale(1.5); }
+.portal-nav { margin:0; background:var(--silver); border:1px solid var(--line); }
+.portal-nav button { border:0!important; background:transparent!important; color:var(--ink)!important; }
+.party-lobby section:has(.portal-carousel) .bingo-stage { margin:0; padding:8px 0 27px; }
+.party-lobby section:has(.portal-carousel) .bingo-machine { width:clamp(78px,18vw,100px); }
+.wish-commands { display:flex; gap:8px; margin-top:10px; }
+.party-lobby .wish-commands button { flex:1; display:grid; text-align:center; gap:2px; padding:8px; border-block:3px double #a7a2b7; clip-path:polygon(0 50%,6% 0,94% 0,100% 50%,94% 100%,6% 100%); }
+.wish-commands strong { font:600 18px var(--title); }
+.wish-commands small { font-size:12px; }
+.wish-commands button:disabled { color:#646071; background:#e2dfe8; }
