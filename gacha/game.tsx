@@ -1031,7 +1031,7 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
  const rewards=questsFor(profile).filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id)).length;
  return <section className="hub-home"><div className="hub-home-heading"><small>SHIBUYA · REAPERS’ GAME</small><h1>À toi de jouer.</h1><span>Record · Étage {profile.bestFloor} / 100</span></div>
   <div className="hub-home-stage"><div className="hub-home-halo" aria-hidden="true"/>{duo.map(f=><SpritePreview key={f.name} fighter={f} maximumScale={2.5}/>)}</div>
-  <div className="home-modes"><button className="hub-play" onClick={()=>navigate("team")}><b>Roguelike</b></button><button className="hub-play" onClick={()=>navigate("events")}><b>Événement</b></button></div>
+  <div className="home-modes" aria-label="Choisir un mode de jeu"><button className="hub-play home-mode-card" onClick={()=>navigate("team")}><small>MODE DE JEU</small><b>Roguelike</b><span>Gravis les 100 étages</span></button><button className="hub-play home-mode-card" onClick={()=>navigate("events")}><small>MODE DE JEU</small><b>Événement</b><span>Défie les personnages</span></button></div>
   <div className="hub-shortcuts"><button onClick={()=>navigate("quests")}><span>◇</span><b>Quêtes</b><small>{rewards?`${rewards} récompense${rewards>1?"s":""}`:"Ta progression"}</small></button><button onClick={()=>navigate("summon")}><span>✦</span><b>Invocations</b><small>{profile.freeWishes} vœux gratuits</small></button><button onClick={()=>navigate("collection")}><span>▦</span><b>Collection</b><small>{profile.owned.length} personnages</small></button></div>
  </section>;
 }

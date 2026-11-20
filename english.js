@@ -371,4 +371,7 @@ Aucun butin cette fois.|No drop this time.
 Personnage obtenu|Character recruited
 Précédent|Previous
 Pause|Pause
+MODE DE JEU|GAME MODE
+Gravis les 100 étages|Climb all 100 floors
+Défie les personnages|Challenge the characters
 `.trim();

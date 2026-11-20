@@ -1034,9 +1034,12 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .audio-settings output {font-variant-numeric:tabular-nums;}
 .audio-settings input {grid-column:1/-1;width:100%;min-height:44px;margin:0;accent-color:#705496;cursor:pointer;}
 
-.game-hub .home-modes {display:flex;gap:.55rem;width:min(100%,580px);margin:auto;min-width:0;}
-.game-hub .home-modes .hub-play {flex:1 1 0;min-width:0;width:auto;margin:0;padding:9px 4px;min-height:44px;}
-.home-modes .hub-play b {font-size:clamp(.85rem,3vw,1.15rem);}
+.game-hub .home-modes {display:flex;gap:.7rem;width:100%;margin:auto;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 1px 10px;}
+.game-hub .home-modes::-webkit-scrollbar {display:none;}
+.game-hub .home-modes .home-mode-card {display:grid;place-content:center;gap:.18rem;flex:0 0 min(86%,420px);scroll-snap-align:center;min-width:0;width:auto;margin:0;padding:12px 14px;min-height:92px;text-align:center;}
+.home-modes .hub-play b {font-size:clamp(1rem,3.8vw,1.35rem);}
+.home-modes .hub-play small {font-size:.62rem;letter-spacing:.14em;opacity:.76;}
+.home-modes .hub-play span {font-size:.78rem;font-weight:800;opacity:.9;}
 .event-hall {min-width:0;}
 .event-hall header,.event-resume {display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
 .event-hall header button {min-width:44px;min-height:44px;margin-inline-start:.3rem;}
@@ -1046,5 +1049,5 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .event-preview {height:clamp(80px,20dvh,155px);}
 .event-preview .sprite-preview {width:100%;height:100%;}
 .event-rail article>button {min-height:44px;width:100%;}
-@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}}
+@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}.game-hub .home-modes .home-mode-card {flex-basis:min(76%,400px);}}
 @media (orientation:landscape) and (min-width:560px) and (max-width:760px){.game-hub .home-modes {grid-column:1/3;}}

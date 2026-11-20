@@ -2373,14 +2373,15 @@ function HubHome({
     fighter: f,
     maximumScale: 2.5
   }))), React.createElement("div", {
-    className: "home-modes"
+    className: "home-modes",
+    "aria-label": "Choisir un mode de jeu"
   }, React.createElement("button", {
-    className: "hub-play",
+    className: "hub-play home-mode-card",
     onClick: () => navigate("team")
-  }, React.createElement("b", null, "Roguelike")), React.createElement("button", {
-    className: "hub-play",
+  }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "Roguelike"), React.createElement("span", null, "Gravis les 100 \xE9tages")), React.createElement("button", {
+    className: "hub-play home-mode-card",
     onClick: () => navigate("events")
-  }, React.createElement("b", null, "\xC9v\xE9nement"))), React.createElement("div", {
+  }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "\xC9v\xE9nement"), React.createElement("span", null, "D\xE9fie les personnages"))), React.createElement("div", {
     className: "hub-shortcuts"
   }, React.createElement("button", {
     onClick: () => navigate("quests")
