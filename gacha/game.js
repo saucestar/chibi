@@ -288,9 +288,11 @@ const characterRoster = [{
   maxHp: 96,
   sprite: joshuaSprite,
   accent: "#92dcce",
-  frames: 10,
-  frameWidth: 80,
-  frameHeight: 116
+  frames: 6,
+  frameWidth: 32,
+  frameHeight: 72,
+  portraitCenter: 16,
+  portraitTop: 5
 }];
 const Icon = ({
   name
