@@ -189,6 +189,11 @@ const enemyCatalog: Record<EnemyKind, { name: string; frames: number; frameWidth
 };
 function registerFfbeEntries(){for(const entry of ffbeBestiary){enemyCatalog[entry.id]={...entry,name:entry.name||`FFBE #${entry.sourceId}`,frames:entry.frames.length,atlasFrames:entry.frames};enemyElements[entry.id]=entry.elements;}}
 registerFfbeEntries();
+const eventHeroes:Record<string,Fighter>=Object.fromEntries(characterRoster.map(f=>["event-"+f.name,f]));
+for(const [kind,f] of Object.entries(eventHeroes)){
+  enemyCatalog[kind]={name:f.name,frames:f.frames||1,frameWidth:f.frameWidth||80,frameHeight:f.frameHeight||116,hp:f.maxHp,attack:1};
+  enemyElements[kind]=characterElements[f.name];
+}
 const enemyKinds: EnemyKind[] = ["frog", "wolf", "jey-pengi", "electro-pengi", "shinigami", "psyche-fox"];
 const isBossWave = (wave: number) => wave % 5 === 0;
 
@@ -206,7 +211,7 @@ function EnemySprite({kind,boss,combat=false}:{kind:EnemyKind;boss:boolean;comba
       Promise.all([...new Set(spec.atlasFrames.map(f=>f[0]))].map(async page=>pages.set(page,await ffbePage(page)))).then(()=>{if(disposed)return;draw();if(spec.frames>1&&!matchMedia("(prefers-reduced-motion: reduce)").matches)timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/(spec.fps||4));}).catch(()=>{});
     }else{
       const atlas=new Image(),draw=()=>{if(disposed||document.hidden)return;context.clearRect(0,0,spec.frameWidth,spec.frameHeight);context.drawImage(atlas,frame*spec.frameWidth,0,spec.frameWidth,spec.frameHeight,0,0,spec.frameWidth,spec.frameHeight);};
-      atlas.onload=()=>{if(disposed)return;draw();if(!matchMedia("(prefers-reduced-motion: reduce)").matches)timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/Math.min(spec.frames,8));};atlas.src=`./assets/game/enemy-atlases/${kind}.png`;
+      atlas.onload=()=>{if(disposed)return;draw();if(!matchMedia("(prefers-reduced-motion: reduce)").matches)timer=window.setInterval(()=>{frame=(frame+1)%spec.frames;draw();},1000/Math.min(spec.frames,8));};atlas.src=eventHeroes[kind]?.sprite||`./assets/game/enemy-atlases/${kind}.png`;
     }
     return ()=>{disposed=true;window.clearInterval(timer);};
   },[kind,spec,combat]);
@@ -318,10 +323,16 @@ const partnerPsychs:Pin[] = [
   {id:"joshua-phone",name:"Joshua Partner Pin",psych:"Chute d’objets",kind:"special",power:22},
 ].map(pin=>({...pin,number:"",row:-1,col:0,drain:false,cost:1}));
 const psychs: Record<string, Pin> = Object.fromEntries([...pinList,...partnerPsychs].map(pin => [pin.id,{...pin,element:badgeElement(pin)}]));
+const signaturePins:Record<string,Pin>=Object.fromEntries(characterRoster.map(hero=>{
+ const base=psychs[basePsych[hero.name]];
+ const pin={...base,id:"signature-"+base.id,grade:"A",name:base.name.replace(" (Pin)","")+" · Signature",number:"★"};
+ psychs[pin.id]=pin;return [hero.name,pin];
+}));
+const collectionPins=[...pinList,...Object.values(signaturePins)];
 type Psych = string;
 const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
 function PinIcon({ pin }: {pin:Pin}) {
-  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾"}[pin.id]}</i>;
+  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾"}[pin.id.replace(/^signature-/,"")]}</i>;
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
 const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands" };
@@ -460,7 +471,7 @@ function applyRunCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profil
  return {...p,run:snapshot,xp,pins:[...new Set([...p.pins,...(gains.pins||[])])],coins:p.coins+(gains.victory?5:0),hasPlayed:true,bestFloor:Math.max(p.bestFloor,snapshot.wave),floorRecoveryAvailable:p.floorRecoveryAvailable&&snapshot.wave<10};
 }
 
-type Profile = { specialRunRecoveries:string[]; run:RunSave|null; wishEvents:WishEvent[]; wishHistoryStartedAt:number; wishHistoryBaseline:number; freeWishVersion:number; freeWishSpent:number; freeWishDaySpent:number; pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
+type Profile = { eventRun?:EventSave|null; specialRunRecoveries:string[]; run:RunSave|null; wishEvents:WishEvent[]; wishHistoryStartedAt:number; wishHistoryBaseline:number; freeWishVersion:number; freeWishSpent:number; freeWishDaySpent:number; pcMissionCoins:Record<string,number>; starterNekuGranted:boolean; starterWishesGranted:boolean; hasPlayed:boolean; wishesMade:number; freeWishes:number; lastFreeWishDay:string; bestFloor:number; claimedQuests:string[]; floorRecoveryAvailable:boolean; pins:string[]; wishStep:number; copies:Record<string,number>; xp:Record<string,number>; levels: Record<string, number>; awakened: string[]; owned: string[]; equipped: string[]; loadout: Record<string, Psych[]>; coins: number };
 const profileKey = "chibi.reapers-run.party.v1";
 
 function equippedBy(profile:Profile,name:string,id:string):string|undefined {
@@ -503,7 +514,7 @@ function loadProfile(): Profile {
       const name=saved.equipped?.[i];
       return owned.includes(name) && (i===0 || name!==saved.equipped[0]) ? name : "";
     });
-    const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]?.row>=0);
+    const pins = [...new Set<string>(Array.isArray(saved.pins) ? saved.pins : Object.values(saved.loadout || {}).flat())].filter(id=>psychs[id]&&(psychs[id].row>=0||id.startsWith("signature-")));
     const copies=Object.fromEntries(owned.map(name=>{
       const value=saved.copies?.[name];
       // An explicit duplicate count is authoritative; only old saves lacking it use legacy star data.
@@ -512,7 +523,7 @@ function loadProfile(): Profile {
       return [name,count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:Array.isArray(saved.specialRunRecoveries)?[...new Set<string>(saved.specialRunRecoveries.filter(id=>typeof id==="string"&&id.length<100))]:[],run:validRun(saved.run,owned,copies,Array.isArray(saved.awakened)?saved.awakened:[]),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:Array.isArray(saved.specialRunRecoveries)?[...new Set<string>(saved.specialRunRecoveries.filter(id=>typeof id==="string"&&id.length<100))]:[],eventRun:readEvent(saved.eventRun,owned,copies,Array.isArray(saved.awakened)?saved.awakened:[]),run:validRun(saved.run,owned,copies,Array.isArray(saved.awakened)?saved.awakened:[]),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies,
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
@@ -828,13 +839,13 @@ function BadgeCatalogue({owned,embedded=false}:{owned:string[];embedded?:boolean
   const [open,setOpen]=useState(false);
   const [page,setPage]=useState(0);
   const [selected,setSelected]=useState<Pin|null>(null);
-  const collected=pinList.filter(pin=>owned.includes(pin.id));
-  const pages=Math.ceil(pinList.length/16);
+  const collected=collectionPins.filter(pin=>owned.includes(pin.id));
+  const pages=Math.ceil(collectionPins.length/16);
   const move=(delta:number)=>{setPage(page+delta);setSelected(null);};
   return <>
     {!embedded&&<button onClick={()=>{setPage(0);setSelected(null);setOpen(true);}}>Catalogue des badges</button>}
     {(open||embedded) && <Panel className="badge-book" title="Badges" close={()=>setOpen(false)}>
-      <div className="badge-counter">{collected.length} / {pinList.length} obtenus</div>
+      <div className="badge-counter">{collected.length} / {collectionPins.length} obtenus</div>
       <div className="badge-slots">
         {Array.from({length:16},(_,i)=>{
           const index=page*16+i, pin=collected[index];
@@ -854,11 +865,11 @@ function BadgeCatalogue({owned,embedded=false}:{owned:string[];embedded?:boolean
 type Quest = {id:string;title:string;progress:number;goal:number;reward:number};
 const maxFloor=100;
 function questsFor(p:Profile):Quest[] {
- const badges=new Set(p.pins.filter(id=>psychs[id]?.row>=0)).size;
+ const badges=new Set(p.pins.filter(id=>psychs[id]&&(psychs[id].row>=0||id.startsWith("signature-")))).size;
  const bestLevel=Math.max(1,...Object.values(p.xp).map(x=>experience(x).level));
  return [
   ...Array.from({length:10},(_,i)=>({id:`floor-${(i+1)*10}`,title:`Atteindre l’étage ${(i+1)*10}`,progress:p.bestFloor,goal:(i+1)*10,reward:100})),
-  ...Array.from({length:Math.floor(pinList.length/10)},(_,i)=>({id:`badges-${(i+1)*10}`,title:`Collectionner ${(i+1)*10} badges`,progress:badges,goal:(i+1)*10,reward:20})),
+  ...Array.from({length:Math.floor(collectionPins.length/10)},(_,i)=>({id:`badges-${(i+1)*10}`,title:`Collectionner ${(i+1)*10} badges`,progress:badges,goal:(i+1)*10,reward:20})),
   ...[2,4,6].map(n=>({id:`recruits-${n}`,title:`Débloquer ${n} personnages`,progress:p.owned.length,goal:n,reward:n*25})),
   ...[5,10,25].map(n=>({id:`level-${n}`,title:`Monter un personnage au niveau ${n}`,progress:bestLevel,goal:n,reward:n*10})),
   {id:"awaken-1",title:"Éveiller 1 personnage",progress:p.awakened.length,goal:1,reward:150}
@@ -918,8 +929,8 @@ function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profil
  const base=newRun(p),run={...base,wave:41,enemies:makeWave(41,base.id)};
  return {...p,run,bestFloor:Math.max(p.bestFloor,41),specialRunRecoveries:marked};
 }
-function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null]);}
-type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"menu";
+function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null,p.eventRun?[p.eventRun.run.id,p.eventRun.run.seq]:null]);}
+type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"events"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
 function gameFullscreen(){
  if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
@@ -959,12 +970,68 @@ function CharacterCollection({profile,awaken}:{profile:Profile;awaken:(name:stri
   {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/>{profile.copies[selected.name]===5&&!profile.awakened.includes(selected.name)&&<button onClick={()=>awaken(selected.name)}>Éveiller · +20 PV</button>}<button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
  </section>;
 }
+type EventPrize="character"|"pin"|"none";
+type EventSave={boss:string;run:RunSave;prize:EventPrize};
+function eventWave(boss:string,stage:number,seed:string):Enemy[]{
+  if(stage<3){
+    const scale=difficultyAt(100);
+    return makeWave(99,seed+"-"+boss+"-"+stage).slice(0,stage+1).map((enemy,i)=>{
+      const spec=enemyCatalog[enemy.kind],hp=Math.max(1500,Math.round(spec.hp*scale.hp));
+      return {...enemy,id:stage*10+i,level:100,maxHp:hp,hp,attack:Math.max(150,Math.round(spec.attack*scale.attack)),speed:Math.max(90,(spec.speed??18)+scale.speed),xp:0};
+    });
+  }
+  const hero=characterRoster.find(f=>f.name===boss)!,stats=bases[boss],hp=(hero.maxHp+99*5)*8;
+  return [{id:30,kind:"event-"+boss,name:boss,hp,maxHp:hp,attack:Math.round((Math.max(stats[0],stats[1])+198)*1.35),speed:stats[2]+115,level:100,boss:true,trait:"berserk",xp:0}];
+}
+function readEvent(raw:any,owned:string[],copies:Record<string,number>,awake:string[]):EventSave|null{
+  if(!raw||!characterRoster.some(f=>f.name===raw.boss))return null;
+  const run=validRun(raw.run,owned,copies,awake);
+  if(!run||run.wave>3||run.enemies.some(e=>e.level!==100)||(run.wave===3&&!run.enemies.every(e=>e.kind==="event-"+raw.boss)))return null;
+  return {boss:raw.boss,run,prize:["character","pin"].includes(raw.prize)?raw.prize:"none"};
+}
+function eventCheckpoint(p:Profile,snapshot:RunSave):Profile{
+  const active=p.eventRun;
+  if(!active||active.run.status!=="active"||snapshot.id!==active.run.id||snapshot.seq<=active.run.seq)return p;
+  let prize:EventPrize="none",next=p;
+  if(snapshot.wave===3&&snapshot.status==="complete"&&snapshot.enemies.every(e=>e.hp===0)){
+    const roll=Math.random(),name=active.boss;
+    prize=roll<.01?"character":roll<.06?"pin":"none";
+    if(prize==="pin")next={...p,pins:[...new Set([...p.pins,signaturePins[name].id])]};
+    if(prize==="character"){
+      const copies=p.owned.includes(name)?Math.min(5,(p.copies[name]||0)+1):0;
+      next={...p,owned:[...new Set([...p.owned,name])],copies:{...p.copies,[name]:copies},levels:{...p.levels,[name]:copies}};
+    }
+  }
+  return {...next,eventRun:{...active,run:snapshot,prize}};
+}
+function EventHall({profile,start,navigate,abandon}:{profile:Profile;start:(name:string)=>void;navigate:(screen:GameScreen)=>void;abandon:()=>void}){
+ const rail=React.useRef<HTMLDivElement>(null),[confirm,setConfirm]=useState(false);
+ const current=profile.eventRun,active=current?.run.status==="active"?current:null;
+ const ready=profile.equipped.filter(Boolean).length===2 && profile.equipped.every(n=>profile.loadout[n]?.length) && profile.equipped.some(n=>profile.loadout[n]?.some(offensive));
+ function scroll(direction:number){
+   const el=rail.current;if(!el)return;
+   const cards=Array.from(el.children) as HTMLElement[];
+   const here=cards.reduce((a,b)=>Math.abs(b.offsetLeft-el.scrollLeft)<Math.abs(a.offsetLeft-el.scrollLeft)?b:a);
+   el.scrollTo({left:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetLeft,behavior:"smooth"});
+ }
+ return <section className="hub-panel event-hall"><header><h1>Événement</h1><div><button aria-label="Précédent" onClick={()=>scroll(-1)}>‹</button><button aria-label="Suivant" onClick={()=>scroll(1)}>›</button></div></header>
+ <p>2 vagues puis le boss · Tous les ennemis niveau 100</p>
+ {active&&<div className="event-resume"><button onClick={()=>start(active.boss)}>Reprendre · {active.boss} · {active.run.wave}/3</button><button onClick={()=>setConfirm(true)}>Abandonner</button></div>}
+ {confirm&&<WishDialog title="Abandonner cet événement ?" close={()=>setConfirm(false)}><button onClick={()=>setConfirm(false)}>Annuler</button><button onClick={()=>{abandon();setConfirm(false);}}>Confirmer</button></WishDialog>}
+ {!ready&&!active&&<button onClick={()=>navigate("team")}>Préparer le duo</button>}
+ <div className="event-rail" ref={rail} aria-label="Événements">{characterRoster.map(hero=><article key={hero.name}>
+ <div className="event-preview"><SpritePreview fighter={hero} maximumScale={2.4}/></div><h2>{hero.name}</h2><TypeChips elements={characterElements[hero.name]}/>
+ <p><b>5 %</b> · {signaturePins[hero.name].name}<br/><b>1 %</b> · {hero.name}</p>
+ <button disabled={active?active.boss!==hero.name:!ready} onClick={()=>start(hero.name)}>{active?.boss===hero.name?"Reprendre":"Défier"}</button>
+ </article>)}</div></section>;
+}
+
 function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
  const names=profile.equipped.filter(Boolean),duo=(names.length?names:["NEKU"]).map(name=>characterRoster.find(f=>f.name===name)!);
  const rewards=questsFor(profile).filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id)).length;
  return <section className="hub-home"><div className="hub-home-heading"><small>SHIBUYA · REAPERS’ GAME</small><h1>À toi de jouer.</h1><span>Record · Étage {profile.bestFloor} / 100</span></div>
   <div className="hub-home-stage"><div className="hub-home-halo" aria-hidden="true"/>{duo.map(f=><SpritePreview key={f.name} fighter={f} maximumScale={2.5}/>)}</div>
-  <button className="hub-play" onClick={()=>navigate("team")}><small>ROGUELIKE</small><b>{profile.run?.status==="active"?`Reprendre · Étage ${profile.run.wave}`:names.length===2?"Préparer le combat":"Former ma Team"}</b><span>100 étages à défier →</span></button>
+  <div className="home-modes"><button className="hub-play" onClick={()=>navigate("team")}><b>Roguelike</b></button><button className="hub-play" onClick={()=>navigate("events")}><b>Événement</b></button></div>
   <div className="hub-shortcuts"><button onClick={()=>navigate("quests")}><span>◇</span><b>Quêtes</b><small>{rewards?`${rewards} récompense${rewards>1?"s":""}`:"Ta progression"}</small></button><button onClick={()=>navigate("summon")}><span>✦</span><b>Invocations</b><small>{profile.freeWishes} vœux gratuits</small></button><button onClick={()=>navigate("collection")}><span>▦</span><b>Collection</b><small>{profile.owned.length} personnages</small></button></div>
  </section>;
 }
@@ -1120,11 +1187,22 @@ function App() {
     setProfile(p=>{if(p.run?.status==="active"||p.equipped.filter(Boolean).length!==2||!p.equipped.every(name=>p.loadout[name]?.length))return p;created=newRun(p);return {...p,run:created,hasPlayed:true,bestFloor:Math.max(1,p.bestFloor)};});
     if(created){runSignature.current=combatFingerprint(loadProfile());setResumeRun(created);setBattleLoadout(created.loadout);setParty(created.team);}
   };
-  if (party && resumeRun) return <Battle key={resumeRun.id} initialRun={resumeRun} initialTeam={party} loadout={battleLoadout} coins={profile.coins}
-    onCheckpoint={(snapshot,gains)=>setProfile(p=>applyRunCheckpoint(p,snapshot,gains))}
-    leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen("team"); setResult([]); }} />;
+  const startEvent=(boss:string)=>{
+    let chosen:RunSave|null=null;
+    setProfile(p=>{
+      if(p.eventRun?.run.status==="active"){if(p.eventRun.boss===boss)chosen=p.eventRun.run;return p;}
+      if(!characterRoster.some(f=>f.name===boss)||p.equipped.filter(Boolean).length!==2||!p.equipped.every(n=>p.loadout[n]?.length)||!p.equipped.some(n=>p.loadout[n]?.some(offensive)))return p;
+      const run=newRun(p);run.enemies=eventWave(boss,1,run.id);chosen=run;return {...p,eventRun:{boss,run,prize:"none"}};
+    });
+    if(chosen){runSignature.current=combatFingerprint(loadProfile());setResumeRun(chosen);setBattleLoadout(chosen.loadout);setParty(chosen.team);}
+  };
+  const event=resumeRun&&profile.eventRun?.run.id===resumeRun.id?profile.eventRun:null;
+  if (party && resumeRun) return <Battle key={resumeRun.id} event={event} initialRun={resumeRun} initialTeam={party} loadout={battleLoadout} coins={profile.coins}
+    onCheckpoint={(snapshot,gains)=>setProfile(p=>event?eventCheckpoint(p,snapshot):applyRunCheckpoint(p,snapshot,gains))}
+    leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen(event?"events":"team"); setResult([]); }} />;
   const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
+  if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);
   if(screen==="settings")return hub(<AudioSettings back={()=>navigate("menu")}/>);
   if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
   if(screen==="bestiary")return hub(<BestiaryMenu/>);
@@ -1229,7 +1307,7 @@ function HudPortrait({fighter,enemy}:{fighter?:Fighter;enemy?:Enemy}) {
       const crop=Math.max(1,Math.min(width,(bottom-top+1)*.45)),x=Math.max(0,Math.min(width-crop,(fighter?.portraitCenter??(left+right)/2)-crop/2));
       context.imageSmoothingEnabled=false;context.clearRect(0,0,64,64);context.drawImage(image,sx+x,sy+(fighter?.portraitTop??top),crop,crop,0,0,64,64);
     };
-    if(spec?.atlasFrames){const [page,x,y]=spec.atlasFrames[0];ffbePage(page).then(image=>ready(image,x,y)).catch(()=>{});}else{image.onload=()=>ready(image);image.src=enemy?`./assets/game/enemy-atlases/${enemy.kind}.png`:fighter!.sprite;}
+    if(spec?.atlasFrames){const [page,x,y]=spec.atlasFrames[0];ffbePage(page).then(image=>ready(image,x,y)).catch(()=>{});}else{image.onload=()=>ready(image);image.src=enemy?(eventHeroes[enemy.kind]?.sprite||`./assets/game/enemy-atlases/${enemy.kind}.png`):fighter!.sprite;}
     return ()=>{disposed=true;};
   },[fighter?.sprite,enemy?.kind]);
   return <canvas ref={ref} width={64} height={64} aria-hidden="true"/>;
@@ -1246,7 +1324,8 @@ function turnOrder(team:Fighter[],enemies:Enemy[],turn:number):TurnEntry[] {
 const planCost=(plan?:PlannedAction)=>plan?.kind==="psych"?psychs[plan.pin!]?.cost||0:0;
 const planName=(plan?:PlannedAction)=>!plan?"Choisir une action":plan.kind==="guard"?"Défense":plan.kind==="burst"?"Sync Burst":psychs[plan.pin!].name;
 
-function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{initialRun:RunSave;initialTeam:Fighter[];loadout:Record<string,Psych[]>;coins:number;onCheckpoint:(snapshot:RunSave,gains?:RunGains)=>void;leave:()=>void}) {
+function Battle({ event,initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{event?:EventSave|null;initialRun:RunSave;initialTeam:Fighter[];loadout:Record<string,Psych[]>;coins:number;onCheckpoint:(snapshot:RunSave,gains?:RunGains)=>void;leave:()=>void}) {
+  const finalWave=event?3:maxFloor;
   const checkpointSeq=React.useRef(initialRun.seq);
   const [fullscreen,setFullscreen]=useState(false);
   useEffect(()=>{
@@ -1346,7 +1425,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
     const publish=()=>{setTeam([...fighters]);setEnemies([...monsters]);setEnergy(en);setGroove(sync);};
     const healParty=(amount:number)=>{fighters=fighters.map(f=>f.hp>0?{...f,hp:Math.min(f.maxHp,f.hp+amount)}:f);};
     const passiveBonus=(pattern:RegExp,base:number)=>Math.max(0,...fighters.filter(f=>f.hp>0).flatMap(f=>(loadout[f.name]||[]).map(id=>psychs[id]).filter(pin=>pattern.test(pin.psych)).map(pin=>base*pinRankMultiplier(pin))));
-    const persist=(pending:RunPending|null,gains:RunGains={},nextTurn=turn)=>saveCheckpoint({status:fighters.every(f=>f.hp<=0)?"lost":wave===100&&monsters.every(e=>e.hp<=0)?"complete":"active",wave,turn:nextTurn,team:fighters,enemies:monsters,energy:en,groove:sync,reward:monsters.every(e=>e.hp<=0),earnedXp:earnedXp+xp,loot:[...loot,...drops.map(pin=>pin.name)],awarded:[...awarded.current],pending:fighters.every(f=>f.hp<=0)||monsters.every(e=>e.hp<=0)?null:pending},gains);
+    const persist=(pending:RunPending|null,gains:RunGains={},nextTurn=turn)=>saveCheckpoint({status:fighters.every(f=>f.hp<=0)?"lost":wave===finalWave&&monsters.every(e=>e.hp<=0)?"complete":"active",wave,turn:nextTurn,team:fighters,enemies:monsters,energy:en,groove:sync,reward:monsters.every(e=>e.hp<=0),earnedXp:earnedXp+xp,loot:[...loot,...drops.map(pin=>pin.name)],awarded:[...awarded.current],pending:fighters.every(f=>f.hp<=0)||monsters.every(e=>e.hp<=0)?null:pending},gains);
     setBusy(true);setQueue(steps);setEnergy(en);
     persist({steps,choices,index:recovery?.index||0,shields:[...shields],performed:[...performed]});
     for(let index=recovery?.index||0;index<steps.length;index++){
@@ -1410,7 +1489,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
         defeated.forEach(e=>awarded.current.add(e.id));
         const earned=defeated.reduce((sum,e)=>sum+e.xp,0);
         if(earned){xp+=earned;gains.xp=earned;fighters=fighters.map(f=>gainExperience(f,earned));}
-        const found=defeated.filter(()=>Math.random()<.25).map(()=>pick(pinList));
+        const found=event?[]:defeated.filter(()=>Math.random()<.25).map(()=>pick(pinList));
         if(found.length){drops.push(...found);gains.pins=found.map(pin=>pin.id);}
       }
       if(monsters.every(e=>e.hp<=0)&&!clearedWave.current){clearedWave.current=true;gains.victory=true;}
@@ -1433,9 +1512,9 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
 
   useEffect(()=>{if(initialRun.pending){const timer=setTimeout(()=>resolveRound(initialRun.pending),0);return()=>clearTimeout(timer);}},[]);
   const nextWave = () => {
-    if(wave>=maxFloor||busy||!reward)return;
+    if(wave>=finalWave||busy||!reward)return;
     const next=wave+1,heal=difficultyAt(next).tier>difficultyAt(wave).tier;
-    const nextTeam=team.map(f=>({...f,hp:heal?f.maxHp:f.hp})),nextEnemies=makeWave(next,initialRun.id);
+    const nextTeam=team.map(f=>({...f,hp:heal?f.maxHp:f.hp})),nextEnemies=event?eventWave(event.boss,next,initialRun.id):makeWave(next,initialRun.id);
     saveCheckpoint({status:"active",wave:next,turn:1,team:nextTeam,enemies:nextEnemies,energy,groove,reward:false,earnedXp:0,loot:[],awarded:[],pending:null});
     setTeam(nextTeam);
     resetPlanning();
@@ -1454,7 +1533,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
   };
 
   const teamDefeated = team.every((fighter) => fighter.hp <= 0);
-  useMusic(teamDefeated?null:reward?"victory":isBossWave(wave)?"boss":"battle");
+  useMusic(teamDefeated?null:reward?"victory":(event?wave===3:isBossWave(wave))?"boss":"battle");
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
 
@@ -1474,7 +1553,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
             <Icon name="star" /> SCORE <b>{String((wave - 1) * 2350).padStart(6, "0")}</b>
           </span>
           <span className="currency"><Icon name="coin" /> {coins}</span>
-          <button className="currency" disabled={busy} onClick={leave} title="Mettre la run en pause et revenir à Team">Mon duo</button>
+          <button className="currency" disabled={busy} onClick={leave} title={event?"Retour aux événements":"Mettre la run en pause et revenir à Team"}>{event?"Pause":"Mon duo"}</button>
           <SoundToggle/>
         </div>
       </header>
@@ -1530,7 +1609,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
           <div className="battle-heading">
             <div>
               <small>ENCOUNTER</small>
-              <h1>ÉTAGE {String(wave).padStart(2, "0")} <small className="tier-label">Palier {difficultyAt(wave).tier} / 10</small></h1>
+              <h1>{event?"Événement":"ÉTAGE"} {String(wave).padStart(2, "0")} <small className="tier-label">{event?`${event.boss} · ${wave}/3`:`Palier ${difficultyAt(wave).tier} / 10`}</small></h1>
             </div>
             <div className={`threat threat-${threat.toLowerCase()}`}>
               <span>THREAT</span>
@@ -1663,10 +1742,10 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
         <div className="overlay">
           <div className="modal reward-modal">
             <small>WAVE {String(wave).padStart(2, "0")} COMPLETE</small>
-            <h2>{wave===maxFloor?"Étage 100 · Ascension terminée !":"CHOOSE YOUR DROP"}</h2>
+            {event?<><h2>{wave===3?event.boss:"Vague terminée !"}</h2>{wave===3?<><p>{event.prize==="character"?`Personnage obtenu · ${event.boss}`:event.prize==="pin"?signaturePins[event.boss].name:"Aucun butin cette fois."}</p><button onClick={leave}>Retour aux événements</button></>:<button onClick={nextWave}>{wave===1?"Vague suivante":"Affronter le boss"}</button>}</>:<><h2>{wave===maxFloor?"Étage 100 · Ascension terminée !":"CHOOSE YOUR DROP"}</h2>
             <p>+5 pièces · +{earnedXp} XP par personnage.</p>
             {loot.length>0 && <p>Psychs récupérés · {loot.join(", ")}</p>}
-            {wave<maxFloor?<><p>{difficultyAt(wave+1).tier>difficultyAt(wave).tier?"Nouveau palier : soin complet de la Team.":"Les PV sont conservés. Prochain soin au changement de palier."}</p><button className="fullscreen-button" onClick={nextWave}>Continuer · Étage {wave+1}</button></>:<button className="fullscreen-button" onClick={leave}>Retour à Team · Voir les quêtes</button>}
+            {wave<maxFloor?<><p>{difficultyAt(wave+1).tier>difficultyAt(wave).tier?"Nouveau palier : soin complet de la Team.":"Les PV sont conservés. Prochain soin au changement de palier."}</p><button className="fullscreen-button" onClick={nextWave}>Continuer · Étage {wave+1}</button></>:<button className="fullscreen-button" onClick={leave}>Retour à Team · Voir les quêtes</button>}</>}
           </div>
         </div>
       )}
@@ -1677,7 +1756,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
             <small>RUN TERMINATED</small>
             <h2>ERASED</h2>
             <p>You reached wave {wave}. The streets will remember your score.</p>
-            <p>La reprise de cette run a été supprimée.</p><button onClick={leave}>Retour à Team</button>
+            <p>La reprise de cette run a été supprimée.</p><button onClick={leave}>{event?"Retour aux événements":"Retour à Team"}</button>
           </div>
         </div>
       )}

@@ -1033,3 +1033,18 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .audio-settings label {display:grid;grid-template-columns:1fr auto;align-items:center;gap:.35rem 1rem;margin:1rem 0;color:#312345;}
 .audio-settings output {font-variant-numeric:tabular-nums;}
 .audio-settings input {grid-column:1/-1;width:100%;min-height:44px;margin:0;accent-color:#705496;cursor:pointer;}
+
+.game-hub .home-modes {display:flex;gap:.55rem;width:min(100%,580px);margin:auto;min-width:0;}
+.game-hub .home-modes .hub-play {flex:1 1 0;min-width:0;width:auto;margin:0;padding:9px 4px;min-height:44px;}
+.home-modes .hub-play b {font-size:clamp(.85rem,3vw,1.15rem);}
+.event-hall {min-width:0;}
+.event-hall header,.event-resume {display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
+.event-hall header button {min-width:44px;min-height:44px;margin-inline-start:.3rem;}
+.event-rail {display:flex;position:relative;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:thin;padding:8px 2px 14px;}
+.event-rail article {flex:0 0 min(85%,290px);min-width:0;scroll-snap-align:start;text-align:center;padding:1rem .75rem;border:1px solid #c3b3d1;border-radius:1.2rem;background:radial-gradient(ellipse at 50% 24%,white,#e6def0 72%,#dad1e4);color:#32263d;box-shadow:0 3px 0 #a99abb;}
+.event-rail h2,.event-rail p {margin:.5rem 0;}
+.event-preview {height:clamp(80px,20dvh,155px);}
+.event-preview .sprite-preview {width:100%;height:100%;}
+.event-rail article>button {min-height:44px;width:100%;}
+@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}}
+@media (orientation:landscape) and (min-width:560px) and (max-width:760px){.game-hub .home-modes {grid-column:1/3;}}

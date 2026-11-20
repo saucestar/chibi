@@ -358,4 +358,17 @@ Paramètres|Settings
 Musique et effets sonores|Music and sound effects
 Effets sonores|Sound effects
 Retour au menu|Back to menu
+Événement|Event
+Événements|Events
+2 vagues puis le boss · Tous les ennemis niveau 100|2 waves, then the boss · All enemies are level 100
+Préparer le duo|Set up your team
+Défier|Challenge
+Abandonner cet événement ?|Abandon this event?
+Retour aux événements|Back to events
+Affronter le boss|Challenge the boss
+Vague suivante|Next wave
+Aucun butin cette fois.|No drop this time.
+Personnage obtenu|Character recruited
+Précédent|Previous
+Pause|Pause
 `.trim();
