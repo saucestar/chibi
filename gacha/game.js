@@ -2459,10 +2459,18 @@ function HubHome({
     duo = (names.length ? names : ["NEKU"]).map(name => characterRoster.find(f => f.name === name));
   const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length;
   const modeRail = React.useRef(null);
-  const moveMode = direction => modeRail.current?.scrollBy({
-    left: direction * modeRail.current.clientWidth,
-    behavior: "smooth"
-  });
+  const moveMode = direction => {
+    const rail = modeRail.current;
+    if (!rail) return;
+    const cards = Array.from(rail.children);
+    if (!cards.length) return;
+    const current = cards.reduce((nearest, card, index) => Math.abs(card.offsetLeft - rail.scrollLeft) < Math.abs(cards[nearest].offsetLeft - rail.scrollLeft) ? index : nearest, 0);
+    const next = (current + direction + cards.length) % cards.length;
+    rail.scrollTo({
+      left: cards[next].offsetLeft,
+      behavior: "smooth"
+    });
+  };
   return React.createElement("section", {
     className: "hub-home"
   }, React.createElement("div", {

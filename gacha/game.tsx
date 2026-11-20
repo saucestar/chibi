@@ -1044,7 +1044,13 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
  const names=profile.equipped.filter(Boolean),duo=(names.length?names:["NEKU"]).map(name=>characterRoster.find(f=>f.name===name)!);
  const rewards=questsFor(profile).filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id)).length;
  const modeRail=React.useRef<HTMLDivElement>(null);
- const moveMode=(direction:number)=>modeRail.current?.scrollBy({left:direction*modeRail.current.clientWidth,behavior:"smooth"});
+ const moveMode=(direction:number)=>{
+   const rail=modeRail.current;if(!rail)return;
+   const cards=Array.from(rail.children) as HTMLElement[];if(!cards.length)return;
+   const current=cards.reduce((nearest,card,index)=>Math.abs(card.offsetLeft-rail.scrollLeft)<Math.abs(cards[nearest].offsetLeft-rail.scrollLeft)?index:nearest,0);
+   const next=(current+direction+cards.length)%cards.length;
+   rail.scrollTo({left:cards[next].offsetLeft,behavior:"smooth"});
+ };
  return <section className="hub-home"><div className="hub-home-heading"><small>SHIBUYA · REAPERS’ GAME</small><h1>À toi de jouer.</h1><span>Record · Étage {profile.bestFloor} / 100</span></div>
   <div className="hub-home-stage"><div className="hub-home-halo" aria-hidden="true"/>{duo.map(f=><SpritePreview key={f.name} fighter={f} maximumScale={2.5}/>)}</div>
   <div className="home-mode-switcher"><button className="home-mode-arrow" aria-label="Voir le mode précédent" onClick={()=>moveMode(-1)}>‹</button><div className="home-modes" ref={modeRail} aria-label="Choisir un mode de jeu"><button className="hub-play home-mode-card" onClick={()=>navigate("roguelike")}><small>MODE DE JEU</small><b>Roguelike</b><span>Gravis les 100 étages</span></button><button className="hub-play home-mode-card" onClick={()=>navigate("events")}><small>MODE DE JEU</small><b>Événement</b><span>Défie les personnages</span></button></div><button className="home-mode-arrow" aria-label="Voir le mode suivant" onClick={()=>moveMode(1)}>›</button></div>
