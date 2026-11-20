@@ -299,7 +299,7 @@ function scaledPinEffect(pin:Pin,base:number):number {return base>0?Math.max(1,M
 function pinShieldReduction(pin:Pin):number {return Math.min(.75,.55*pinRankMultiplier(pin));}
 function PinRankInfo({pin}:{pin:Pin}) {
  const label=pin.grade&&pin.grade!=="---"?`Classe ${pin.grade}`:"Sans classe";
- return <span>{label} · Effets ×{pinRankMultiplier(pin).toLocaleString("fr-FR")}</span>;
+ return <span>{label} · Effets ×{pinRankMultiplier(pin).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span>;
 }
 declare const pinList: Pin[];
 const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn"};
@@ -394,7 +394,7 @@ function WishHistory({profile,embedded=false}:{profile:Profile;embedded?:boolean
  {(open||embedded)&&<Panel className="wish-history" title="Historique des vœux" close={()=>setOpen(false)}>
   <div key={selected?.id||"list"} className="wish-history-view">
   {selected?<>
-   <p><b>{portals[selected.portal]||selected.portal}</b> · {new Date(selected.at).toLocaleString("fr-FR",{timeZone:"Europe/Paris"})}</p>
+   <p><b>{portals[selected.portal]||selected.portal}</b> · {new Date(selected.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{timeZone:"Europe/Paris"})}</p>
    <p>Vœux {selected.first}–{selected.last} · {selected.freeUsed} gratuits · {selected.coinsPaid} pièces</p>
    <p>Solde : {selected.coinsBefore} → {selected.coinsAfter} pièces · Gratuits : {selected.freeBefore} → {selected.freeAfter}</p>
    <div className="wish-history-list">{JSON.parse(selected.drawsJson).map((draw:any,i:number)=>{
@@ -406,8 +406,8 @@ function WishHistory({profile,embedded=false}:{profile:Profile;embedded?:boolean
    {profile.wishHistoryBaseline>0&&<p>{profile.wishHistoryBaseline} invocations antérieures : total connu, détails non enregistrés à l’époque.</p>}
    {error&&<p role="status">{error}</p>}
    <div className="wish-history-list">{events.map(event=><button key={event.id} onClick={()=>setSelected(event)}>
-    <b>{event.count} vœu{event.count>1?"x":""} · {portals[event.portal]||event.portal}</b>
-    <small>{new Date(event.at).toLocaleString("fr-FR",{timeZone:"Europe/Paris"})} · {event.freeUsed} gratuits · {event.coinsPaid} pièces</small>
+    <b>{event.count} {event.count>1?"vœux":"vœu"} · {portals[event.portal]||event.portal}</b>
+    <small>{new Date(event.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{timeZone:"Europe/Paris"})} · {event.freeUsed} gratuits · {event.coinsPaid} pièces</small>
     {pending.has(event.id)&&<small>En attente de synchronisation</small>}
    </button>)}{!events.length&&!loading&&<p>Aucune invocation détaillée enregistrée pour le moment.</p>}</div>
    <div className="dialog-actions"><button disabled={loading} onClick={()=>load(true)}>Actualiser</button>{more&&<button disabled={loading} onClick={()=>load()}>Charger plus</button>}</div>
@@ -772,7 +772,7 @@ function GameHub({profile,screen,navigate,children}:{profile:Profile;screen:Game
  const content=React.useRef<HTMLDivElement>(null);
  useEffect(()=>{content.current?.scrollTo({top:0});},[screen]);
  return <div className="game-hub game-shell">
-  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString("fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
+  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
   <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
   <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} onClick={()=>navigate(id)}><span aria-hidden="true">{icon}</span><b>{label}</b></button>)}</nav>
  </div>;
@@ -787,7 +787,7 @@ function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;pro
   <div className="dossier-stats"><p>{reference?"Stats de base · Niveau 1 · Rang E":`Ta progression · Niveau ${stats.level} · Rang ${rank===5?"étoile":ranks[rank]}`}</p>
    <dl>{[["PV",stats.maxHp],["ATK",stats.atk],["ATK SPE",stats.mag],["SPE",stats.speed]].map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
    <div className="dossier-psych"><PinIcon pin={pin}/><span><small>Psych de départ</small><b>{pin.name.replace(" (Pin)","")}</b></span></div>
-   {rate!==undefined&&<p className="dossier-rate">Prochain vœu · {(rate*100).toLocaleString("fr-FR",{maximumFractionDigits:3})} %</p>}
+   {rate!==undefined&&<p className="dossier-rate">Prochain vœu · {(rate*100).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{maximumFractionDigits:3})} %</p>}
    {!reference&&<p>{profile.copies[fighter.name]||0} / 5 doublons{profile.awakened.includes(fighter.name)?" · Éveillé":""}</p>}
   </div>
  </article>;
@@ -913,7 +913,7 @@ function App() {
   };
   const pool=portalPool(portal,profile);
   const guaranteed=profile.wishStep===9;
-  const percent=(v:number)=>v.toLocaleString("fr-FR",{style:"percent",maximumFractionDigits:3});
+  const percent=(v:number)=>v.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{style:"percent",maximumFractionDigits:3});
   const portalName=portal==="shibuya"?"First Week #1":portals[portal];
   const closeDialog=()=>setPhase("ready");
   const recruit = (id:string,count:number) => {
@@ -992,8 +992,8 @@ function App() {
         </div>
         <div className="wish-commands">{[1,10].map(n=><div key={n} className="wish-option">
           <button aria-describedby={`wish-price-${id}-${n}`} disabled={historyFull(profile) || phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
-          <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString("fr-FR")}</span></span>
-          {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} gratuit{wishQuote(profile,n).free>1?"s":""} inclus</small>}
+          <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span></span>
+          {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} {wishQuote(profile,n).free>1?"gratuits":"gratuit"} inclus</small>}
         </div>)}</div>
         <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>

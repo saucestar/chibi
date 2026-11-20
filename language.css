@@ -1,0 +1,20 @@
+.language-picker {
+  box-sizing:border-box; width:min(90vw,24rem); max-height:90dvh; overflow:auto;
+  padding:clamp(1rem,4vw,2rem); border:2px solid #a79bbc; border-radius:1.3rem;
+  background:linear-gradient(145deg,#fff,#ece7f5); color:#271d3e;
+  box-shadow:0 .4rem 0 #59496e,0 1rem 3rem #18102180;
+  font-family:Montserrat,system-ui,sans-serif; text-align:center;
+}
+.language-picker::backdrop { background:#151020c9; }
+.language-picker h2 { margin:0 0 1.2rem; font:900 1.45rem/1.3 Montserrat,system-ui,sans-serif; }
+.language-picker small { display:block; font-size:.95rem; color:#57466a; }
+.language-picker div { display:grid; grid-template-columns:1fr 1fr; gap:.65rem; }
+.language-picker button,.language-profile {
+  min-height:44px; padding:.6rem; cursor:pointer; border-radius:.9rem;
+  border:1px solid #9a82bd; color:white; background:linear-gradient(#68518e,#392658);
+  box-shadow:0 3px 0 #27173d; font:900 .95rem Montserrat,system-ui,sans-serif;
+  transition:transform .13s,box-shadow .13s;
+}
+.language-picker button:active,.language-profile:active { transform:translateY(2px); box-shadow:none; }
+.language-picker button:focus-visible,.language-profile:focus-visible { outline:3px solid #9671ce; outline-offset:3px; }
+.language-profile { margin:.6rem 0; padding-inline:1rem; }

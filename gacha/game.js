@@ -590,7 +590,7 @@ function PinRankInfo({
   pin
 }) {
   const label = pin.grade && pin.grade !== "---" ? `Classe ${pin.grade}` : "Sans classe";
-  return React.createElement("span", null, label, " \xB7 Effets \xD7", pinRankMultiplier(pin).toLocaleString("fr-FR"));
+  return React.createElement("span", null, label, " \xB7 Effets \xD7", pinRankMultiplier(pin).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR"));
 }
 const basePsych = {
   NEKU: "pin266",
@@ -895,7 +895,7 @@ function WishHistory({
   }, React.createElement("div", {
     key: selected?.id || "list",
     className: "wish-history-view"
-  }, selected ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, portals[selected.portal] || selected.portal), " \xB7 ", new Date(selected.at).toLocaleString("fr-FR", {
+  }, selected ? React.createElement(React.Fragment, null, React.createElement("p", null, React.createElement("b", null, portals[selected.portal] || selected.portal), " \xB7 ", new Date(selected.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     timeZone: "Europe/Paris"
   })), React.createElement("p", null, "V\u0153ux ", selected.first, "\u2013", selected.last, " \xB7 ", selected.freeUsed, " gratuits \xB7 ", selected.coinsPaid, " pi\xE8ces"), React.createElement("p", null, "Solde : ", selected.coinsBefore, " \u2192 ", selected.coinsAfter, " pi\xE8ces \xB7 Gratuits : ", selected.freeBefore, " \u2192 ", selected.freeAfter), React.createElement("div", {
     className: "wish-history-list"
@@ -915,7 +915,7 @@ function WishHistory({
   }, events.map(event => React.createElement("button", {
     key: event.id,
     onClick: () => setSelected(event)
-  }, React.createElement("b", null, event.count, " v\u0153u", event.count > 1 ? "x" : "", " \xB7 ", portals[event.portal] || event.portal), React.createElement("small", null, new Date(event.at).toLocaleString("fr-FR", {
+  }, React.createElement("b", null, event.count, " ", event.count > 1 ? "v\u0153ux" : "v\u0153u", " \xB7 ", portals[event.portal] || event.portal), React.createElement("small", null, new Date(event.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     timeZone: "Europe/Paris"
   }), " \xB7 ", event.freeUsed, " gratuits \xB7 ", event.coinsPaid, " pi\xE8ces"), pending.has(event.id) && React.createElement("small", null, "En attente de synchronisation"))), !events.length && !loading && React.createElement("p", null, "Aucune invocation d\xE9taill\xE9e enregistr\xE9e pour le moment.")), React.createElement("div", {
     className: "dialog-actions"
@@ -1775,7 +1775,7 @@ function GameHub({
     "aria-label": `${profile.coins} pièces`
   }, React.createElement(Icon, {
     name: "coin"
-  }), profile.coins.toLocaleString("fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement("button", {
+  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement("button", {
     className: "hub-fullscreen",
     onClick: gameFullscreen,
     "aria-label": "Basculer le plein \xE9cran"
@@ -1834,7 +1834,7 @@ function CharacterDossier({
     pin: pin
   }), React.createElement("span", null, React.createElement("small", null, "Psych de d\xE9part"), React.createElement("b", null, pin.name.replace(" (Pin)", "")))), rate !== undefined && React.createElement("p", {
     className: "dossier-rate"
-  }, "Prochain v\u0153u \xB7 ", (rate * 100).toLocaleString("fr-FR", {
+  }, "Prochain v\u0153u \xB7 ", (rate * 100).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     maximumFractionDigits: 3
   }), " %"), !reference && React.createElement("p", null, profile.copies[fighter.name] || 0, " / 5 doublons", profile.awakened.includes(fighter.name) ? " · Éveillé" : "")));
 }
@@ -2110,7 +2110,7 @@ function App() {
   };
   const pool = portalPool(portal, profile);
   const guaranteed = profile.wishStep === 9;
-  const percent = v => v.toLocaleString("fr-FR", {
+  const percent = v => v.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     style: "percent",
     maximumFractionDigits: 3
   });
@@ -2327,9 +2327,9 @@ function App() {
     "aria-label": `${wishCost(profile, n)} pièces requises`
   }, React.createElement(Icon, {
     name: "coin"
-  }), React.createElement("span", null, "\xD7 ", wishCost(profile, n).toLocaleString("fr-FR"))), wishQuote(profile, n).free > 0 && React.createElement("small", {
+  }), React.createElement("span", null, "\xD7 ", wishCost(profile, n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR"))), wishQuote(profile, n).free > 0 && React.createElement("small", {
     className: "wish-free"
-  }, wishQuote(profile, n).free, " gratuit", wishQuote(profile, n).free > 1 ? "s" : "", " inclus")))), React.createElement("p", {
+  }, wishQuote(profile, n).free, " ", wishQuote(profile, n).free > 1 ? "gratuits" : "gratuit", " inclus")))), React.createElement("p", {
     className: "portal-caption"
   }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
