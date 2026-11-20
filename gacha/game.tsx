@@ -749,13 +749,16 @@ function QuestMenu({profile,save,embedded=false}:{profile:Profile;save:(fn:(p:Pr
  </>;
 }
 
-// Explicit one-time recovery requested for Cetruc: floor 5, not difficulty tier 5.
+// Explicit one-time recovery requested for Cetruc: difficulty tier 5 begins on floor 41.
 function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profile {
  if(!identity||!/^\d{1,25}$/.test(identity.id)||identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR")!=="cetruc")return p;
- const flag=`cetruc-floor-5-v1-${identity.id}`;
- if(p.specialRunRecoveries.includes(flag)||!p.hasPlayed||p.equipped.filter(Boolean).length!==2||!p.equipped.every(name=>p.loadout[name]?.length))return p;
- const base=newRun(p),run={...base,wave:5,enemies:makeWave(5,base.id)};
- return {...p,run,bestFloor:Math.max(p.bestFloor,5),specialRunRecoveries:[...p.specialRunRecoveries,flag]};
+ const flag=`cetruc-tier-5-v2-${identity.id}`;
+ if(p.specialRunRecoveries.includes(flag) || !p.hasPlayed) return p;
+  const marked = [...p.specialRunRecoveries, flag];
+  if (p.run?.status === "complete" || (p.run?.status === "active" && p.run.wave >= 41)) return {...p, specialRunRecoveries:marked};
+  if (p.equipped.filter(Boolean).length!==2||!p.equipped.every(name=>p.loadout[name]?.length))return p;
+ const base=newRun(p),run={...base,wave:41,enemies:makeWave(41,base.id)};
+ return {...p,run,bestFloor:Math.max(p.bestFloor,41),specialRunRecoveries:marked};
 }
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null]);}
 type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"menu";

@@ -1708,19 +1708,22 @@ function QuestMenu({
 }
 function applyCetrucRecovery(p, identity) {
   if (!identity || !/^\d{1,25}$/.test(identity.id) || identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR") !== "cetruc") return p;
-  const flag = `cetruc-floor-5-v1-${identity.id}`;
-  if (p.specialRunRecoveries.includes(flag) || !p.hasPlayed || p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
+  const flag = `cetruc-tier-5-v2-${identity.id}`;
+  if (p.specialRunRecoveries.includes(flag)  || !p.hasPlayed) return p;
+  const marked = [...p.specialRunRecoveries, flag];
+  if (p.run?.status === "complete" || (p.run?.status === "active" && p.run.wave >= 41)) return {...p, specialRunRecoveries:marked};
+  if (p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
   const base = newRun(p),
     run = {
       ...base,
-      wave: 5,
-      enemies: makeWave(5, base.id)
+      wave: 41,
+      enemies: makeWave(41, base.id)
     };
   return {
     ...p,
     run,
-    bestFloor: Math.max(p.bestFloor, 5),
-    specialRunRecoveries: [...p.specialRunRecoveries, flag]
+    bestFloor: Math.max(p.bestFloor, 41),
+    specialRunRecoveries: marked
   };
 }
 function combatFingerprint(p) {
