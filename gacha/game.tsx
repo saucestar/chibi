@@ -579,7 +579,7 @@ function wishQuote(p:Profile,count:number) {
 
 const characterChance = 0.10;
 function portalRoster(id:string):Fighter[] {
-  const names=id==="eosDawn"?["NOCTIS","PROMPTO"]:id==="eosDusk"?["IGNIS","GLADIO"]:id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
+  const names=id==="partners"?["BEAT","JOSHUA"]:id==="eosDawn"?["NOCTIS","PROMPTO"]:id==="eosDusk"?["IGNIS","GLADIO"]:id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI"];
   return characterRoster.filter(f=>names.includes(f.name));
 }
 function portalPool(id:string, _profile?:Profile) {
@@ -1271,7 +1271,7 @@ function App() {
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} {wishQuote(profile,n).free>1?"gratuits":"gratuit"} inclus</small>}
         </div>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."}</p>
       </div>
 
     </article>)}</div>
