@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>TWEWY Co-op</title>
+<script src="i18n.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f1d23">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -39,6 +40,8 @@ button{ font-family:inherit; }
 @media (max-width:420px){ .sw{ gap:3px; } .sw button{ width:12px !important; height:12px !important; } .logo b, .logo i{ -webkit-text-stroke-width:4px; } }
 .sw button{ width:15px; height:15px; border:2px solid var(--ink); padding:0; cursor:pointer; box-shadow:1px 1px 0 #000; }
 .sw button.on{ outline:2px solid #fff; outline-offset:1px; }
+.lang{ margin-left:auto; flex-shrink:0; background:var(--ink); color:#fff; border:2px solid var(--ac); padding:2px 6px; font:900 11px 'Montserrat',sans-serif; cursor:pointer; box-shadow:1px 1px 0 #000; }
+body:has(.game-page.on[data-page="game"]) .lang { display:none; }
 .wallet{display:flex;align-items:center;gap:.45rem;margin-top:8px;color:var(--yellow);font:800 14px Montserrat,sans-serif;font-variant-numeric:tabular-nums}
 .wallet::before{content:"";width:13px;height:13px;border:2px solid #af7522;border-radius:50%;background:#ffd75a;box-shadow:inset 2px 0 #fff0a5}
 
@@ -301,7 +304,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <div class="logo"><b>TWEWY</b><i>CO-OP</i></div>
     <div class="sw" id="sw"></div>
   </div>
-  <div class="wallet" role="status"><span id="walletAmount">180</span> pièces</div>
+  <div class="wallet"><span role="status"><span id="walletAmount">180</span> pièces</span><button type="button" class="lang" id="langBtn" title="langue">EN</button></div>
 </header>
 
 <nav class="tabs" id="tabs">
@@ -313,7 +316,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
 </nav>
 
 <main>
-  <div class="err" id="err" hidden></div>
+  <div class="err" id="err" translate="no" hidden></div>
 
   <!-- ACCUEIL (the JOUER tab, without the game) -->
   <section class="page on" data-page="home">
@@ -321,22 +324,22 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
       <div class="chip"><i>01</i>COMPTE DISCORD</div><div class="win"><b></b><b></b></div><div class="tape"></div>
       <div class="ph">
         <div class="av" id="hAv"><span>…</span></div>
-        <div class="pm"><div class="pname" id="hName">…</div><div class="ps" id="hSub"></div></div>
+        <div class="pm"><div class="pname" id="hName" translate="no">…</div><div class="ps" id="hSub" translate="no"></div></div>
       </div>
       <div class="row2">
         <button type="button" class="btn pri" id="toProfile">mon profil</button>
         <a class="btn" href="index.html">le site</a>
         <button type="button" class="btn" id="logout">déconnexion</button>
       </div>
-      <div class="note" id="install" hidden></div>
+      <div class="note" id="install" translate="no" hidden></div>
     </div>
     <div class="pn">
       <div class="chip"><i>03</i>AUJOURD'HUI</div><div class="win"><b></b><b></b></div>
-      <div id="today"><div class="txt">chargement…</div></div>
+      <div id="today" translate="no"><div class="txt">chargement…</div></div>
     </div>
     <div class="pn wide">
       <div class="chip"><i>06</i>FEED</div><div class="win"><b></b><b></b></div><div class="tape"></div>
-      <div class="dl" id="feed" style="max-height:none;background:none"><div class="empty" style="color:var(--muted)">chargement…</div></div>
+      <div class="dl" id="feed" translate="no" style="max-height:none;background:none"><div class="empty" style="color:var(--muted)">chargement…</div></div>
     </div>
   </section>
 
@@ -345,24 +348,24 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <div class="pn">
       <div class="chip"><i>09</i>YOUTUBE</div><div class="win"><b></b><b></b></div><div class="tape"></div>
       <form class="srch" id="srch">
-        <input class="in" id="q" placeholder="recherche, lien YouTube ou playlist Spotify" autocomplete="off" enterkeyhint="search">
+        <input class="in" id="q" placeholder="recherche, lien YouTube, Spotify ou Apple Music" autocomplete="off" enterkeyhint="search">
         <button type="submit" class="btn pri">▶</button>
       </form>
-      <div class="dl" id="lists" style="max-height:30vh"></div>
+      <div class="dl" id="lists" translate="no" style="max-height:30vh"></div>
       <div style="height:8px"></div>
-      <div class="dl" id="tracks"></div>
+      <div class="dl" id="tracks" translate="no"></div>
     </div>
     <div class="pn">
       <div class="chip"><i>10</i>LECTEUR</div><div class="win"><b></b><b></b></div>
       <div class="vid"><div id="yt"></div><div class="idle" id="idle"><b>♪</b>choisis une musique ou colle un lien YouTube</div></div>
-      <div class="now" id="now">Rien en lecture : choisis un titre.</div>
+      <div class="now" id="now" translate="no"></div>
       <div class="jam">Sur téléphone : écoute solo. YouTube coupe le son si l'écran s'éteint.</div>
       <div class="ctl">
         <button type="button" class="btn pri" id="tog">▶</button>
         <button type="button" class="btn" id="nxt">▶▶</button>
         <span id="time"></span>
       </div>
-      <div class="dl" id="queue"></div>
+      <div class="dl" id="queue" translate="no"></div>
     </div>
   </section>
 
@@ -382,7 +385,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
       <p class="txt">Le plus haut étage atteint · 100 étages maximum</p>
       <p class="note">Seuls les joueurs ayant lancé le roguelike ou effectué une invocation apparaissent. Les joueurs à égalité d’étage partagent le même rang.</p>
       <p id="mobileBoardCount" class="txt"></p>
-      <div id="mobileBoardList" class="mobile-rank-list" aria-live="polite"></div>
+      <div id="mobileBoardList" class="mobile-rank-list" translate="no" aria-live="polite"></div>
     </div>
   </section>
   <section class="page" data-page="board-pc">
@@ -399,7 +402,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <div class="pn">
       <div class="chip"><i>08</i>MISSION DU JOUR</div><div class="win"><b></b><b></b></div>
       <p class="note">Ton score de mission rapporte des pièces au jeu mobile : 10 points = 1 pièce, avec rattrapage des anciennes missions à l’ouverture du jeu ou du gacha.</p>
-      <div id="mission"><div class="txt">chargement…</div></div>
+      <div id="mission" translate="no"><div class="txt">chargement…</div></div>
       <button type="button" class="btn" id="rulesBtn" style="margin-top:12px">voir les règles</button>
     </div>
     <div class="pn wide">
@@ -413,12 +416,12 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <div class="pn">
       <div class="chip"><i>11</i>AMIS</div><div class="win"><b></b><b></b></div><div class="tape"></div>
       <button type="button" class="btn" id="myStats" style="margin-bottom:10px">mes stats musicales</button>
-      <div class="dl" id="fList"><div class="empty">chargement…</div></div>
+      <div class="dl" id="fList" translate="no"></div>
       <div class="note">Joue une partie en co-op en ligne (les deux launchers à jour) : tes partenaires apparaîtront ici.</div>
     </div>
     <div class="pn" id="fStatsPanel">
       <div class="chip"><i>12</i>STATS MUSICALES</div><div class="win"><b></b><b></b></div>
-      <div id="fStats"><div class="txt">chargement…</div></div>
+      <div id="fStats" translate="no"></div>
     </div>
   </section>
 
@@ -429,10 +432,10 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
       <div class="ph">
         <div class="av" id="pAv"><span>…</span></div>
         <div class="pm">
-          <div class="pname" id="pName">…</div>
-          <div class="lvl" id="pLvl">NIVEAU 1</div>
+          <div class="pname" id="pName" translate="no">…</div>
+          <div class="lvl" id="pLvl" translate="no"></div>
           <div class="xp"><i id="pXpBar" style="width:0"></i><span id="pXp">0 / 200 XP</span></div>
-          <div class="ps" id="pStats"></div>
+          <div class="ps" id="pStats" translate="no"></div>
         </div>
       </div>
       <div id="ach"><div class="txt">chargement…</div></div>
@@ -440,7 +443,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
   </section>
 
   <!-- GACHA: the collectible card game (built together, its own cards and art) -->
-<section class="page game-page" data-page="game" aria-label="Jeu Reaper's Run">
+<section class="page game-page" data-page="game" aria-label="Reaper's Run">
     <iframe class="game-frame" src="gacha/index.html" title="TWEWY · jeu, collection et invocations" allow="fullscreen" loading="lazy"></iframe>
   </section>
 </main>
@@ -481,7 +484,7 @@ body,body * { font-family:'Montserrat',Arial,sans-serif !important; font-weight:
     <button type="button" class="btn pri" id="loginBtn">se connecter avec Discord</button>
   </div>
 </div>
-<div class="toast" id="toast" hidden></div>
+<div class="toast" id="toast" translate="no" hidden></div>
 
 <script src="chibi-data.js" defer></script>
 <script src="progress.js"></script>
@@ -507,11 +510,12 @@ const $ = id => document.getElementById(id);
 function esc(s){ const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 function clock(s){ s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 function dur(min){ min = +min || 0; if(min < 1) return '—'; if(min < 60) return min + ' min'; return Math.floor(min / 60) + ' h ' + String(min % 60).padStart(2, '0'); }
-function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); if(m < 1) return "à l'instant"; if(m < 60) return 'il y a ' + m + ' min'; const h = Math.round(m / 60); if(h < 24) return 'il y a ' + h + ' h'; return 'il y a ' + Math.round(h / 24) + ' j'; }
+function plural(n, fr, en){ return n + ' ' + L(fr, en) + ((LANG === 'en' ? n !== 1 : n > 1) ? 's' : ''); }
+function ago(ms){ const m = Math.round((Date.now() - ms) / 60000); if(m < 1) return L("à l'instant", 'just now'); const v = m < 60 ? m + ' min' : Math.round(m / 60) < 24 ? Math.round(m / 60) + ' h' : Math.round(m / 1440) + L(' j', ' d'); return L('il y a ' + v, v + ' ago'); }
 function showErr(m){ $('err').hidden = !m; $('err').textContent = m ? '⚠ ' + m : ''; }
 let toastT = 0;
 function toast(m){ const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800); }
-function why(e){ const m = String(e && (e.code || e.message) || e || ''); return /permission|denied/i.test(m) ? 'lecture refusée par la base (règles Firebase à publier)' : (m || 'erreur'); }
+function why(e){ const m = String(e && (e.code || e.message) || e || ''); return /permission|denied/i.test(m) ? L('lecture refusée par la base (règles Firebase à publier)', 'read refused by the database (Firebase rules to publish)') : (m || L('erreur', 'error')); }
 
 // ---------------- accent colours: the launcher's 7 swatches
 const SWATCHES = ['#ff208c', '#ff2440', '#ff6a00', '#9638ff', '#1c68ff', '#00bee6', '#00c878'];
@@ -522,9 +526,12 @@ function setAccent(c){
   document.querySelectorAll('#sw button').forEach(b => b.classList.toggle('on', b.dataset.c === c));
   try{ localStorage.setItem('appAccent', c); }catch(e){}
 }
-SWATCHES.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.c = c; b.style.background = c; b.title = 'couleur'; b.onclick = () => setAccent(c); $('sw').appendChild(b); });
+SWATCHES.forEach(c => { const b = document.createElement('button'); b.type = 'button'; b.dataset.c = c; b.style.background = c; b.title = L('couleur', 'colour'); b.onclick = () => setAccent(c); $('sw').appendChild(b); });
 let savedAc = null; try{ savedAc = localStorage.getItem('appAccent'); }catch(e){}
 setAccent(SWATCHES.includes(savedAc) ? savedAc : SWATCHES[0]);
+$('langBtn').textContent = LANG === 'en' ? 'FR' : 'EN';
+$('langBtn').title = LANG === 'en' ? 'Passer en français' : 'Switch to English';
+$('langBtn').onclick = () => setLang(LANG === 'en' ? 'fr' : 'en');
 
 // ---------------- tabs
 const PAGE_NAMES = { home: 'ACCUEIL', music: 'MUSIQUE', board: 'CLASSEMENT', 'board-mobile':'CLASSEMENT MOBILE', 'board-pc':'CLASSEMENT PC', friends: 'AMIS', profile: 'PROFIL', game: 'JEU', gacha: 'GACHA' };
@@ -536,7 +543,7 @@ function refreshWallet(){
     const saved = JSON.parse(localStorage.getItem(walletKey));
     if (Number.isSafeInteger(saved?.coins) && saved.coins >= 0) amount = saved.coins;
   } catch {}
-  document.getElementById('walletAmount').textContent = amount.toLocaleString('fr-FR');
+  document.getElementById('walletAmount').textContent = amount.toLocaleString(LANG === 'en' ? 'en-GB' : 'fr-FR');
 }
 window.addEventListener('storage', e => { if (e.key === walletKey || e.key === null) refreshWallet(); });
 window.addEventListener('pageshow', refreshWallet);
@@ -588,7 +595,7 @@ let me = null, data = null, coopAll = null, chibiOf = {}, assign = {}, custom = 
 function chibiImg(id){ return custom[id] || (typeof BASE_CHIBI_DATA !== 'undefined' ? BASE_CHIBI_DATA[id] : '') || ''; }
 async function setAvatar(el, discordId){
   const c = chibiOf[discordId], src = c ? chibiImg(c) : '';
-  if(!src){ el.innerHTML = '<span>pas encore de chibi</span>'; return; }
+  if(!src){ el.innerHTML = '<span>' + L('pas encore de chibi', 'no chibi yet') + '</span>'; return; }
   const head = window.ChibiHead ? await ChibiHead.crop(src) : src;
   el.innerHTML = '<img alt="" src="' + head + '">';
 }
@@ -608,23 +615,26 @@ async function loadHome(){
   await base();
   $('hName').textContent = '@' + me.username;
   const st = stOf(me.id);
-  $('hSub').innerHTML = 'Connecté à Discord' + (st ? '<br><b>Niveau ' + st.lv + '</b> · ' + st.n + ' / ' + st.total + ' succès' : '');
+  $('hSub').innerHTML = L('Connecté à Discord', 'Connected to Discord') + (st ? '<br><b>' + L('Niveau ', 'Level ') + st.lv + '</b> · ' + st.n + ' / ' + st.total + L(' succès', ' achievements') : '');
   setAvatar($('hAv'), me.id);
   // today
   const rows = data.days[0].rows, mine = rows.find(r => r.id === me.id);
   let h = '';
   if(mine){
     const left = mine.start ? mine.start + 24 * 60000 - Date.now() : 0;
-    h += '<div class="big"><b>' + (left > 0 ? 'EN COURS' : 'FINI') + '</b><strong>' + mine.score + ' pts</strong></div>';
-    h += '<p class="txt">' + (left > 0 ? 'Il reste ' + Math.ceil(left / 60000) + ' min de mission.' : 'Mission terminée.') + ' Tu es <b>' + (rows.indexOf(mine) + 1) + '<sup>e</sup></b> sur ' + rows.length + ' aujourd\'hui.</p>';
+    const place = rows.indexOf(mine) + 1;
+    h += '<div class="big"><b>' + (left > 0 ? L('EN COURS', 'LIVE') : L('FINI', 'DONE')) + '</b><strong>' + mine.score + ' pts</strong></div>';
+    h += '<p class="txt">' + (left > 0 ? L('Il reste ' + Math.ceil(left / 60000) + ' min de mission.', Math.ceil(left / 60000) + ' min of mission left.') : L('Mission terminée.', 'Mission over.')) +
+      L(' Tu es <b>' + place + '<sup>e</sup></b> sur ' + rows.length + ' aujourd\'hui.', ' You are <b>#' + place + '</b> of ' + rows.length + ' today.') + '</p>';
   } else {
-    h += '<div class="big"><b>À JOUER</b><strong>0 pts</strong></div><p class="txt">Lance le jeu sur PC et charge ta sauvegarde : la mission de 24 minutes démarre.' + (rows.length ? ' ' + rows.length + ' joueur' + (rows.length > 1 ? 's' : '') + ' en lice aujourd\'hui.' : '') + '</p>';
+    h += '<div class="big"><b>' + L('À JOUER', 'TO PLAY') + '</b><strong>0 pts</strong></div><p class="txt">' + L('Lance le jeu sur PC et charge ta sauvegarde : la mission de 24 minutes démarre.', 'Start the game on PC and load your save: the 24-minute mission starts.') +
+      (rows.length ? ' ' + L(plural(rows.length, 'joueur', '') + ' en lice aujourd\'hui.', plural(rows.length, '', 'player').trim() + ' in the running today.') : '') + '</p>';
   }
   const q = mine ? Math.min(3, mine.quests || 0) : 0;
   h += CoopProgress.list ? '' : '';
-  h += '<div class="lp-list" style="--cols:minmax(0,1fr) 70px"><div class="lp-hrow"><span>Quêtes du jour</span><span class="r">' + q + ' / 3</span></div><div class="lp-body">' +
-    ['Lancer le jeu', 'Remporter 5 combats', 'Récupérer 15 badges'].map((n, i) => '<div class="lp-row"><span><i class="dot ' + (i < q ? 'acid' : '') + '"></i>' + n + '</span><span class="r ' + (i < q ? 'hi' : 'dim') + '">' + (i < q ? '✔ faite' : '—') + '</span></div>').join('') +
-    '</div></div><p class="note">Le détail exact des quêtes est dans le launcher PC ; ici, le nombre de quêtes faites dans le temps.</p>';
+  h += '<div class="lp-list" style="--cols:minmax(0,1fr) 70px"><div class="lp-hrow"><span>' + L('Quêtes du jour', 'Daily quests') + '</span><span class="r">' + q + ' / 3</span></div><div class="lp-body">' +
+    (LANG === 'en' ? ['Start the game', 'Win 5 battles', 'Collect 15 pins'] : ['Lancer le jeu', 'Remporter 5 combats', 'Récupérer 15 badges']).map((n, i) => '<div class="lp-row"><span><i class="dot ' + (i < q ? 'acid' : '') + '"></i>' + n + '</span><span class="r ' + (i < q ? 'hi' : 'dim') + '">' + (i < q ? L('✔ faite', '✔ done') : '—') + '</span></div>').join('') +
+    '</div></div><p class="note">' + L('Le détail exact des quêtes est dans le launcher PC ; ici, le nombre de quêtes faites dans le temps.', 'The exact quest details are in the PC launcher; here, the number of quests done in time.') + '</p>';
   $('today').innerHTML = h;
   // feed
   try{
@@ -634,9 +644,9 @@ async function loadHome(){
     all.sort((a, b) => (b.p.createdAt || 0) - (a.p.createdAt || 0));
     const nameOf = c => (assign[c] && (assign[c].name || assign[c].discordUsername)) || c;
     $('feed').innerHTML = all.slice(0, 25).map(x => '<div class="post"><div class="who"><img alt="" src="' + esc(chibiImg(x.chibi)) + '">@' + esc(nameOf(x.chibi)) + '<small>' + ago(x.p.createdAt || Date.now()) + '</small></div><img loading="lazy" alt="" src="' + esc(x.p.image) + '">' +
-      '<p>' + (x.p.caption ? esc(x.p.caption) + ' ' : '') + '<b>♥ ' + Object.keys(x.p.likes || {}).length + '</b></p></div>').join('') || '<div class="empty" style="color:var(--muted)">Pas encore de publication.</div>';
+      '<p>' + (x.p.caption ? esc(x.p.caption) + ' ' : '') + '<b>♥ ' + Object.keys(x.p.likes || {}).length + '</b></p></div>').join('') || '<div class="empty" style="color:var(--muted)">' + L('Pas encore de publication.', 'No posts yet.') + '</div>';
     $('feed').querySelectorAll('.who img').forEach(im => window.ChibiHead && ChibiHead.crop(im.src).then(u => im.src = u));
-  }catch(e){ $('feed').innerHTML = '<div class="empty" style="color:var(--muted)">feed indisponible : ' + esc(why(e)) + '</div>'; }
+  }catch(e){ $('feed').innerHTML = '<div class="empty" style="color:var(--muted)">' + L('feed indisponible : ', 'feed unavailable: ') + esc(why(e)) + '</div>'; }
 }
 $('logout').onclick = () => ChibiAuth.logout();
 $('toProfile').onclick = () => show('profile');
@@ -649,9 +659,9 @@ function renderInstall(){
   const box = $('install');
   if(matchMedia('(display-mode: standalone)').matches || navigator.standalone === true){ box.hidden = true; return; }
   box.hidden = false;
-  if(window.__ip){ box.innerHTML = '<button type="button" class="btn pri" id="ipBtn" style="margin-top:6px">installer l\'appli</button>'; $('ipBtn').onclick = async () => { const p = window.__ip; window.__ip = null; p.prompt(); try{ await p.userChoice; }catch(e){} renderInstall(); }; }
-  else if(/iphone|ipad|ipod/i.test(navigator.userAgent)) box.textContent = '📲 iPhone : Partager ⬆ puis « Sur l\'écran d\'accueil » pour l\'avoir en appli.';
-  else if(/android/i.test(navigator.userAgent)) box.textContent = '📲 Android : menu ⋮ de Chrome puis « Installer l\'application ».';
+  if(window.__ip){ box.innerHTML = '<button type="button" class="btn pri" id="ipBtn" style="margin-top:6px">' + L('installer l\'appli', 'install the app') + '</button>'; $('ipBtn').onclick = async () => { const p = window.__ip; window.__ip = null; p.prompt(); try{ await p.userChoice; }catch(e){} renderInstall(); }; }
+  else if(/iphone|ipad|ipod/i.test(navigator.userAgent)) box.textContent = L('📲 iPhone : Partager ⬆ puis « Sur l\'écran d\'accueil » pour l\'avoir en appli.', '📲 iPhone: Share ⬆ then “Add to Home Screen” to get it as an app.');
+  else if(/android/i.test(navigator.userAgent)) box.textContent = L('📲 Android : menu ⋮ de Chrome puis « Installer l\'application ».', '📲 Android: Chrome’s ⋮ menu then “Install app”.');
   else box.hidden = true;
 }
 
@@ -664,27 +674,27 @@ function stopMobileBoard(){
 }
 function mobileRows(value){
   return Object.entries(value||{}).filter(([,p])=>p&&p.participated===true&&Number.isInteger(p.bestFloor)&&p.bestFloor>=0&&p.bestFloor<=100)
-    .map(([id,p])=>({id,name:String(p.name||'Joueur').slice(0,64),floor:p.bestFloor}))
+    .map(([id,p])=>({id,name:String(p.name||L('Joueur','Player')).slice(0,64),floor:p.bestFloor}))
     .sort((a,b)=>b.floor-a.floor||a.name.localeCompare(b.name,'fr')||a.id.localeCompare(b.id));
 }
 function renderMobileBoard(value){
   const rows=mobileRows(value);
-  $('mobileBoardCount').textContent=rows.length+' joueur'+(rows.length>1?'s':'');
-  if(!rows.length){$('mobileBoardList').innerHTML='<p class="txt">Aucun participant pour le moment. Lance le roguelike ou effectue une invocation pour rejoindre le classement.</p>';return;}
+  $('mobileBoardCount').textContent=plural(rows.length,'joueur','player');
+  if(!rows.length){$('mobileBoardList').innerHTML='<p class="txt">'+L('Aucun participant pour le moment. Lance le roguelike ou effectue une invocation pour rejoindre le classement.','No participants yet. Start the roguelike or make a summon to join the ranking.')+'</p>';return;}
   let last=-1,rank=0;
-  $('mobileBoardList').innerHTML='<div class="mobile-rank-row mobile-rank-heading"><span>Rang</span><span>Joueur</span><span>Palier</span><span>Étage</span></div>'+rows.map((p,i)=>{
+  $('mobileBoardList').innerHTML='<div class="mobile-rank-row mobile-rank-heading"><span>'+L('Rang','Rank')+'</span><span>'+L('Joueur','Player')+'</span><span>'+L('Palier','Tier')+'</span><span>'+L('Étage','Floor')+'</span></div>'+rows.map((p,i)=>{
     if(p.floor!==last){rank=i+1;last=p.floor;}
-    return '<div class="mobile-rank-row '+(p.id===me?.id?'is-me':'')+'"><span class="mobile-rank-number">'+rank+'</span><span class="mobile-rank-name">'+esc(p.name)+(p.id===me?.id?' <small>Toi</small>':'')+'</span><span>'+(p.floor?Math.ceil(p.floor/10):'—')+'</span><b>'+p.floor+'</b></div>';
+    return '<div class="mobile-rank-row '+(p.id===me?.id?'is-me':'')+'"><span class="mobile-rank-number">'+rank+'</span><span class="mobile-rank-name">'+esc(p.name)+(p.id===me?.id?' <small>'+L('Toi','You')+'</small>':'')+'</span><span>'+(p.floor?Math.ceil(p.floor/10):'—')+'</span><b>'+p.floor+'</b></div>';
   }).join('');
 }
 function loadMobileBoard(){
   stopMobileBoard();
-  $('mobileBoardList').innerHTML='<p class="txt" role="status">Chargement du classement…</p>';
-  if(!db||!me){$('mobileBoardList').innerHTML='<p class="txt">Connecte-toi pour voir le classement mobile.</p>';return;}
+  $('mobileBoardList').innerHTML='<p class="txt" role="status">'+L('Chargement du classement…','Loading the ranking…')+'</p>';
+  if(!db||!me){$('mobileBoardList').innerHTML='<p class="txt">'+L('Connecte-toi pour voir le classement mobile.','Log in to see the mobile ranking.')+'</p>';return;}
   mobileBoardRef=db.ref('mobileLeaderboard');
   mobileBoardListener=snapshot=>renderMobileBoard(snapshot.val());
   mobileBoardRef.on('value',mobileBoardListener,error=>{
-    $('mobileBoardList').innerHTML='<p class="txt" role="alert">Classement mobile indisponible : '+esc(why(error))+'.</p>';
+    $('mobileBoardList').innerHTML='<p class="txt" role="alert">'+L('Classement mobile indisponible : ','Mobile ranking unavailable: ')+esc(why(error))+'.</p>';
   });
 }
 
@@ -709,14 +719,14 @@ async function loadBoard(){
   let h;
   if(mine){
     const left = mine.start ? mine.start + 24 * 60000 - Date.now() : 0;
-    h = '<div class="big"><b>' + (left > 0 ? 'EN COURS' : 'FINI') + '</b><strong>' + mine.score + ' pts</strong></div>' +
-      '<p class="txt">' + (left > 0 ? 'Il reste ' + Math.ceil(left / 60000) + ' min.' : 'Mission terminée. Prochaine mission demain.') + '</p>' +
-      '<div class="lp-list" style="--cols:minmax(0,1fr) 80px"><div class="lp-hrow"><span>Points de la mission</span><span class="r">Valeur</span></div><div class="lp-body">' +
-      '<div class="lp-row"><span><i class="dot acid"></i>Quêtes du jour</span><span class="r hi">' + Math.min(3, mine.quests || 0) + ' / 3</span></div>' +
-      '<div class="lp-row"><span><i class="dot acid"></i>Ennemis éliminés</span><span class="r hi">× ' + mine.kills + '</span></div>' +
-      '<div class="lp-row"><span><i class="dot acid"></i>Combats gagnés</span><span class="r hi">× ' + mine.battles + '</span></div>' +
+    h = '<div class="big"><b>' + (left > 0 ? L('EN COURS', 'LIVE') : L('FINI', 'DONE')) + '</b><strong>' + mine.score + ' pts</strong></div>' +
+      '<p class="txt">' + (left > 0 ? L('Il reste ' + Math.ceil(left / 60000) + ' min.', Math.ceil(left / 60000) + ' min left.') : L('Mission terminée. Prochaine mission demain.', 'Mission over. Next mission tomorrow.')) + '</p>' +
+      '<div class="lp-list" style="--cols:minmax(0,1fr) 80px"><div class="lp-hrow"><span>' + L('Points de la mission', 'Mission points') + '</span><span class="r">' + L('Valeur', 'Value') + '</span></div><div class="lp-body">' +
+      '<div class="lp-row"><span><i class="dot acid"></i>' + L('Quêtes du jour', 'Daily quests') + '</span><span class="r hi">' + Math.min(3, mine.quests || 0) + ' / 3</span></div>' +
+      '<div class="lp-row"><span><i class="dot acid"></i>' + L('Ennemis éliminés', 'Enemies erased') + '</span><span class="r hi">× ' + mine.kills + '</span></div>' +
+      '<div class="lp-row"><span><i class="dot acid"></i>' + L('Combats gagnés', 'Battles won') + '</span><span class="r hi">× ' + mine.battles + '</span></div>' +
       '<div class="lp-sec"><span>✦ Total</span><b>' + mine.score + ' pts</b></div></div></div>';
-  } else h = '<div class="big"><b>À JOUER</b><strong>0 pts</strong></div><p class="txt">Pas encore de mission aujourd\'hui. Elle démarre quand tu charges ta sauvegarde dans le jeu, sur PC.</p>';
+  } else h = '<div class="big"><b>' + L('À JOUER', 'TO PLAY') + '</b><strong>0 pts</strong></div><p class="txt">' + L('Pas encore de mission aujourd\'hui. Elle démarre quand tu charges ta sauvegarde dans le jeu, sur PC.', 'No mission today yet. It starts when you load your save in the game, on PC.') + '</p>';
   $('mission').innerHTML = h;
   $('levels').innerHTML = CoopProgress.levelBoard(coopAll, data.chibiOf, data.assign, me.id).html || '';
 }
@@ -730,11 +740,11 @@ async function loadProfile(){
   setAvatar($('pAv'), me.id);
   const st = stOf(me.id);
   if(st){
-    $('pLvl').textContent = 'NIVEAU ' + st.lv;
+    $('pLvl').textContent = L('NIVEAU ', 'LEVEL ') + st.lv;
     $('pXp').textContent = st.into + ' / ' + st.need + ' XP';
     requestAnimationFrame(() => $('pXpBar').style.width = Math.round(100 * st.into / st.need) + '%');
-    $('pStats').textContent = st.n + ' / ' + st.total + ' succès  ·  ' + st.xp + ' XP au total';
-  } else $('pStats').textContent = 'Lance le launcher PC (connecté à Discord) pour publier ta progression.';
+    $('pStats').textContent = st.n + ' / ' + st.total + L(' succès  ·  ', ' achievements  ·  ') + st.xp + L(' XP au total', ' XP in total');
+  } else { $('pLvl').textContent = L('NIVEAU 1', 'LEVEL 1'); $('pStats').textContent = L('Lance le launcher PC (connecté à Discord) pour publier ta progression.', 'Start the PC launcher (logged in to Discord) to publish your progress.'); }
   $('ach').innerHTML = CoopProgress.achList({ coop: coopAll[me.id] });
 }
 
@@ -742,9 +752,9 @@ async function loadProfile(){
 async function loadFriends(){
   await base();
   const mine = coopAll[me.id] || {};
-  const fr = Object.entries(mine.friends || {}).map(([id, f]) => ({ id, n: f.n || (coopAll[id] || {}).name || 'joueur', p: +f.p || 0, l: +f.l || 0 })).sort((a, b) => b.p - a.p || b.l - a.l);
-  $('fList').innerHTML = '<div class="hr">Joueur<span style="margin-left:auto">Joué ensemble · Musique</span></div>' +
-    (fr.length ? fr.map((f, i) => '<div class="it" data-id="' + esc(f.id) + '" data-n="' + esc(f.n) + '"><i class="dot ' + (i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'acid') + '"></i><div class="t"><span>@' + esc(f.n) + '</span></div><div class="n">' + dur(f.p) + '<br><span style="color:#a9a3b3">' + dur(f.l) + '</span></div></div>').join('') : '<div class="empty">Personne pour l\'instant.</div>');
+  const fr = Object.entries(mine.friends || {}).map(([id, f]) => ({ id, n: f.n || (coopAll[id] || {}).name || L('joueur', 'player'), p: +f.p || 0, l: +f.l || 0 })).sort((a, b) => b.p - a.p || b.l - a.l);
+  $('fList').innerHTML = '<div class="hr">' + L('Joueur', 'Player') + '<span style="margin-left:auto">' + L('Joué ensemble · Musique', 'Played together · Music') + '</span></div>' +
+    (fr.length ? fr.map((f, i) => '<div class="it" data-id="' + esc(f.id) + '" data-n="' + esc(f.n) + '"><i class="dot ' + (i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'acid') + '"></i><div class="t"><span>@' + esc(f.n) + '</span></div><div class="n">' + dur(f.p) + '<br><span style="color:#a9a3b3">' + dur(f.l) + '</span></div></div>').join('') : '<div class="empty">' + L('Personne pour l\'instant.', 'Nobody yet.') + '</div>');
   $('fList').querySelectorAll('.it').forEach(r => r.onclick = () => { stats(r.dataset.id, r.dataset.n); if(innerWidth < 900) $('fStatsPanel').scrollIntoView({ behavior: 'smooth' }); });
   stats(me.id);
 }
@@ -754,15 +764,15 @@ async function stats(id, name){
   const c = coopAll[id] || {}, m = c.music || {}, mine = id === me.id;
   const f = ((coopAll[me.id] || {}).friends || {})[id] || {};
   const top = Object.entries(m.top || {}).map(([v, t]) => ({ v, t: t.t || v, m: +t.m || 0 })).sort((a, b) => b.m - a.m).slice(0, 3);
-  let h = '<div class="ph"><div class="av" id="fAv"><span>…</span></div><div class="pm"><div class="pname">@' + esc(mine ? me.username : (name || c.name || 'joueur')) + (mine ? '  (toi)' : '') + '</div></div></div>';
-  h += '<div class="figs">' + (mine ? '' : '<div><b>' + dur(f.p) + '</b>joué ensemble</div><div><b>' + dur(f.l) + '</b>musique ensemble</div>') +
-    '<div><b>' + dur(m.together) + '</b>musique écoutée en co-op</div>' + (mine ? '<div><b>' + Object.keys((coopAll[me.id] || {}).friends || {}).length + '</b>partenaires</div>' : '') + '</div>';
-  h += '<div class="band">Musiques préférées</div>';
-  if(!top.length) h += '<p class="txt">' + (c.music ? 'Pas encore assez écouté.' : 'Pas encore de stats : le launcher les publie quand on écoute de la musique.') + '</p>';
+  let h = '<div class="ph"><div class="av" id="fAv"><span>…</span></div><div class="pm"><div class="pname">@' + esc(mine ? me.username : (name || c.name || L('joueur', 'player'))) + (mine ? L('  (toi)', '  (you)') : '') + '</div></div></div>';
+  h += '<div class="figs">' + (mine ? '' : '<div><b>' + dur(f.p) + '</b>' + L('joué ensemble', 'played together') + '</div><div><b>' + dur(f.l) + '</b>' + L('musique ensemble', 'music together') + '</div>') +
+    '<div><b>' + dur(m.together) + '</b>' + L('musique écoutée en co-op', 'music heard in co-op') + '</div>' + (mine ? '<div><b>' + Object.keys((coopAll[me.id] || {}).friends || {}).length + '</b>' + L('partenaires', 'partners') + '</div>' : '') + '</div>';
+  h += '<div class="band">' + L('Musiques préférées', 'Favourite songs') + '</div>';
+  if(!top.length) h += '<p class="txt">' + (c.music ? L('Pas encore assez écouté.', 'Not enough listening yet.') : L('Pas encore de stats : le launcher les publie quand on écoute de la musique.', 'No stats yet: the launcher publishes them while you listen to music.')) + '</p>';
   top.forEach((t, i) => {
     const local = t.v.indexOf('f:') === 0;
     h += '<a class="trk" ' + (local ? '' : 'data-v="' + esc(t.v) + '" data-t="' + esc(t.t) + '" href="#music"') + '>' + (local ? '<span class="ph0"></span>' : '<img loading="lazy" alt="" src="https://i.ytimg.com/vi/' + encodeURIComponent(t.v) + '/mqdefault.jpg">') +
-      '<div><em>#' + (i + 1) + '</em><strong>' + esc(t.t) + '</strong><small>' + dur(t.m) + ' d\'écoute' + (local ? ' · fichier local' : ' · ▶ écouter') + '</small></div></a>';
+      '<div><em>#' + (i + 1) + '</em><strong>' + esc(t.t) + '</strong><small>' + dur(t.m) + L(' d\'écoute', ' listened') + (local ? L(' · fichier local', ' · local file') : L(' · ▶ écouter', ' · ▶ play')) + '</small></div></a>';
   });
   $('fStats').innerHTML = h;
   setAvatar($('fAv'), id);
@@ -772,27 +782,34 @@ async function stats(id, name){
 // ---------------- MUSIQUE (search, playlists synced with the launcher, Spotify import, queue, YouTube player)
 async function api(path, body){
   const user = firebase.auth().currentUser;
-  if(!user) throw new Error('connecte-toi');
+  if(!user) throw new Error(L('connecte-toi', 'log in first'));
   const token = await user.getIdToken();
   let res;
   try{ res = await fetch(WORKER + path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, body: JSON.stringify(body) }); }
-  catch(e){ throw new Error('serveur injoignable (connexion internet ?)'); }
+  catch(e){ throw new Error(L('serveur injoignable (connexion internet ?)', 'server unreachable (internet connection?)')); }
   const d = await res.json().catch(() => ({}));
-  if(res.status === 404) throw new Error('le serveur de l\'appli doit être mis à jour (worker Cloudflare)');
-  if(!res.ok) throw new Error(d.error || ('erreur ' + res.status));
+  if(res.status === 404) throw new Error(L('le serveur de l\'appli doit être mis à jour (worker Cloudflare)', 'the app server needs an update (Cloudflare worker)'));
+  if(!res.ok) throw new Error(d.error ? T(d.error) : L('erreur ', 'error ') + res.status);
   return d;
 }
 let queue = [], cur = null, player = null, ready = false, pending = null, paused = true;
 try{ const s = JSON.parse(localStorage.getItem('muState') || '{}'); queue = Array.isArray(s.queue) ? s.queue.slice(0, 300) : []; cur = s.cur || null; }catch(e){}
 function save(){ try{ localStorage.setItem('muState', JSON.stringify({ queue, cur })); }catch(e){} }
 function videoIdOf(t){ const m = /(?:youtu\.be\/|[?&]v=|\/shorts\/|\/embed\/|\/live\/)([A-Za-z0-9_-]{11})/.exec(t || ''); if(m) return m[1]; return /^[A-Za-z0-9_-]{11}$/.test((t || '').trim()) ? t.trim() : null; }
-function spotifyRef(t){ const m = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-zA-Z]{2})?\/)?(?:embed\/)?|spotify:)(playlist|album)[\/:]([A-Za-z0-9]{10,40})/.exec(t || ''); return m ? m[1] + '/' + m[2] : null; }
+function spotifyRef(t){
+  const m = /(?:open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[a-zA-Z]{2})?\/)?(?:embed\/)?|spotify:)(playlist|album)[\/:]([A-Za-z0-9]{10,40})/.exec(t || '');
+  if(m) return m[1] + '/' + m[2];
+  // Apple Music: music.apple.com/fr/playlist/<name>/pl.xxxx or /album/<name>/1440837096
+  const a = /music\.apple\.com\/([a-z]{2})\/(playlist|album)\/(?:[^\/?#\s]+\/)?((?:pl\.)?[A-Za-z0-9.\-]{4,60})/.exec(t || '');
+  return a ? 'am/' + a[1] + '/' + a[2] + '/' + a[3] : null;
+}
+function sourceName(ref){ return ref && ref.indexOf('am/') === 0 ? 'Apple Music' : 'Spotify'; }
 
 window.onYouTubeIframeAPIReady = function(){
   player = new YT.Player('yt', { width: '100%', height: '100%', playerVars: { playsinline: 1, rel: 0 }, events: {
     onReady: () => { ready = true; if(pending){ const p = pending; pending = null; load(p.id, p.play); } else if(cur) load(cur.id, false); },
     onStateChange: e => { if(e.data === 0) next(); else if(e.data === 1){ paused = false; renderPlayer(); } else if(e.data === 2){ paused = true; renderPlayer(); } },
-    onError: e => { toast('vidéo passée : ' + (e.data === 101 || e.data === 150 ? 'lecture interdite hors de YouTube' : e.data === 100 ? 'vidéo introuvable' : 'code ' + e.data)); setTimeout(next, 800); },
+    onError: e => { toast(L('vidéo passée : ', 'video skipped: ') + (e.data === 101 || e.data === 150 ? L('lecture interdite hors de YouTube', 'playback blocked outside YouTube') : e.data === 100 ? L('vidéo introuvable', 'video not found') : 'code ' + e.data)); setTimeout(next, 800); },
   } });
 };
 let ytLoaded = false;
@@ -800,7 +817,7 @@ function loadYt(){ if(ytLoaded) return; ytLoaded = true; const s = document.crea
 function load(id, play){ $('idle').style.display = 'none'; if(!ready){ pending = { id, play }; loadYt(); return; } if(play) player.loadVideoById(id); else player.cueVideoById(id); }
 function playNow(t){ cur = { id: t.id, title: t.title }; paused = false; load(t.id, true); save(); renderPlayer(); }
 function enqueue(t){ queue.push({ id: t.id, title: t.title }); toast('+ ' + t.title); if(!cur) next(); else { save(); renderPlayer(); } }
-function enqueueAll(l){ let n = 0; for(const t of l){ if(queue.length >= 300) break; queue.push({ id: t.id, title: t.title }); n++; } toast('+ ' + n + ' titres dans la file'); if(!cur) next(); else { save(); renderPlayer(); } }
+function enqueueAll(l){ let n = 0; for(const t of l){ if(queue.length >= 300) break; queue.push({ id: t.id, title: t.title }); n++; } toast('+ ' + L(n + ' titres dans la file', n + ' tracks queued')); if(!cur) next(); else { save(); renderPlayer(); } }
 function next(){ if(queue.length){ playNow(queue.shift()); return; } cur = null; paused = true; if(ready) player.stopVideo(); $('idle').style.display = ''; save(); renderPlayer(); }
 $('tog').onclick = () => { if(!cur){ next(); return; } if(!ready) return; if(player.getPlayerState() === 1) player.pauseVideo(); else player.playVideo(); };
 $('nxt').onclick = next;
@@ -809,10 +826,10 @@ function item(t, i, btns, on){
   return '<div class="it' + (on ? ' on' : '') + '" data-i="' + i + '"><div class="t"><span>' + (on ? '♪ ' : '') + esc(t.title) + '</span>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + btns + '</div>';
 }
 function renderPlayer(){
-  $('now').textContent = cur ? (paused ? '❚❚  ' : '♪  ') + cur.title : 'Rien en lecture : choisis un titre.';
+  $('now').textContent = cur ? (paused ? '❚❚  ' : '♪  ') + cur.title : L('Rien en lecture : choisis un titre.', 'Nothing playing: pick a track.');
   $('tog').textContent = cur && !paused ? '❚❚' : '▶';
-  $('queue').innerHTML = '<div class="hr">File d\'attente (' + queue.length + ')' + (queue.length ? '<button type="button" id="qClear">vider</button>' : '') + '</div>' +
-    (queue.length ? queue.map((t, i) => item(t, i, '<button type="button" data-a="play">▶</button><button type="button" class="x" data-a="del">✕</button>')).join('') : '<div class="empty">Vide : ajoute des titres avec +.</div>');
+  $('queue').innerHTML = '<div class="hr">' + L('File d\'attente', 'Queue') + ' (' + queue.length + ')' + (queue.length ? '<button type="button" id="qClear">' + L('vider', 'clear') + '</button>' : '') + '</div>' +
+    (queue.length ? queue.map((t, i) => item(t, i, '<button type="button" data-a="play">▶</button><button type="button" class="x" data-a="del">✕</button>')).join('') : '<div class="empty">' + L('Vide : ajoute des titres avec +.', 'Empty: add tracks with +.') + '</div>');
   if($('qClear')) $('qClear').onclick = () => { queue = []; save(); renderPlayer(); };
   $('queue').querySelectorAll('.it').forEach(r => r.onclick = e => { const i = +r.dataset.i; if(e.target.dataset.a === 'del'){ queue.splice(i, 1); save(); renderPlayer(); } else playNow(queue.splice(i, 1)[0]); });
 }
@@ -843,25 +860,25 @@ async function loadMusic(){
 function renderLists(){
   const lists = allLists();
   if(!openKey && lists.length) openKey = lists[0].key;
-  $('lists').innerHTML = '<div class="hr">Playlists<span style="margin-left:auto">Titres</span></div>' +
+  $('lists').innerHTML = '<div class="hr">Playlists<span style="margin-left:auto">' + L('Titres', 'Tracks') + '</span></div>' +
     (spJob ? '<div class="it on"><div class="t"><span>⏳ ' + esc(spJob) + '</span></div></div>' : '') +
     (lists.length ? lists.map(l => '<div class="it' + (l.key === openKey ? ' on' : '') + '" data-k="' + esc(l.key) + '"><i class="dot ' + (l.k === 'sp' ? 'acid' : l.k === 'search' ? 'gold' : '') + '"></i><div class="t"><span>' + (l.k === 'sp' ? '♫ ' : '') + esc(l.n) + '</span></div><div class="n">' + l.tracks.length + '</div>' +
-      (l.k === 'sp' ? '<button type="button" class="x" data-a="del" title="supprimer">✕</button>' : '') + '</div>').join('')
-      : '<div class="empty">Cherche une musique, colle un lien Spotify, ou connecte YouTube dans le launcher PC : tes playlists arrivent ici.</div>');
+      (l.k === 'sp' ? '<button type="button" class="x" data-a="del" title="' + L('supprimer', 'delete') + '">✕</button>' : '') + '</div>').join('')
+      : '<div class="empty">' + L('Cherche une musique, colle un lien Spotify ou Apple Music, ou connecte YouTube dans le launcher PC : tes playlists arrivent ici.', 'Search for a song, paste a Spotify or Apple Music link, or connect YouTube in the PC launcher: your playlists show up here.') + '</div>');
   $('lists').querySelectorAll('.it[data-k]').forEach(r => r.onclick = async e => {
     const l = allLists().find(x => x.key === r.dataset.k);
     if(e.target.dataset.a === 'del'){
-      if(!confirm('Supprimer « ' + l.n + ' » (ici et dans le launcher) ?')) return;
+      if(!confirm(L('Supprimer « ' + l.n + ' » (ici et dans le launcher) ?', 'Delete “' + l.n + '” (here and in the launcher)?'))) return;
       try{ await libRef().update({ ['lists/' + l.key]: null, ['gone/' + l.key]: firebase.database.ServerValue.TIMESTAMP }); delete lib.lists[l.key]; if(openKey === l.key) openKey = null; renderLists(); }
-      catch(err){ toast('suppression impossible : ' + why(err)); }
+      catch(err){ toast(L('suppression impossible : ', 'cannot delete: ') + why(err)); }
       return;
     }
     openKey = l.key; renderLists();
   });
   const l = allLists().find(x => x.key === openKey);
   const tr = l ? l.tracks : [];
-  $('tracks').innerHTML = '<div class="hr">' + (l ? esc(l.n) : 'Titres') + (tr.length ? '<button type="button" id="addAll">+ toute la playlist</button>' : '') + '</div>' +
-    (tr.length ? tr.map((t, i) => item(t, i, '<button type="button" data-a="play">▶</button><button type="button" class="w" data-a="add">+</button>', cur && cur.id === t.id)).join('') : '<div class="empty">Choisis une playlist.</div>');
+  $('tracks').innerHTML = '<div class="hr">' + (l ? esc(l.n) : L('Titres', 'Tracks')) + (tr.length ? '<button type="button" id="addAll">' + L('+ toute la playlist', '+ whole playlist') + '</button>' : '') + '</div>' +
+    (tr.length ? tr.map((t, i) => item(t, i, '<button type="button" data-a="play">▶</button><button type="button" class="w" data-a="add">+</button>', cur && cur.id === t.id)).join('') : '<div class="empty">' + L('Choisis une playlist.', 'Pick a playlist.') + '</div>');
   if($('addAll')) $('addAll').onclick = () => enqueueAll(tr);
   $('tracks').querySelectorAll('.it').forEach(r => r.onclick = e => { const t = tr[+r.dataset.i]; if(e.target.dataset.a === 'add') enqueue(t); else playNow(t); });
 }
@@ -872,7 +889,7 @@ $('srch').addEventListener('submit', async e => {
   $('q').value = ''; $('q').blur();
   if(v){ playNow({ id: v, title: 'YouTube ' + v }); return; }
   if(sp){ importSpotify(sp); return; }
-  searchList = { key: 'search', k: 'search', n: '🔍 ' + q, tracks: [] }; openKey = 'search'; spJob = 'Recherche : ' + q + '…'; renderLists();
+  searchList = { key: 'search', k: 'search', n: '🔍 ' + q, tracks: [] }; openKey = 'search'; spJob = L('Recherche : ', 'Searching: ') + q + '…'; renderLists();
   try{ searchList.tracks = ((await api('/yt/search', { q })).items || []).map(x => ({ id: x.id, title: x.title, channel: x.channel, length: x.length })); }
   catch(err){ toast(err.message); }
   spJob = null; renderLists();
@@ -899,20 +916,20 @@ async function findTrack(t){
 async function importSpotify(ref){
   if(spJob) return;
   try{
-    spJob = 'Spotify : lecture de la playlist…'; renderLists();
+    spJob = sourceName(ref) + L(' : lecture de la playlist…', ': reading the playlist…'); renderLists();
     const sp = await api('/spotify', { ref });
     const found = new Array(sp.tracks.length); let done = 0, nx = 0;
-    const work = async () => { while(nx < sp.tracks.length){ const i = nx++; for(let a = 0; a < 2; a++){ try{ found[i] = await findTrack(sp.tracks[i]); break; }catch(e){ await new Promise(r => setTimeout(r, 1500)); } } done++; spJob = '« ' + sp.name + ' » : recherche sur YouTube ' + done + ' / ' + sp.tracks.length; renderLists(); } };
+    const work = async () => { while(nx < sp.tracks.length){ const i = nx++; for(let a = 0; a < 2; a++){ try{ found[i] = await findTrack(sp.tracks[i]); break; }catch(e){ await new Promise(r => setTimeout(r, 1500)); } } done++; spJob = L('« ' + sp.name + ' » : recherche sur YouTube ', '“' + sp.name + '”: searching YouTube ') + done + ' / ' + sp.tracks.length; renderLists(); } };
     await Promise.all([work(), work(), work()]);
     const seen = new Set(), t = []; let lost = 0;
     found.forEach(v => { if(!v){ lost++; return; } if(seen.has(v.id) || t.length >= 500) return; seen.add(v.id); t.push((v.id + '|' + v.title).slice(0, 260)); });
-    if(!t.length) throw new Error('aucun titre trouvé sur YouTube');
-    const key = ('sp_' + ref.replace('/', '_')).slice(0, 80);
+    if(!t.length) throw new Error(L('aucun titre trouvé sur YouTube', 'no track found on YouTube'));
+    const key = ('sp_' + ref).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 80);
     await libRef().update({ ['lists/' + key]: { n: String(sp.name).slice(0, 200), k: 'sp', u: firebase.database.ServerValue.TIMESTAMP, t }, ['gone/' + key]: null });
     const s = await libRef().get(); lib = s.exists() ? s.val() : {};
     openKey = key;
-    toast('« ' + sp.name + ' » importée : ' + t.length + ' titres' + (lost ? ' (' + lost + ' introuvables)' : ''));
-  }catch(err){ toast('Spotify : ' + err.message); }
+    toast(L('« ' + sp.name + ' » importée : ' + t.length + ' titres' + (lost ? ' (' + lost + ' introuvables)' : ''), '“' + sp.name + '” imported: ' + t.length + ' tracks' + (lost ? ' (' + lost + ' not found)' : '')));
+  }catch(err){ toast(sourceName(ref) + L(' : ', ': ') + err.message); }
   spJob = null; renderLists();
 }
 
@@ -923,7 +940,7 @@ async function init(){
   await ChibiAuth.handleRedirect();
   me = await ChibiAuth.current();
   if(!me){ $('login').hidden = false; if(ChibiAuth.error){ $('loginErr').hidden = false; $('loginErr').textContent = '⚠ ' + ChibiAuth.error; } return; }
-  if(!db){ showErr('base injoignable'); return; }
+  if(!db){ showErr(L('base injoignable', 'database unreachable')); return; }
   renderInstall();
   if(typeof BASE_CHIBI_DATA === 'undefined') await new Promise(r => window.addEventListener('load', r, { once: true }));
   show((location.hash || '#home').slice(1));
