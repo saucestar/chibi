@@ -2539,9 +2539,14 @@ function RoguelikeLaunch({
     const fighter = characterRoster.find(f => f.name === name);
     return React.createElement("article", {
       key: name
-    }, React.createElement(HudPortrait, {
-      fighter: fighter
-    }), React.createElement("b", null, name), React.createElement("small", null, profile.loadout[name]?.length || 0, " psych(s)"));
+    }, React.createElement("div", {
+      className: "roguelike-fighter-art"
+    }, React.createElement(SpritePreview, {
+      fighter: fighter,
+      maximumScale: 2.25
+    })), React.createElement("b", null, name), React.createElement(TypeChips, {
+      elements: characterElements[name]
+    }), React.createElement("small", null, profile.loadout[name]?.length || 0, " psych(s) \xE9quip\xE9s"));
   }), fighters.length < 2 && React.createElement("p", null, "Il manque ", 2 - fighters.length, " personnage(s) dans ta Team.")), !ready && !run && React.createElement("button", {
     onClick: () => navigate("team")
   }, "Pr\xE9parer Team"), run ? React.createElement(React.Fragment, null, React.createElement("p", {
