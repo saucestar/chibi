@@ -564,49 +564,105 @@ function portalPool(id:string, _profile?:Profile) {
 }
 type MusicTrack = "hub"|"battle"|"boss"|"victory";
 type SoundCue = "execute"|"hit"|"pin";
+type AudioChannel = "music"|"sfx";
 const gameSound = (() => {
   const key="chibi.reapers-run.audio-muted";
-  let muted=false,unlocked=false,visible=true,track:MusicTrack|null=null;
-  let music:HTMLAudioElement|null=null, cue:HTMLAudioElement|null=null;
-  let clickSound:HTMLAudioElement|null=null;
-  try { muted=localStorage.getItem(key)==="1"; } catch {}
-  function sync() {
-    if(!track || muted || !unlocked || !visible || document.hidden){music?.pause();cue?.pause();clickSound?.pause();return;}
-    if(!music || music.dataset.track!==track){
-      music?.pause();music=new Audio("./assets/audio/"+track+".mp3");
-      music.dataset.track=track;music.volume=.32;music.loop=track!=="victory";
+  const volumes={music:32,sfx:55};
+  let muted=false,visible=false,track:MusicTrack|null=null;
+  let music:HTMLAudioElement|null=null, cue:HTMLAudioElement|null=null, clickSound:HTMLAudioElement|null=null;
+  // Some mobile browsers leave media-element volume under hardware control.
+  let context:AudioContext|null=null,needsGain=false;
+  const gains=new WeakMap<HTMLAudioElement,GainNode>();
+  try {
+    muted=localStorage.getItem(key)==="1";
+    for(const channel of ["music","sfx"] as const){
+      const stored=localStorage.getItem("chibi.reapers-run.volume."+channel);
+      if(stored!==null && /^\d{1,3}$/.test(stored) && Number(stored)<=100)volumes[channel]=Number(stored);
     }
+  } catch {}
+  function level(player:HTMLAudioElement|null,volume:number){
+    if(!player)return;
+    let gain=gains.get(player);
+    if(!gain && context?.state==="running"){
+      gain=context.createGain();context.createMediaElementSource(player).connect(gain);gain.connect(context.destination);
+      gains.set(player,gain);
+    }
+    if(gain){player.volume=1;gain.gain.value=volume;}
+    else {player.volume=volume;if(Math.abs(player.volume-volume)>.001)needsGain=true;}
+    player.muted=muted || volume===0;
+  }
+  function mix(){
+    level(music,volumes.music/100);level(cue,volumes.sfx/100);level(clickSound,volumes.sfx/100*.62);
+  }
+  function sync(){
+    if(!visible||document.hidden||muted){music?.pause();cue?.pause();clickSound?.pause();return;}
+    if(!track || !volumes.music){music?.pause();return;}
+    if(!music)music=new Audio();
+    if(music.dataset.track!==track){
+      music.dataset.track=track;music.src="./assets/audio/"+track+".mp3";music.loop=track!=="victory";
+    }
+    level(music,volumes.music/100);
     if(music.paused && !music.ended)music.play().catch(()=>{});
+  }
+  function preview(){
+    if(muted||!visible||document.hidden||!volumes.sfx)return;
+    if(!clickSound)clickSound=new Audio("./assets/audio/menu-click.mp3");
+    level(clickSound,volumes.sfx/100*.62);clickSound.currentTime=0;clickSound.play().catch(()=>{});
+  }
+  function effect(id:SoundCue){
+    if(muted||!visible||document.hidden||!volumes.sfx)return;
+    if(!cue)cue=new Audio();
+    cue.src="./assets/audio/"+id+".mp3";level(cue,volumes.sfx/100);cue.play().catch(()=>{});
+  }
+  function setVolume(channel:AudioChannel,value:number){
+    if(!Number.isFinite(value))return;
+    volumes[channel]=Math.min(100,Math.max(0,Math.round(value)));
+    try{localStorage.setItem("chibi.reapers-run.volume."+channel,String(volumes[channel]));}catch{}
+    mix();sync();
   }
   function toggle(){
     muted=!muted;try{localStorage.setItem(key,muted?"1":"0");}catch{}
-    sync();if(!muted)playClick();window.dispatchEvent(new Event("chibi:audio-setting"));
-  }
-  function effect(id:SoundCue){
-    if(muted||!unlocked||!visible||document.hidden)return;
-    cue?.pause();cue=new Audio("./assets/audio/"+id+".mp3");cue.volume=.55;cue.play().catch(()=>{});
-  }
-  function playClick(){
-    if(muted||!visible||document.hidden)return;
-    if(!clickSound){clickSound=new Audio("./assets/audio/menu-click.mp3");clickSound.volume=.34;}
-    clickSound.currentTime=0;
-    clickSound.play().catch(()=>{});
+    mix();sync();if(!muted)preview();window.dispatchEvent(new Event("chibi:audio-setting"));
   }
   function connect(){
-    const unlock=()=>{unlocked=true;sync();};
+    function interact(){
+      if(needsGain && !context){
+        const AudioEngine=window.AudioContext||(window as any).webkitAudioContext;
+        if(AudioEngine)context=new AudioEngine();
+      }
+      if(context?.state==="suspended")context.resume().then(mix).catch(()=>{});
+      sync();
+    }
     const click=(event:MouseEvent)=>{
-      unlock();
+      interact();
       const button=(event.target as Element)?.closest?.("button");
-      if(button && !button.matches(":disabled,[aria-disabled=true],.audio-control"))playClick();
+      if(button && !button.matches(":disabled,[aria-disabled=true],.audio-control"))preview();
     };
-    document.addEventListener("click",click,true);document.addEventListener("keydown",unlock,true);
-    document.addEventListener("visibilitychange",sync);
+    // Retry inside the launch gesture when the embedding page already loaded the game.
+    const frame=window.frameElement;
+    const host=frame?.ownerDocument;
+    const opening=()=>{if(frame?.getClientRects().length){visible=true;interact();}};
+    host?.addEventListener("click",opening);
+    document.addEventListener("click",click,true);document.addEventListener("keydown",interact,true);
+    document.addEventListener("pointerup",interact,true);document.addEventListener("visibilitychange",sync);
     const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});
     observer.observe(document.documentElement);
-    return ()=>{observer.disconnect();document.removeEventListener("click",click,true);document.removeEventListener("keydown",unlock,true);document.removeEventListener("visibilitychange",sync);music?.pause();cue?.pause();clickSound?.pause();};
+    return ()=>{observer.disconnect();host?.removeEventListener("click",opening);document.removeEventListener("pointerup",interact,true);document.removeEventListener("click",click,true);document.removeEventListener("keydown",interact,true);document.removeEventListener("visibilitychange",sync);visible=false;sync();};
   }
-  return {connect,toggle,effect,get muted(){return muted;},scene(next:MusicTrack|null){track=next;sync();}};
+  return {connect,toggle,effect,preview,setVolume,volumes,get muted(){return muted;},scene(next:MusicTrack|null){track=next;sync();}};
 })();
+function AudioSettings({back}:{back:()=>void}){
+  const [values,setValues]=useState({...gameSound.volumes});
+  return <section className="hub-panel audio-settings"><h1>Paramètres</h1>
+    {(["music","sfx"] as const).map(channel=><label key={channel}>
+      <span>{channel==="music"?"Musique":"Effets sonores"}</span><output>{values[channel]} %</output>
+      <input type="range" min="0" max="100" step="1" value={values[channel]}
+        aria-label={channel==="music"?"Musique":"Effets sonores"}
+        onChange={event=>{gameSound.setVolume(channel,Number(event.currentTarget.value));setValues({...gameSound.volumes});}}
+        onPointerUp={()=>{if(channel==="sfx")gameSound.preview();}}
+        onKeyUp={event=>{if(channel==="sfx"&&/^(Arrow|Home|End|Page)/.test(event.key))gameSound.preview();}}/>
+    </label>)}<button onClick={back}>Retour au menu</button></section>;
+}
 function useMusic(track:MusicTrack|null){
   useEffect(()=>{gameSound.scene(track);return ()=>gameSound.scene(null);},[track]);
 }
@@ -825,7 +881,7 @@ function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profil
  return {...p,run,bestFloor:Math.max(p.bestFloor,41),specialRunRecoveries:marked};
 }
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null]);}
-type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"menu";
+type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
 function gameFullscreen(){
  if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
@@ -875,7 +931,7 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
  </section>;
 }
 function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
 }
 
 function BestiaryMenu(){
@@ -1031,6 +1087,7 @@ function App() {
     leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen("team"); setResult([]); }} />;
   const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
+  if(screen==="settings")return hub(<AudioSettings back={()=>navigate("menu")}/>);
   if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
   if(screen==="bestiary")return hub(<BestiaryMenu/>);
   if(screen==="quests")return hub(<QuestMenu embedded profile={profile} save={setProfile}/>);

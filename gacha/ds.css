@@ -1029,3 +1029,7 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .audio-control {border:1px solid #baaace;border-radius:12px;background:linear-gradient(#fff,#ddd4e9);color:#342944;min-height:34px;min-width:34px;cursor:pointer;}
 .scene-apocalyptic .portal-art,.scene-destiny .portal-art {object-fit:cover;}
 .scene-apocalyptic::before,.scene-destiny::before {display:none;}
+
+.audio-settings label {display:grid;grid-template-columns:1fr auto;align-items:center;gap:.35rem 1rem;margin:1rem 0;color:#312345;}
+.audio-settings output {font-variant-numeric:tabular-nums;}
+.audio-settings input {grid-column:1/-1;width:100%;min-height:44px;margin:0;accent-color:#705496;cursor:pointer;}

@@ -1244,69 +1244,128 @@ function portalPool(id, _profile) {
 }
 const gameSound = (() => {
   const key = "chibi.reapers-run.audio-muted";
+  const volumes = {
+    music: 32,
+    sfx: 55
+  };
   let muted = false,
-    unlocked = false,
-    visible = true,
+    visible = false,
     track = null;
   let music = null,
-    cue = null;
-  let clickSound = null;
+    cue = null,
+    clickSound = null;
+  let context = null,
+    needsGain = false;
+  const gains = new WeakMap();
   try {
     muted = localStorage.getItem(key) === "1";
+    for (const channel of ["music", "sfx"]) {
+      const stored = localStorage.getItem("chibi.reapers-run.volume." + channel);
+      if (stored !== null && /^\d{1,3}$/.test(stored) && Number(stored) <= 100) volumes[channel] = Number(stored);
+    }
   } catch {}
+  function level(player, volume) {
+    if (!player) return;
+    let gain = gains.get(player);
+    if (!gain && context?.state === "running") {
+      gain = context.createGain();
+      context.createMediaElementSource(player).connect(gain);
+      gain.connect(context.destination);
+      gains.set(player, gain);
+    }
+    if (gain) {
+      player.volume = 1;
+      gain.gain.value = volume;
+    } else {
+      player.volume = volume;
+      if (Math.abs(player.volume - volume) > .001) needsGain = true;
+    }
+    player.muted = muted || volume === 0;
+  }
+  function mix() {
+    level(music, volumes.music / 100);
+    level(cue, volumes.sfx / 100);
+    level(clickSound, volumes.sfx / 100 * .62);
+  }
   function sync() {
-    if (!track || muted || !unlocked || !visible || document.hidden) {
+    if (!visible || document.hidden || muted) {
       music?.pause();
       cue?.pause();
       clickSound?.pause();
       return;
     }
-    if (!music || music.dataset.track !== track) {
+    if (!track || !volumes.music) {
       music?.pause();
-      music = new Audio("./assets/audio/" + track + ".mp3");
+      return;
+    }
+    if (!music) music = new Audio();
+    if (music.dataset.track !== track) {
       music.dataset.track = track;
-      music.volume = .32;
+      music.src = "./assets/audio/" + track + ".mp3";
       music.loop = track !== "victory";
     }
+    level(music, volumes.music / 100);
     if (music.paused && !music.ended) music.play().catch(() => {});
+  }
+  function preview() {
+    if (muted || !visible || document.hidden || !volumes.sfx) return;
+    if (!clickSound) clickSound = new Audio("./assets/audio/menu-click.mp3");
+    level(clickSound, volumes.sfx / 100 * .62);
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {});
+  }
+  function effect(id) {
+    if (muted || !visible || document.hidden || !volumes.sfx) return;
+    if (!cue) cue = new Audio();
+    cue.src = "./assets/audio/" + id + ".mp3";
+    level(cue, volumes.sfx / 100);
+    cue.play().catch(() => {});
+  }
+  function setVolume(channel, value) {
+    if (!Number.isFinite(value)) return;
+    volumes[channel] = Math.min(100, Math.max(0, Math.round(value)));
+    try {
+      localStorage.setItem("chibi.reapers-run.volume." + channel, String(volumes[channel]));
+    } catch {}
+    mix();
+    sync();
   }
   function toggle() {
     muted = !muted;
     try {
       localStorage.setItem(key, muted ? "1" : "0");
     } catch {}
+    mix();
     sync();
-    if (!muted) playClick();
+    if (!muted) preview();
     window.dispatchEvent(new Event("chibi:audio-setting"));
   }
-  function effect(id) {
-    if (muted || !unlocked || !visible || document.hidden) return;
-    cue?.pause();
-    cue = new Audio("./assets/audio/" + id + ".mp3");
-    cue.volume = .55;
-    cue.play().catch(() => {});
-  }
-  function playClick() {
-    if (muted || !visible || document.hidden) return;
-    if (!clickSound) {
-      clickSound = new Audio("./assets/audio/menu-click.mp3");
-      clickSound.volume = .34;
-    }
-    clickSound.currentTime = 0;
-    clickSound.play().catch(() => {});
-  }
   function connect() {
-    const unlock = () => {
-      unlocked = true;
+    function interact() {
+      if (needsGain && !context) {
+        const AudioEngine = window.AudioContext || window.webkitAudioContext;
+        if (AudioEngine) context = new AudioEngine();
+      }
+      if (context?.state === "suspended") context.resume().then(mix).catch(() => {});
       sync();
-    };
+    }
     const click = event => {
-      unlock();
+      interact();
       const button = event.target?.closest?.("button");
-      if (button && !button.matches(":disabled,[aria-disabled=true],.audio-control")) playClick();
+      if (button && !button.matches(":disabled,[aria-disabled=true],.audio-control")) preview();
     };
+    const frame = window.frameElement;
+    const host = frame?.ownerDocument;
+    const opening = () => {
+      if (frame?.getClientRects().length) {
+        visible = true;
+        interact();
+      }
+    };
+    host?.addEventListener("click", opening);
     document.addEventListener("click", click, true);
-    document.addEventListener("keydown", unlock, true);
+    document.addEventListener("keydown", interact, true);
+    document.addEventListener("pointerup", interact, true);
     document.addEventListener("visibilitychange", sync);
     const observer = new IntersectionObserver(entries => {
       visible = entries[0].isIntersecting;
@@ -1315,18 +1374,22 @@ const gameSound = (() => {
     observer.observe(document.documentElement);
     return () => {
       observer.disconnect();
+      host?.removeEventListener("click", opening);
+      document.removeEventListener("pointerup", interact, true);
       document.removeEventListener("click", click, true);
-      document.removeEventListener("keydown", unlock, true);
+      document.removeEventListener("keydown", interact, true);
       document.removeEventListener("visibilitychange", sync);
-      music?.pause();
-      cue?.pause();
-      clickSound?.pause();
+      visible = false;
+      sync();
     };
   }
   return {
     connect,
     toggle,
     effect,
+    preview,
+    setVolume,
+    volumes,
     get muted() {
       return muted;
     },
@@ -1336,6 +1399,39 @@ const gameSound = (() => {
     }
   };
 })();
+function AudioSettings({
+  back
+}) {
+  const [values, setValues] = useState({
+    ...gameSound.volumes
+  });
+  return React.createElement("section", {
+    className: "hub-panel audio-settings"
+  }, React.createElement("h1", null, "Param\xE8tres"), ["music", "sfx"].map(channel => React.createElement("label", {
+    key: channel
+  }, React.createElement("span", null, channel === "music" ? "Musique" : "Effets sonores"), React.createElement("output", null, values[channel], " %"), React.createElement("input", {
+    type: "range",
+    min: "0",
+    max: "100",
+    step: "1",
+    value: values[channel],
+    "aria-label": channel === "music" ? "Musique" : "Effets sonores",
+    onChange: event => {
+      gameSound.setVolume(channel, Number(event.currentTarget.value));
+      setValues({
+        ...gameSound.volumes
+      });
+    },
+    onPointerUp: () => {
+      if (channel === "sfx") gameSound.preview();
+    },
+    onKeyUp: event => {
+      if (channel === "sfx" && /^(Arrow|Home|End|Page)/.test(event.key)) gameSound.preview();
+    }
+  }))), React.createElement("button", {
+    onClick: back
+  }, "Retour au menu"));
+}
 function useMusic(track) {
   useEffect(() => {
     gameSound.scene(track);
@@ -2055,7 +2151,7 @@ function HubMenu({
     className: "hub-panel"
   }, React.createElement("h1", null, "Menu"), React.createElement("div", {
     className: "hub-menu-links"
-  }, [["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
+  }, [["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
@@ -2378,6 +2474,9 @@ function App() {
   if (screen === "home") return hub(React.createElement(HubHome, {
     profile: profile,
     navigate: navigate
+  }));
+  if (screen === "settings") return hub(React.createElement(AudioSettings, {
+    back: () => navigate("menu")
   }));
   if (screen === "menu") return hub(React.createElement(HubMenu, {
     profile: profile,

@@ -354,4 +354,8 @@ Reaper's Run - Jeu test|Reaper's Run
 TWEWY · jeu, collection et invocations|TWEWY · Game, collection and summons
 Débloque ton premier personnage dans|Unlock your first character in
 l’onglet Gacha|the Gacha tab
+Paramètres|Settings
+Musique et effets sonores|Music and sound effects
+Effets sonores|Sound effects
+Retour au menu|Back to menu
 `.trim();
