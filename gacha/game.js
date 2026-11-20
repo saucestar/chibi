@@ -621,13 +621,11 @@ function Sprite({
   const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
   const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
   return React.createElement("div", {
-    className: `pixel-sprite hero-sprite ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
+    className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
       ...(frameCount ? {
-        backgroundSize: `${frameCount * 100}% 100%`,
-        "--frames": frameCount,
-        "--idle-duration": `${Math.max(.8, frameCount / 7)}s`
+        backgroundSize: `${frameCount * 100}% 100%`
       } : {}),
       ...(fighter.frameWidth ? {
         width: `${fighter.frameWidth}px`,
