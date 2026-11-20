@@ -1024,3 +1024,8 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .monster-preview {display:grid;place-items:center;min-height:160px;margin:10px 0;}
 .monster-preview .enemy-sprite {height:150px!important;width:auto!important;max-width:100%;object-fit:contain;transform:none!important;}
 @media(min-width:760px){.monster-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
+
+.game-hub .hub-header {grid-template-columns:minmax(0,1fr) auto auto auto;}
+.audio-control {border:1px solid #baaace;border-radius:12px;background:linear-gradient(#fff,#ddd4e9);color:#342944;min-height:34px;min-width:34px;cursor:pointer;}
+.scene-apocalyptic .portal-art,.scene-destiny .portal-art {object-fit:cover;}
+.scene-apocalyptic::before,.scene-destiny::before {display:none;}

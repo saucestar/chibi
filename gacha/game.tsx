@@ -88,6 +88,7 @@ type Enemy = {
 };
 
 type Fighter = {
+  battleRank?:number;
   xp?:number; level?:number; atk?:number; mag?:number; speed?:number; portraitCenter?:number; portraitTop?:number;
   name: string;
   role: string;
@@ -345,18 +346,22 @@ function legacyExperience(wins:number) {
 }
 function gainExperience(f:Fighter,amount:number):Fighter {
   const progress=experience((f.xp||0)+amount);
-  const levels=progress.level-(f.level||1);
-  return {...f,xp:progress.xp,level:progress.level,atk:f.atk+levels*2,mag:f.mag+levels*2,speed:f.speed+levels,maxHp:f.maxHp+levels*5,hp:f.hp>0?f.hp+levels*5:0};
+  const oldLevel=(f.level||1)-1,newLevel=progress.level-1;
+  const scale=1.2**(f.battleRank||0),[atk,mag,speed]=bases[f.name],hpBase=characterRoster.find(hero=>hero.name===f.name)!.maxHp;
+  const delta=(base:number,step:number)=>Math.round((base+newLevel*step)*scale)-Math.round((base+oldLevel*step)*scale);
+  const hpGain=delta(hpBase,5);
+  return {...f,xp:progress.xp,level:progress.level,atk:f.atk+delta(atk,2),mag:f.mag+delta(mag,2),speed:f.speed+delta(speed,1),maxHp:f.maxHp+hpGain,hp:f.hp>0?f.hp+hpGain:0};
 }
 function XpProgress({xp}:{xp:number}) {
   const p=experience(xp);
   return <div className="xp-progress"><span>Niv. {p.level} · {p.required?`${p.current} / ${p.required} XP`:"MAX"}</span>
     <progress aria-label="Progression du niveau" max={p.required||1} value={p.required?p.current:1}/></div>;
 }
-function trained(f:Fighter, xp:number, awake:boolean) {
+function trained(f:Fighter, xp:number, awake:boolean, rank=0) {
   const progress=experience(xp), n=progress.level-1, [atk,mag,speed]=bases[f.name];
-  const maxHp=f.maxHp+n*5+(awake?20:0);
-  return {...f,xp:progress.xp,level:progress.level,atk:atk+n*2,mag:mag+n*2,speed:speed+n,hp:maxHp,maxHp};
+  const scale=(v:number)=>Math.round(v*1.2**rank);
+  const maxHp=scale(f.maxHp+n*5)+(awake?20:0);
+  return {...f,xp:progress.xp,level:progress.level,battleRank:rank,atk:scale(atk+n*2),mag:scale(mag+n*2),speed:scale(speed+n),hp:maxHp,maxHp};
 }
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const ranks = ["E", "D", "C", "B", "A", "etoile"];
@@ -420,12 +425,17 @@ function WishHistory({profile,embedded=false}:{profile:Profile;embedded?:boolean
 type RunPending={steps:TurnEntry[];choices:Record<string,PlannedAction>;index:number;shields:[string,number][];performed:string[]};
 type RunSave={version:1;id:string;seq:number;status:"active"|"lost"|"complete"|"abandoned";updatedAt:number;wave:number;turn:number;team:Fighter[];enemies:Enemy[];loadout:Record<string,string[]>;energy:number;groove:number;reward:boolean;earnedXp:number;loot:string[];awarded:number[];pending:RunPending|null};
 type RunGains={xp?:number;pins?:string[];victory?:boolean};
-function validRun(raw:any,owned:string[]):RunSave|null {
+function validRun(raw:any,owned:string[],copies:Record<string,number>={},awakened:string[]=[]):RunSave|null {
  try{
   const integer=(n:any,min:number,max:number)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
   if(!raw||raw.version!==1||typeof raw.id!=="string"||!/^[a-zA-Z0-9-]{1,100}$/.test(raw.id)||!integer(raw.seq,0,1000000)||!["active","lost","complete","abandoned"].includes(raw.status)||!integer(raw.wave,1,100)||!integer(raw.turn,1,100000)||!integer(raw.energy,0,3)||!integer(raw.groove,0,100)||JSON.stringify(raw).length>18000)return null;
   if(!Array.isArray(raw.team)||raw.team.length!==2||new Set(raw.team.map((f:any)=>f.name)).size!==2)return null;
-  const team=raw.team.map((f:any)=>{const base=characterRoster.find(b=>b.name===f.name);if(!base||!owned.includes(f.name)||!["hp","maxHp","atk","mag","speed","xp","level"].every(k=>integer(f[k],k==="hp"||k==="xp"?0:1,10000000))||f.hp>f.maxHp)throw Error();return {...base,...Object.fromEntries(["hp","maxHp","atk","mag","speed","xp","level"].map(k=>[k,f[k]]))} as Fighter;});
+  const team=raw.team.map((f:any)=>{const base=characterRoster.find(b=>b.name===f.name);if(!base||!owned.includes(f.name)||!["hp","maxHp","atk","mag","speed","xp","level"].every(k=>integer(f[k],k==="hp"||k==="xp"?0:1,10000000))||f.hp>f.maxHp)throw Error();const oldRank=integer(f.battleRank,0,5)?f.battleRank:0;
+    if(raw.status==="active" && copies[f.name]>oldRank){
+      const current=trained(base,f.xp,awakened.includes(f.name),copies[f.name]);
+      return {...current,hp:f.hp>0?Math.max(1,Math.round(current.maxHp*f.hp/f.maxHp)):0};
+    }
+    return {...base,battleRank:oldRank,...Object.fromEntries(["hp","maxHp","atk","mag","speed","xp","level"].map(k=>[k,f[k]]))} as Fighter;});
   if(!Array.isArray(raw.enemies)||raw.enemies.length<1||raw.enemies.length>4||new Set(raw.enemies.map((e:any)=>e.id)).size!==raw.enemies.length)return null;
   for(const e of raw.enemies)if(!enemyCatalog[e.kind]||!["id","hp","maxHp","attack","speed","xp"].every(k=>integer(e[k],0,10000000))||e.hp>e.maxHp||Math.floor(e.id/10)!==raw.wave)return null;
   const names=team.map(f=>f.name),loadout=Object.fromEntries(names.map(name=>[name,raw.loadout?.[name]]));
@@ -442,7 +452,7 @@ function validRun(raw:any,owned:string[]):RunSave|null {
 }
 function newRun(profile:Profile):RunSave {
  const names=profile.equipped.filter(Boolean),id=`run-${Date.now()}-${crypto.randomUUID()}`;
- return {version:1,id,seq:0,status:"active",updatedAt:Date.now(),wave:1,turn:1,team:names.map(name=>trained(characterRoster.find(f=>f.name===name)!,profile.xp[name]||0,profile.awakened.includes(name))),enemies:makeWave(1,id),loadout:Object.fromEntries(names.map(name=>[name,[...profile.loadout[name]]])),energy:3,groove:28,reward:false,earnedXp:0,loot:[],awarded:[],pending:null};
+ return {version:1,id,seq:0,status:"active",updatedAt:Date.now(),wave:1,turn:1,team:names.map(name=>trained(characterRoster.find(f=>f.name===name)!,profile.xp[name]||0,profile.awakened.includes(name),profile.copies[name]||0)),enemies:makeWave(1,id),loadout:Object.fromEntries(names.map(name=>[name,[...profile.loadout[name]]])),energy:3,groove:28,reward:false,earnedXp:0,loot:[],awarded:[],pending:null};
 }
 function applyRunCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profile {
  if(!p.run||p.run.id!==snapshot.id||p.run.status!=="active"||snapshot.seq<=p.run.seq)return p;
@@ -502,7 +512,7 @@ function loadProfile(): Profile {
       return [name,count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:Array.isArray(saved.specialRunRecoveries)?[...new Set<string>(saved.specialRunRecoveries.filter(id=>typeof id==="string"&&id.length<100))]:[],run:validRun(saved.run,owned),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({specialRunRecoveries:Array.isArray(saved.specialRunRecoveries)?[...new Set<string>(saved.specialRunRecoveries.filter(id=>typeof id==="string"&&id.length<100))]:[],run:validRun(saved.run,owned,copies,Array.isArray(saved.awakened)?saved.awakened:[]),wishEvents:Array.isArray(saved.wishEvents)?saved.wishEvents.filter(validWishEvent):[],wishHistoryStartedAt:Number(saved.wishHistoryStartedAt)||0,wishHistoryBaseline:Number(saved.wishHistoryBaseline)||0,freeWishVersion:saved.freeWishVersion===1?1:0,freeWishSpent:Number.isSafeInteger(saved.freeWishSpent)&&saved.freeWishSpent>=0?saved.freeWishSpent:0,freeWishDaySpent:Number.isSafeInteger(saved.freeWishDaySpent)&&saved.freeWishDaySpent>=0?saved.freeWishDaySpent:0,pcMissionCoins:Object.fromEntries(Object.entries(saved.pcMissionCoins||{}).filter(([day,n])=>/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=100000)),starterNekuGranted:saved.starterNekuGranted===true,starterWishesGranted:saved.starterWishesGranted===true,hasPlayed:saved.hasPlayed===true || Number(saved.bestFloor)>0 || Object.values(saved.xp||saved.wins||{}).some(x=>Number(x)>0),wishesMade:Number.isSafeInteger(saved.wishesMade)&&saved.wishesMade>=0?saved.wishesMade:Math.max(owned.filter(n=>!saved.starterNekuGranted||n!=="NEKU").length,Number(saved.wishStep)||0,(saved.pins||[]).some(id=>!saved.starterNekuGranted||id!==basePsych.NEKU)?1:0),freeWishes:Number.isSafeInteger(saved.freeWishes)&&saved.freeWishes>=0?saved.freeWishes:0,lastFreeWishDay:typeof saved.lastFreeWishDay==="string"?saved.lastFreeWishDay:"",bestFloor:Math.min(100,Math.max(0,Math.floor(Number(saved.bestFloor??saved.highestFloor??0)||0))), claimedQuests:Array.isArray(saved.claimedQuests)?[...new Set<string>(saved.claimedQuests.filter(id=>typeof id==="string"))]:[], floorRecoveryAvailable:saved.floorRecoveryAvailable===true || (saved.floorRecoveryAvailable!==false && saved.bestFloor===undefined && owned.length>0), owned, equipped, pins, wishStep,
       copies,
       xp:Object.fromEntries(owned.map(n=>[n,Number.isSafeInteger(saved.xp?.[n]) && saved.xp[n]>=0 ? experience(saved.xp[n]).xp : legacyExperience(saved.wins?.[n])])),
 
@@ -552,6 +562,48 @@ function portalPool(id:string, _profile?:Profile) {
   // Fixed weights: ownership, duplicates and awakening never change the odds.
   return id==="partners" ? [...roster,...roster.filter(f=>["BEAT","JOSHUA"].includes(f.name))] : roster;
 }
+type MusicTrack = "hub"|"battle"|"boss"|"victory";
+type SoundCue = "execute"|"hit"|"pin";
+const gameSound = (() => {
+  const key="chibi.reapers-run.audio-muted";
+  let muted=false,unlocked=false,visible=true,track:MusicTrack|null=null;
+  let music:HTMLAudioElement|null=null, cue:HTMLAudioElement|null=null;
+  try { muted=localStorage.getItem(key)==="1"; } catch {}
+  function sync() {
+    if(!track || muted || !unlocked || !visible || document.hidden){music?.pause();cue?.pause();return;}
+    if(!music || music.dataset.track!==track){
+      music?.pause();music=new Audio("./assets/audio/"+track+".mp3");
+      music.dataset.track=track;music.volume=.32;music.loop=track!=="victory";
+    }
+    if(music.paused && !music.ended)music.play().catch(()=>{});
+  }
+  function toggle(){
+    muted=!muted;try{localStorage.setItem(key,muted?"1":"0");}catch{}
+    sync();window.dispatchEvent(new Event("chibi:audio-setting"));
+  }
+  function effect(id:SoundCue){
+    if(muted||!unlocked||!visible||document.hidden)return;
+    cue?.pause();cue=new Audio("./assets/audio/"+id+".mp3");cue.volume=.55;cue.play().catch(()=>{});
+  }
+  function connect(){
+    const unlock=()=>{unlocked=true;sync();};
+    document.addEventListener("click",unlock,true);document.addEventListener("keydown",unlock,true);
+    document.addEventListener("visibilitychange",sync);
+    const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});
+    observer.observe(document.documentElement);
+    return ()=>{observer.disconnect();document.removeEventListener("click",unlock,true);document.removeEventListener("keydown",unlock,true);document.removeEventListener("visibilitychange",sync);music?.pause();cue?.pause();};
+  }
+  return {connect,toggle,effect,get muted(){return muted;},scene(next:MusicTrack|null){track=next;sync();}};
+})();
+function useMusic(track:MusicTrack|null){
+  useEffect(()=>{gameSound.scene(track);return ()=>gameSound.scene(null);},[track]);
+}
+function SoundToggle(){
+  const [muted,setMuted]=useState(gameSound.muted);
+  useEffect(()=>{const changed=()=>setMuted(gameSound.muted);window.addEventListener("chibi:audio-setting",changed);return ()=>window.removeEventListener("chibi:audio-setting",changed);},[]);
+  return <button className="audio-control" aria-label="Audio" aria-pressed={!muted} onClick={gameSound.toggle}>{muted?"🔇":"🔊"}</button>;
+}
+
 function PortalVideo({src,poster}:{src:string;poster:string}) {
   const ref=React.useRef<HTMLVideoElement>(null);
   const [playing,setPlaying]=useState(false);
@@ -769,17 +821,18 @@ function gameFullscreen(){
 }
 const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["menu","Menu","☰"]];
 function GameHub({profile,screen,navigate,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;children:React.ReactNode}) {
+ useMusic("hub");
  const content=React.useRef<HTMLDivElement>(null);
  useEffect(()=>{content.current?.scrollTo({top:0});},[screen]);
  return <div className="game-hub game-shell">
-  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
+  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><SoundToggle/><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
   <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
   <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} onClick={()=>navigate(id)}><span aria-hidden="true">{icon}</span><b>{label}</b></button>)}</nav>
  </div>;
 }
 function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;profile:Profile;base?:boolean;rate?:number}) {
  const owned=profile.owned.includes(fighter.name),reference=base||!owned;
- const stats=trained(fighter,reference?0:profile.xp[fighter.name]||0,!reference&&profile.awakened.includes(fighter.name));
+ const stats=trained(fighter,reference?0:profile.xp[fighter.name]||0,!reference&&profile.awakened.includes(fighter.name),reference?0:profile.copies[fighter.name]||0);
  const rank=reference?0:profile.levels[fighter.name]||0,pin=psychs[basePsych[fighter.name]];
  return <article className="character-dossier" style={{"--character-accent":fighter.accent} as React.CSSProperties}>
   <header><small>{fighter.role}</small><h3>{fighter.name}</h3><TypeChips elements={characterElements[fighter.name]}/></header>
@@ -792,12 +845,12 @@ function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;pro
   </div>
  </article>;
 }
-function CharacterCollection({profile}:{profile:Profile}) {
+function CharacterCollection({profile,awaken}:{profile:Profile;awaken:(name:string)=>void}) {
  const [onlyOwned,setOnlyOwned]=useState(false),[selected,setSelected]=useState<Fighter|null>(null);
  return <section className="hub-panel character-collection"><h1>Personnages</h1><p>{profile.owned.length} / {characterRoster.length} débloqués</p>
   <div className="hub-tabs"><button aria-pressed={!onlyOwned} onClick={()=>setOnlyOwned(false)}>Tous</button><button aria-pressed={onlyOwned} onClick={()=>setOnlyOwned(true)}>Débloqués</button></div>
   <div className="character-grid">{characterRoster.filter(f=>!onlyOwned||profile.owned.includes(f.name)).map(f=>{const owned=profile.owned.includes(f.name);return <button key={f.name} className={owned?"":"not-owned"} onClick={()=>setSelected(f)} aria-label={`Fiche de ${f.name}${owned?"":" · Non obtenu"}`}><HudPortrait fighter={f}/><b>{f.name}</b><small>{owned?`Niv. ${experience(profile.xp[f.name]||0).level} · ${ranks[profile.levels[f.name]||0]}`:"Non obtenu"}</small></button>;})}</div>
-  {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/><button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
+  {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/>{profile.copies[selected.name]===5&&!profile.awakened.includes(selected.name)&&<button onClick={()=>awaken(selected.name)}>Éveiller · +20 PV</button>}<button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
  </section>;
 }
 function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
@@ -826,6 +879,7 @@ function BestiaryMenu(){
 }
 
 function App() {
+  useEffect(gameSound.connect,[]);
   const [profile, displayProfile] = useState(loadProfile);
   const profileRef=React.useRef(profile);profileRef.current=profile;
   const runSignature=React.useRef<string|null>(null);
@@ -969,7 +1023,7 @@ function App() {
   if(screen==="bestiary")return hub(<BestiaryMenu/>);
   if(screen==="quests")return hub(<QuestMenu embedded profile={profile} save={setProfile}/>);
   if(screen==="journal")return hub(<WishHistory embedded key={window.ChibiGameSync?.accountId||"local"} profile={profile}/>);
-  if(screen==="collection")return hub(<><CharacterCollection profile={profile}/><BadgeCatalogue embedded owned={profile.pins}/></>);
+  if(screen==="collection")return hub(<><CharacterCollection profile={profile} awaken={awaken}/><BadgeCatalogue embedded owned={profile.pins}/></>);
   if (screen==="summon") return hub(<main className="game-shell party-lobby"><section>
     <h1>Invocations</h1>
     <p>{profile.coins} pièces · {profile.owned.length} / {characterRoster.length} personnages débloqués · Garantie dans {10-profile.wishStep} {profile.wishStep===9?"vœu":"vœux"}</p>
@@ -983,7 +1037,10 @@ function App() {
         {id==="reality" && <>
           {!matchMedia("(prefers-reduced-motion: reduce)").matches && <PortalVideo src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp"/>}
         </>}
-        {["partners","apocalyptic","destiny"].includes(id) && <div className="portal-duo">{characterRoster.filter(f=>(id==="partners"?["BEAT","JOSHUA"]:id==="apocalyptic"?["2B","A2"]:["SORA","RIKU"]).includes(f.name)).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
+        {(id==="apocalyptic"||id==="destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? <img className="portal-art" src={`./assets/bingo/${id}.webp`} alt=""/>
+          : <PortalVideo src={`./assets/bingo/${id}.mp4`} poster={`./assets/bingo/${id}.webp`}/>)}
+        {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setRateFighter(null);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
@@ -1017,20 +1074,15 @@ function App() {
         <div className="invocation-stage"><div className="bingo-machine"><img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
           <button autoFocus aria-label="Tourner la manivelle" className={"bingo-crank "+(phase==="spin"?"turning":"")} disabled={phase!=="crank"} onClick={()=>setPhase("spin")}
             onAnimationEnd={e=>{if(e.animationName==="bingo-turn")setPhase("drop");}}/>
-          {phase==="drop" && <span className="bingo-ball capsule" onAnimationEnd={e=>{if(e.animationName==="bingo-drop"){turning.current=false;setPhase("reveal");}}}><Capsule/></span>}
+          {phase==="drop" && <span className="bingo-ball capsule" onAnimationEnd={e=>{if(e.animationName==="bingo-drop"){turning.current=false;gameSound.effect("pin");setPhase("reveal");}}}><Capsule/></span>}
         </div></div><p aria-live="polite">{phase==="crank"?"Appuie sur la manivelle.":phase==="spin"?"La manivelle tourne…":"La capsule tombe…"}</p></>}
     </WishDialog>}
-    {phase === "ready" && profile.owned.map(name => <div className="bingo-member" key={name}>
-      <RankBadge level={profile.levels[name]}/><b>{name}</b><span>{profile.copies[name]||0}/5 doublons</span>
-      {profile.awakened.includes(name) ? <span>Éveillé · +20 PV</span> : profile.levels[name] === 5 &&
-      <button onClick={() => awaken(name)}>Éveiller · +20 PV</button>}
-    </div>)}
     {saveError && <p role="alert">Sauvegarde locale indisponible.</p>}
   </section></main>);
   return hub(<main className="game-shell party-lobby"><section><h1>Team</h1>
     <div className="team-slots">{profile.equipped.map((name,index)=>{
       const fighter=characterRoster.find(f=>f.name===name);
-      const stats=fighter && trained(fighter,profile.xp[name]||0,profile.awakened.includes(name));
+      const stats=fighter && trained(fighter,profile.xp[name]||0,profile.awakened.includes(name),profile.copies[name]||0);
       return <button key={index} aria-label={`Emplacement ${index+1} · ${name||"Choisir un personnage"}`} onClick={()=>setEditingSlot(index)}>
         {fighter && stats ? <><SpritePreview fighter={fighter}/><strong>{name}</strong><TypeChips elements={characterElements[name]}/><RankBadge level={profile.levels[name]}/><small>PV {stats.maxHp}<br/>ATK {stats.atk} · ATK SPE {stats.mag} · SPE {stats.speed}</small><XpProgress xp={stats.xp}/></> : <span aria-hidden="true">+</span>}
       </button>;
@@ -1206,6 +1258,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
         fighters=fighters.map(f=>f.name===target.name?{...f,hp:Math.max(0,f.hp-damage)}:f);
         if(attacker.trait==="vampire"&&damage>0)monsters=monsters.map(e=>e.id===attacker.id?{...e,hp:Math.min(e.maxHp,e.hp+Math.ceil(damage*.15))}:e);
         sync=Math.min(100,sync+12);
+        if(damage)gameSound.effect("hit");
         setMessage(damage?`${attacker.name} attaque ${target.name} · −${damage} PV`:`${target.name} esquive ${attacker.name}.`);
       }else{
         const fighter=fighters.find(f=>f.name===step.name)!;
@@ -1241,6 +1294,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
             setHitFeedback({side:"enemy",target:String(target.id),label:scale===0?"Sans effet":`${damage} dégâts · ${affinityText(scale)}`});
             monsters=monsters.map(e=>e.id===target.id?{...e,hp:Math.max(0,e.hp-damage)}:e);
             if(pin.drain)healParty(Math.ceil(damage/4));
+            if(damage)gameSound.effect("hit");
             sync=Math.min(100,sync+18);setSelected(target.id);setImpact(target.id);setActiveAction(physical?"shockwave":"pyro");
             setMessage(`${fighter.name} · ${pin.name} → ${target.name} · ${damage} dégâts`);
           }
@@ -1260,7 +1314,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
     const unused=Object.entries(choices).reduce((sum,[name,plan])=>sum+(performed.has(name)?0:planCost(plan)),0);
     en=Math.min(3,en+unused+2);persist(null,{},fighters.some(f=>f.hp>0)&&monsters.some(e=>e.hp>0)?turn+1:turn);publish();resetPlanning();
     if(xp)setEarnedXp(old=>old+xp);
-    if(drops.length){setLoot(old=>[...old,...drops.map(pin=>pin.name)]);setDropReveal(drops.map(pin=>({pin})));}
+    if(drops.length){gameSound.effect("pin");setLoot(old=>[...old,...drops.map(pin=>pin.name)]);setDropReveal(drops.map(pin=>({pin})));}
     if(!monsters.some(e=>e.hp>0)){
       setReward(true);
       setMessage("Vague terminée !");
@@ -1293,6 +1347,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
   };
 
   const teamDefeated = team.every((fighter) => fighter.hp <= 0);
+  useMusic(teamDefeated?null:reward?"victory":isBossWave(wave)?"boss":"battle");
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
 
@@ -1313,11 +1368,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
           </span>
           <span className="currency"><Icon name="coin" /> {coins}</span>
           <button className="currency" disabled={busy} onClick={leave} title="Mettre la run en pause et revenir à Team">Mon duo</button>
-          <button className="sound-button" aria-label="Sound settings">
-            <i />
-            <i />
-            <i />
-          </button>
+          <SoundToggle/>
         </div>
       </header>
 
@@ -1459,7 +1510,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
                 {plan&&<small>{planCost(plan)} EN · Modifier</small>}
               </button>;
             })}</div>
-            <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={()=>resolveRound()}>{busy?"Tour en cours…":"Lancer le tour"}</button>
+            <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={()=>{gameSound.effect("execute");resolveRound();}}>{busy?"Tour en cours…":"Lancer le tour"}</button>
             </>}
           </section>
         </section>

@@ -760,16 +760,22 @@ function legacyExperience(wins) {
 }
 function gainExperience(f, amount) {
   const progress = experience((f.xp || 0) + amount);
-  const levels = progress.level - (f.level || 1);
+  const oldLevel = (f.level || 1) - 1,
+    newLevel = progress.level - 1;
+  const scale = 1.2 ** (f.battleRank || 0),
+    [atk, mag, speed] = bases[f.name],
+    hpBase = characterRoster.find(hero => hero.name === f.name).maxHp;
+  const delta = (base, step) => Math.round((base + newLevel * step) * scale) - Math.round((base + oldLevel * step) * scale);
+  const hpGain = delta(hpBase, 5);
   return {
     ...f,
     xp: progress.xp,
     level: progress.level,
-    atk: f.atk + levels * 2,
-    mag: f.mag + levels * 2,
-    speed: f.speed + levels,
-    maxHp: f.maxHp + levels * 5,
-    hp: f.hp > 0 ? f.hp + levels * 5 : 0
+    atk: f.atk + delta(atk, 2),
+    mag: f.mag + delta(mag, 2),
+    speed: f.speed + delta(speed, 1),
+    maxHp: f.maxHp + hpGain,
+    hp: f.hp > 0 ? f.hp + hpGain : 0
   };
 }
 function XpProgress({
@@ -784,18 +790,20 @@ function XpProgress({
     value: p.required ? p.current : 1
   }));
 }
-function trained(f, xp, awake) {
+function trained(f, xp, awake, rank = 0) {
   const progress = experience(xp),
     n = progress.level - 1,
     [atk, mag, speed] = bases[f.name];
-  const maxHp = f.maxHp + n * 5 + (awake ? 20 : 0);
+  const scale = v => Math.round(v * 1.2 ** rank);
+  const maxHp = scale(f.maxHp + n * 5) + (awake ? 20 : 0);
   return {
     ...f,
     xp: progress.xp,
     level: progress.level,
-    atk: atk + n * 2,
-    mag: mag + n * 2,
-    speed: speed + n,
+    battleRank: rank,
+    atk: scale(atk + n * 2),
+    mag: scale(mag + n * 2),
+    speed: scale(speed + n),
     hp: maxHp,
     maxHp
   };
@@ -915,7 +923,7 @@ function WishHistory({
   }, events.map(event => React.createElement("button", {
     key: event.id,
     onClick: () => setSelected(event)
-  }, React.createElement("b", null, event.count, " ", event.count > 1 ? "v\u0153ux" : "v\u0153u", " \xB7 ", portals[event.portal] || event.portal), React.createElement("small", null, new Date(event.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
+  }, React.createElement("b", null, event.count, " ", event.count > 1 ? "vœux" : "vœu", " \xB7 ", portals[event.portal] || event.portal), React.createElement("small", null, new Date(event.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     timeZone: "Europe/Paris"
   }), " \xB7 ", event.freeUsed, " gratuits \xB7 ", event.coinsPaid, " pi\xE8ces"), pending.has(event.id) && React.createElement("small", null, "En attente de synchronisation"))), !events.length && !loading && React.createElement("p", null, "Aucune invocation d\xE9taill\xE9e enregistr\xE9e pour le moment.")), React.createElement("div", {
     className: "dialog-actions"
@@ -929,7 +937,7 @@ function WishHistory({
     onClick: () => setOpen(false)
   }, "Fermer")));
 }
-function validRun(raw, owned) {
+function validRun(raw, owned, copies = {}, awakened = []) {
   try {
     const integer = (n, min, max) => Number.isSafeInteger(n) && n >= min && n <= max;
     if (!raw || raw.version !== 1 || typeof raw.id !== "string" || !/^[a-zA-Z0-9-]{1,100}$/.test(raw.id) || !integer(raw.seq, 0, 1000000) || !["active", "lost", "complete", "abandoned"].includes(raw.status) || !integer(raw.wave, 1, 100) || !integer(raw.turn, 1, 100000) || !integer(raw.energy, 0, 3) || !integer(raw.groove, 0, 100) || JSON.stringify(raw).length > 18000) return null;
@@ -937,8 +945,17 @@ function validRun(raw, owned) {
     const team = raw.team.map(f => {
       const base = characterRoster.find(b => b.name === f.name);
       if (!base || !owned.includes(f.name) || !["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].every(k => integer(f[k], k === "hp" || k === "xp" ? 0 : 1, 10000000)) || f.hp > f.maxHp) throw Error();
+      const oldRank = integer(f.battleRank, 0, 5) ? f.battleRank : 0;
+      if (raw.status === "active" && copies[f.name] > oldRank) {
+        const current = trained(base, f.xp, awakened.includes(f.name), copies[f.name]);
+        return {
+          ...current,
+          hp: f.hp > 0 ? Math.max(1, Math.round(current.maxHp * f.hp / f.maxHp)) : 0
+        };
+      }
       return {
         ...base,
+        battleRank: oldRank,
         ...Object.fromEntries(["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].map(k => [k, f[k]]))
       };
     });
@@ -983,7 +1000,7 @@ function newRun(profile) {
     updatedAt: Date.now(),
     wave: 1,
     turn: 1,
-    team: names.map(name => trained(characterRoster.find(f => f.name === name), profile.xp[name] || 0, profile.awakened.includes(name))),
+    team: names.map(name => trained(characterRoster.find(f => f.name === name), profile.xp[name] || 0, profile.awakened.includes(name), profile.copies[name] || 0)),
     enemies: makeWave(1, id),
     loadout: Object.fromEntries(names.map(name => [name, [...profile.loadout[name]]])),
     energy: 3,
@@ -1101,7 +1118,7 @@ function loadProfile() {
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
     if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({
       specialRunRecoveries: Array.isArray(saved.specialRunRecoveries) ? [...new Set(saved.specialRunRecoveries.filter(id => typeof id === "string" && id.length < 100))] : [],
-      run: validRun(saved.run, owned),
+      run: validRun(saved.run, owned, copies, Array.isArray(saved.awakened) ? saved.awakened : []),
       wishEvents: Array.isArray(saved.wishEvents) ? saved.wishEvents.filter(validWishEvent) : [],
       wishHistoryStartedAt: Number(saved.wishHistoryStartedAt) || 0,
       wishHistoryBaseline: Number(saved.wishHistoryBaseline) || 0,
@@ -1224,6 +1241,102 @@ function portalRoster(id) {
 function portalPool(id, _profile) {
   const roster = portalRoster(id);
   return id === "partners" ? [...roster, ...roster.filter(f => ["BEAT", "JOSHUA"].includes(f.name))] : roster;
+}
+const gameSound = (() => {
+  const key = "chibi.reapers-run.audio-muted";
+  let muted = false,
+    unlocked = false,
+    visible = true,
+    track = null;
+  let music = null,
+    cue = null;
+  try {
+    muted = localStorage.getItem(key) === "1";
+  } catch {}
+  function sync() {
+    if (!track || muted || !unlocked || !visible || document.hidden) {
+      music?.pause();
+      cue?.pause();
+      return;
+    }
+    if (!music || music.dataset.track !== track) {
+      music?.pause();
+      music = new Audio("./assets/audio/" + track + ".mp3");
+      music.dataset.track = track;
+      music.volume = .32;
+      music.loop = track !== "victory";
+    }
+    if (music.paused && !music.ended) music.play().catch(() => {});
+  }
+  function toggle() {
+    muted = !muted;
+    try {
+      localStorage.setItem(key, muted ? "1" : "0");
+    } catch {}
+    sync();
+    window.dispatchEvent(new Event("chibi:audio-setting"));
+  }
+  function effect(id) {
+    if (muted || !unlocked || !visible || document.hidden) return;
+    cue?.pause();
+    cue = new Audio("./assets/audio/" + id + ".mp3");
+    cue.volume = .55;
+    cue.play().catch(() => {});
+  }
+  function connect() {
+    const unlock = () => {
+      unlocked = true;
+      sync();
+    };
+    document.addEventListener("click", unlock, true);
+    document.addEventListener("keydown", unlock, true);
+    document.addEventListener("visibilitychange", sync);
+    const observer = new IntersectionObserver(entries => {
+      visible = entries[0].isIntersecting;
+      sync();
+    });
+    observer.observe(document.documentElement);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("keydown", unlock, true);
+      document.removeEventListener("visibilitychange", sync);
+      music?.pause();
+      cue?.pause();
+    };
+  }
+  return {
+    connect,
+    toggle,
+    effect,
+    get muted() {
+      return muted;
+    },
+    scene(next) {
+      track = next;
+      sync();
+    }
+  };
+})();
+function useMusic(track) {
+  useEffect(() => {
+    gameSound.scene(track);
+    return () => gameSound.scene(null);
+  }, [track]);
+}
+function SoundToggle() {
+  const [muted, setMuted] = useState(gameSound.muted);
+  useEffect(() => {
+    const changed = () => setMuted(gameSound.muted);
+    window.addEventListener("chibi:audio-setting", changed);
+    return () => window.removeEventListener("chibi:audio-setting", changed);
+  }, []);
+  return React.createElement("button", {
+    className: "audio-control",
+    "aria-label": "Audio",
+    "aria-pressed": !muted,
+    onClick: gameSound.toggle
+  }, muted ? "🔇" : "🔊");
 }
 function PortalVideo({
   src,
@@ -1709,9 +1822,12 @@ function QuestMenu({
 function applyCetrucRecovery(p, identity) {
   if (!identity || !/^\d{1,25}$/.test(identity.id) || identity.name.normalize("NFKC").trim().toLocaleLowerCase("fr-FR") !== "cetruc") return p;
   const flag = `cetruc-tier-5-v2-${identity.id}`;
-  if (p.specialRunRecoveries.includes(flag)  || !p.hasPlayed) return p;
+  if (p.specialRunRecoveries.includes(flag) || !p.hasPlayed) return p;
   const marked = [...p.specialRunRecoveries, flag];
-  if (p.run?.status === "complete" || (p.run?.status === "active" && p.run.wave >= 41)) return {...p, specialRunRecoveries:marked};
+  if (p.run?.status === "complete" || p.run?.status === "active" && p.run.wave >= 41) return {
+    ...p,
+    specialRunRecoveries: marked
+  };
   if (p.equipped.filter(Boolean).length !== 2 || !p.equipped.every(name => p.loadout[name]?.length)) return p;
   const base = newRun(p),
     run = {
@@ -1755,6 +1871,7 @@ function GameHub({
   navigate,
   children
 }) {
+  useMusic("hub");
   const content = React.useRef(null);
   useEffect(() => {
     content.current?.scrollTo({
@@ -1775,7 +1892,7 @@ function GameHub({
     "aria-label": `${profile.coins} pièces`
   }, React.createElement(Icon, {
     name: "coin"
-  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement("button", {
+  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement(SoundToggle, null), React.createElement("button", {
     className: "hub-fullscreen",
     onClick: gameFullscreen,
     "aria-label": "Basculer le plein \xE9cran"
@@ -1804,7 +1921,7 @@ function CharacterDossier({
 }) {
   const owned = profile.owned.includes(fighter.name),
     reference = base || !owned;
-  const stats = trained(fighter, reference ? 0 : profile.xp[fighter.name] || 0, !reference && profile.awakened.includes(fighter.name));
+  const stats = trained(fighter, reference ? 0 : profile.xp[fighter.name] || 0, !reference && profile.awakened.includes(fighter.name), reference ? 0 : profile.copies[fighter.name] || 0);
   const rank = reference ? 0 : profile.levels[fighter.name] || 0,
     pin = psychs[basePsych[fighter.name]];
   return React.createElement("article", {
@@ -1839,7 +1956,8 @@ function CharacterDossier({
   }), " %"), !reference && React.createElement("p", null, profile.copies[fighter.name] || 0, " / 5 doublons", profile.awakened.includes(fighter.name) ? " · Éveillé" : "")));
 }
 function CharacterCollection({
-  profile
+  profile,
+  awaken
 }) {
   const [onlyOwned, setOnlyOwned] = useState(false),
     [selected, setSelected] = useState(null);
@@ -1872,7 +1990,9 @@ function CharacterCollection({
   }, React.createElement(CharacterDossier, {
     fighter: selected,
     profile: profile
-  }), React.createElement("button", {
+  }), profile.copies[selected.name] === 5 && !profile.awakened.includes(selected.name) && React.createElement("button", {
+    onClick: () => awaken(selected.name)
+  }, "\xC9veiller \xB7 +20 PV"), React.createElement("button", {
     onClick: () => setSelected(null)
   }, "Retour \xE0 la collection")));
 }
@@ -1977,6 +2097,7 @@ function BestiaryMenu() {
   }, "Fermer")));
 }
 function App() {
+  useEffect(gameSound.connect, []);
   const [profile, displayProfile] = useState(loadProfile);
   const profileRef = React.useRef(profile);
   profileRef.current = profile;
@@ -2256,7 +2377,8 @@ function App() {
     profile: profile
   }));
   if (screen === "collection") return hub(React.createElement(React.Fragment, null, React.createElement(CharacterCollection, {
-    profile: profile
+    profile: profile,
+    awaken: awaken
   }), React.createElement(BadgeCatalogue, {
     embedded: true,
     owned: profile.pins
@@ -2289,9 +2411,16 @@ function App() {
   }), id === "reality" && React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && React.createElement(PortalVideo, {
     src: "./assets/bingo/from-another-reality.mp4",
     poster: "./assets/bingo/from-another-reality.webp"
-  })), ["partners", "apocalyptic", "destiny"].includes(id) && React.createElement("div", {
+  })), (id === "apocalyptic" || id === "destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches ? React.createElement("img", {
+    className: "portal-art",
+    src: `./assets/bingo/${id}.webp`,
+    alt: ""
+  }) : React.createElement(PortalVideo, {
+    src: `./assets/bingo/${id}.mp4`,
+    poster: `./assets/bingo/${id}.webp`
+  })), id === "partners" && React.createElement("div", {
     className: "portal-duo"
-  }, characterRoster.filter(f => (id === "partners" ? ["BEAT", "JOSHUA"] : id === "apocalyptic" ? ["2B", "A2"] : ["SORA", "RIKU"]).includes(f.name)).map(f => React.createElement(SpritePreview, {
+  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(SpritePreview, {
     key: f.name,
     fighter: f,
     maximumScale: 1.6
@@ -2395,19 +2524,13 @@ function App() {
     onAnimationEnd: e => {
       if (e.animationName === "bingo-drop") {
         turning.current = false;
+        gameSound.effect("pin");
         setPhase("reveal");
       }
     }
   }, React.createElement(Capsule, null)))), React.createElement("p", {
     "aria-live": "polite"
-  }, phase === "crank" ? "Appuie sur la manivelle." : phase === "spin" ? "La manivelle tourne…" : "La capsule tombe…"))), phase === "ready" && profile.owned.map(name => React.createElement("div", {
-    className: "bingo-member",
-    key: name
-  }, React.createElement(RankBadge, {
-    level: profile.levels[name]
-  }), React.createElement("b", null, name), React.createElement("span", null, profile.copies[name] || 0, "/5 doublons"), profile.awakened.includes(name) ? React.createElement("span", null, "\xC9veill\xE9 \xB7 +20 PV") : profile.levels[name] === 5 && React.createElement("button", {
-    onClick: () => awaken(name)
-  }, "\xC9veiller \xB7 +20 PV"))), saveError && React.createElement("p", {
+  }, phase === "crank" ? "Appuie sur la manivelle." : phase === "spin" ? "La manivelle tourne…" : "La capsule tombe…"))), saveError && React.createElement("p", {
     role: "alert"
   }, "Sauvegarde locale indisponible."))));
   return hub(React.createElement("main", {
@@ -2416,7 +2539,7 @@ function App() {
     className: "team-slots"
   }, profile.equipped.map((name, index) => {
     const fighter = characterRoster.find(f => f.name === name);
-    const stats = fighter && trained(fighter, profile.xp[name] || 0, profile.awakened.includes(name));
+    const stats = fighter && trained(fighter, profile.xp[name] || 0, profile.awakened.includes(name), profile.copies[name] || 0);
     return React.createElement("button", {
       key: index,
       "aria-label": `Emplacement ${index + 1} · ${name || "Choisir un personnage"}`,
@@ -2824,6 +2947,7 @@ function Battle({
           hp: Math.min(e.maxHp, e.hp + Math.ceil(damage * .15))
         } : e);
         sync = Math.min(100, sync + 12);
+        if (damage) gameSound.effect("hit");
         setMessage(damage ? `${attacker.name} attaque ${target.name} · −${damage} PV` : `${target.name} esquive ${attacker.name}.`);
       } else {
         const fighter = fighters.find(f => f.name === step.name);
@@ -2874,6 +2998,7 @@ function Battle({
               hp: Math.max(0, e.hp - damage)
             } : e);
             if (pin.drain) healParty(Math.ceil(damage / 4));
+            if (damage) gameSound.effect("hit");
             sync = Math.min(100, sync + 18);
             setSelected(target.id);
             setImpact(target.id);
@@ -2917,6 +3042,7 @@ function Battle({
     resetPlanning();
     if (xp) setEarnedXp(old => old + xp);
     if (drops.length) {
+      gameSound.effect("pin");
       setLoot(old => [...old, ...drops.map(pin => pin.name)]);
       setDropReveal(drops.map(pin => ({
         pin
@@ -2980,6 +3106,7 @@ function Battle({
     setMessage(heal ? `Palier ${difficultyAt(next).tier} · Team entièrement soignée.` : `Étage ${next} · PV conservés.`);
   };
   const teamDefeated = team.every(fighter => fighter.hp <= 0);
+  useMusic(teamDefeated ? null : reward ? "victory" : isBossWave(wave) ? "boss" : "battle");
   const routeStart = Math.floor((wave - 1) / 5) * 5 + 1;
   const sector = Math.floor((wave - 1) / 5) + 1;
   return React.createElement("main", {
@@ -3007,10 +3134,7 @@ function Battle({
     disabled: busy,
     onClick: leave,
     title: "Mettre la run en pause et revenir \xE0 Team"
-  }, "Mon duo"), React.createElement("button", {
-    className: "sound-button",
-    "aria-label": "Sound settings"
-  }, React.createElement("i", null), React.createElement("i", null), React.createElement("i", null)))), React.createElement("section", {
+  }, "Mon duo"), React.createElement(SoundToggle, null))), React.createElement("section", {
     className: "game-grid"
   }, React.createElement("aside", {
     className: "squad-panel"
@@ -3206,7 +3330,10 @@ function Battle({
   })), React.createElement("button", {
     className: "resolve-round",
     disabled: busy || reward || !ready || teamDefeated,
-    onClick: () => resolveRound()
+    onClick: () => {
+      gameSound.effect("execute");
+      resolveRound();
+    }
   }, busy ? "Tour en cours…" : "Lancer le tour")))), React.createElement("aside", {
     className: "route-panel"
   }, React.createElement("div", {
