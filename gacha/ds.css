@@ -1034,12 +1034,14 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .audio-settings output {font-variant-numeric:tabular-nums;}
 .audio-settings input {grid-column:1/-1;width:100%;min-height:44px;margin:0;accent-color:#705496;cursor:pointer;}
 
-.game-hub .home-modes {display:flex;gap:.7rem;width:100%;margin:auto;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 1px 10px;}
+.game-hub .home-mode-switcher {display:grid;grid-template-columns:38px minmax(0,1fr) 38px;align-items:center;gap:.35rem;width:100%;min-width:0;}
+.game-hub .home-modes {display:flex;gap:.7rem;width:100%;margin:0;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 1px 10px;}
 .game-hub .home-modes::-webkit-scrollbar {display:none;}
 .game-hub .home-modes .home-mode-card {display:grid;place-content:center;gap:.18rem;flex:0 0 min(86%,420px);scroll-snap-align:center;min-width:0;width:auto;margin:0;padding:12px 14px;min-height:92px;text-align:center;}
 .home-modes .hub-play b {font-size:clamp(1rem,3.8vw,1.35rem);}
 .home-modes .hub-play small {font-size:.62rem;letter-spacing:.14em;opacity:.76;}
 .home-modes .hub-play span {font-size:.78rem;font-weight:800;opacity:.9;}
+.game-hub .home-mode-arrow {display:grid;place-items:center;min-width:38px;min-height:38px;padding:0;border-radius:50%;font:900 29px/1 Arial,sans-serif;color:#fff;background:linear-gradient(155deg,#8871bd,#534081 48%,#33234e);box-shadow:inset 0 2px 2px #f3e5ff90,inset 0 -2px #211332,0 3px 0 #261934;}
 .event-hall {min-width:0;}
 .event-hall header,.event-resume {display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;}
 .event-hall header button {min-width:44px;min-height:44px;margin-inline-start:.3rem;}
@@ -1049,8 +1051,8 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .event-preview {height:clamp(80px,20dvh,155px);}
 .event-preview .sprite-preview {width:100%;height:100%;}
 .event-rail article>button {min-height:44px;width:100%;}
-@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}.game-hub .home-modes .home-mode-card {flex-basis:100%;}}
-@media (orientation:landscape) and (min-width:560px) and (max-width:760px){.game-hub .home-modes {grid-column:1/3;}}
+@media (orientation:landscape){.game-hub .home-mode-switcher {grid-column:1;grid-row:2;align-self:center;}.game-hub .home-modes .home-mode-card {flex-basis:100%;}}
+@media (orientation:landscape) and (min-width:560px) and (max-width:760px){.game-hub .home-mode-switcher {grid-column:1/3;}}
 
 .awakening-panel,.roguelike-launch {margin-top:1rem;padding:1rem;border:1px solid #b9a8ce;border-radius:1.1rem;background:linear-gradient(145deg,#ffffffd9,#e9e0f2);box-shadow:0 4px 0 #aa98bd;color:#352641;}
 .awakening-panel h2,.roguelike-launch h1 {margin:0;color:#33224b;}

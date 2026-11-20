@@ -2458,6 +2458,11 @@ function HubHome({
   const names = profile.equipped.filter(Boolean),
     duo = (names.length ? names : ["NEKU"]).map(name => characterRoster.find(f => f.name === name));
   const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length;
+  const modeRail = React.useRef(null);
+  const moveMode = direction => modeRail.current?.scrollBy({
+    left: direction * modeRail.current.clientWidth,
+    behavior: "smooth"
+  });
   return React.createElement("section", {
     className: "hub-home"
   }, React.createElement("div", {
@@ -2472,7 +2477,14 @@ function HubHome({
     fighter: f,
     maximumScale: 2.5
   }))), React.createElement("div", {
+    className: "home-mode-switcher"
+  }, React.createElement("button", {
+    className: "home-mode-arrow",
+    "aria-label": "Voir le mode pr\xE9c\xE9dent",
+    onClick: () => moveMode(-1)
+  }, "\u2039"), React.createElement("div", {
     className: "home-modes",
+    ref: modeRail,
     "aria-label": "Choisir un mode de jeu"
   }, React.createElement("button", {
     className: "hub-play home-mode-card",
@@ -2480,7 +2492,11 @@ function HubHome({
   }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "Roguelike"), React.createElement("span", null, "Gravis les 100 \xE9tages")), React.createElement("button", {
     className: "hub-play home-mode-card",
     onClick: () => navigate("events")
-  }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "\xC9v\xE9nement"), React.createElement("span", null, "D\xE9fie les personnages"))), React.createElement("div", {
+  }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "\xC9v\xE9nement"), React.createElement("span", null, "D\xE9fie les personnages"))), React.createElement("button", {
+    className: "home-mode-arrow",
+    "aria-label": "Voir le mode suivant",
+    onClick: () => moveMode(1)
+  }, "\u203A")), React.createElement("div", {
     className: "hub-shortcuts"
   }, React.createElement("button", {
     onClick: () => navigate("quests")
