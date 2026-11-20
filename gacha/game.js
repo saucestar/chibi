@@ -138,7 +138,7 @@ const characterRoster = [{
   frameWidth: 56,
   frameHeight: 77,
   portraitCenter: 28,
-  portraitTop: 24
+  portraitTop: 5
 }, {
   name: "PROMPTO",
   role: "CROWNSGUARD",
@@ -150,7 +150,7 @@ const characterRoster = [{
   frameWidth: 54,
   frameHeight: 76,
   portraitCenter: 27,
-  portraitTop: 24
+  portraitTop: 5
 }, {
   name: "IGNIS",
   role: "CROWNSGUARD",
@@ -162,7 +162,7 @@ const characterRoster = [{
   frameWidth: 56,
   frameHeight: 79,
   portraitCenter: 28,
-  portraitTop: 24
+  portraitTop: 6
 }, {
   name: "GLADIO",
   role: "CROWNSGUARD",
@@ -174,7 +174,7 @@ const characterRoster = [{
   frameWidth: 75,
   frameHeight: 83,
   portraitCenter: 38,
-  portraitTop: 26
+  portraitTop: 7
 }, {
   name: "2B",
   role: "YORHA",
@@ -625,7 +625,9 @@ function Sprite({
     style: {
       backgroundImage: `url(${sprite})`,
       ...(frameCount ? {
-        backgroundSize: `${frameCount * 100}% 100%`
+        backgroundSize: `${frameCount * 100}% 100%`,
+        "--frames": frameCount,
+        "--idle-duration": `${Math.max(.8, frameCount / 7)}s`
       } : {}),
       ...(fighter.frameWidth ? {
         width: `${fighter.frameWidth}px`,
@@ -2451,6 +2453,36 @@ function EventHall({
     onClick: () => start(hero.name)
   }, active?.boss === hero.name ? "Reprendre" : "Défier")))));
 }
+function LaunchNews({
+  navigate,
+  close
+}) {
+  const open = screen => {
+    close();
+    navigate(screen);
+  };
+  return React.createElement(WishDialog, {
+    className: "launch-news",
+    title: "Nouveaut\xE9s"
+  }, React.createElement("p", {
+    className: "launch-news-lead"
+  }, "La Reapers\u2019 Game bouge. Choisis une destination."), React.createElement("div", {
+    className: "launch-news-grid"
+  }, React.createElement("button", {
+    className: "news-card news-events",
+    onClick: () => open("events")
+  }, React.createElement("span", null, "\xC9V\xC9NEMENTS"), React.createElement("b", null, "Boss niveau 100"), React.createElement("small", null, "D\xE9fie les personnages et gagne leurs r\xE9compenses signature."), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "\u2192")), React.createElement("button", {
+    className: "news-card news-portals",
+    onClick: () => open("summon")
+  }, React.createElement("span", null, "NOUVEAUX PORTAILS"), React.createElement("b", null, "Eos arrive le 25 novembre"), React.createElement("small", null, "Noctis & Prompto \xB7 Ignis & Gladio"), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "\u2192"))), React.createElement("button", {
+    className: "launch-news-close",
+    onClick: close
+  }, "Fermer"));
+}
 function HubHome({
   profile,
   navigate
@@ -2683,6 +2715,7 @@ function App() {
   const [phase, setPhase] = useState("ready");
   const turning = React.useRef(false);
   const [screen, setScreen] = useState(gachaView ? "summon" : "home");
+  const [newsOpen, setNewsOpen] = useState(true);
   const [rateFighter, setRateFighter] = useState(null);
   const navigate = next => {
     if (turning.current) return;
@@ -2955,7 +2988,10 @@ function App() {
     profile: profile,
     screen: screen,
     navigate: navigate
-  }, content);
+  }, React.createElement(React.Fragment, null, content, newsOpen && React.createElement(LaunchNews, {
+    navigate: navigate,
+    close: () => setNewsOpen(false)
+  })));
   if (screen === "home") return hub(React.createElement(HubHome, {
     profile: profile,
     navigate: navigate

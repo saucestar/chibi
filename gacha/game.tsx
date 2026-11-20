@@ -108,10 +108,10 @@ type Fighter = {
 };
 
 const characterRoster: Fighter[] = [
-  {name:"NOCTIS",role:"LUCIS",hp:130,maxHp:130,sprite:"./assets/game/noctis-idle.png",accent:"#586d9d",frames:16,frameWidth:56,frameHeight:77,portraitCenter:28,portraitTop:24},
-  {name:"PROMPTO",role:"CROWNSGUARD",hp:108,maxHp:108,sprite:"./assets/game/prompto-idle.png",accent:"#f5d36b",frames:4,frameWidth:54,frameHeight:76,portraitCenter:27,portraitTop:24},
-  {name:"IGNIS",role:"CROWNSGUARD",hp:114,maxHp:114,sprite:"./assets/game/ignis-idle.png",accent:"#b8a56d",frames:4,frameWidth:56,frameHeight:79,portraitCenter:28,portraitTop:24},
-  {name:"GLADIO",role:"CROWNSGUARD",hp:148,maxHp:148,sprite:"./assets/game/gladio-idle.png",accent:"#9a724e",frames:4,frameWidth:75,frameHeight:83,portraitCenter:38,portraitTop:26},
+  {name:"NOCTIS",role:"LUCIS",hp:130,maxHp:130,sprite:"./assets/game/noctis-idle.png",accent:"#586d9d",frames:16,frameWidth:56,frameHeight:77,portraitCenter:28,portraitTop:5},
+  {name:"PROMPTO",role:"CROWNSGUARD",hp:108,maxHp:108,sprite:"./assets/game/prompto-idle.png",accent:"#f5d36b",frames:4,frameWidth:54,frameHeight:76,portraitCenter:27,portraitTop:5},
+  {name:"IGNIS",role:"CROWNSGUARD",hp:114,maxHp:114,sprite:"./assets/game/ignis-idle.png",accent:"#b8a56d",frames:4,frameWidth:56,frameHeight:79,portraitCenter:28,portraitTop:6},
+  {name:"GLADIO",role:"CROWNSGUARD",hp:148,maxHp:148,sprite:"./assets/game/gladio-idle.png",accent:"#9a724e",frames:4,frameWidth:75,frameHeight:83,portraitCenter:38,portraitTop:7},
   {name:"2B",role:"YORHA",hp:128,maxHp:128,sprite:"./assets/game/2b-idle.png",accent:"#d2cce0",frames:4,frameWidth:176,frameHeight:160,portraitCenter:88,portraitTop:40},
   {name:"A2",role:"YORHA",hp:132,maxHp:132,sprite:"./assets/game/a2-idle.png",accent:"#b8b1be",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
   {name:"SORA",role:"KEYBLADE",hp:122,maxHp:122,sprite:"./assets/game/sora-idle.png",accent:"#ffd25c",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
@@ -296,7 +296,7 @@ function Sprite({
       className={`pixel-sprite hero-sprite ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`}
       style={{
         backgroundImage: `url(${sprite})`,
-        ...(frameCount ? { backgroundSize: `${frameCount * 100}% 100%` } : {}),
+        ...(frameCount ? { backgroundSize: `${frameCount * 100}% 100%`,"--frames":frameCount,"--idle-duration":`${Math.max(.8,frameCount/7)}s` } : {}),
         ...(fighter.frameWidth ? { width: `${fighter.frameWidth}px`, height: `${fighter.frameHeight}px` } : {}),
       }}
       role="img"
@@ -1039,6 +1039,16 @@ function EventHall({profile,start,navigate,abandon}:{profile:Profile;start:(name
  <button disabled={active?active.boss!==hero.name:!ready} onClick={()=>start(hero.name)}>{active?.boss===hero.name?"Reprendre":"Défier"}</button>
  </article>)}</div></section>;
 }
+function LaunchNews({navigate,close}:{navigate:(screen:GameScreen)=>void;close:()=>void}) {
+ const open=(screen:GameScreen)=>{close();navigate(screen);};
+ return <WishDialog className="launch-news" title="Nouveautés"><p className="launch-news-lead">La Reapers’ Game bouge. Choisis une destination.</p>
+  <div className="launch-news-grid">
+   <button className="news-card news-events" onClick={()=>open("events")}><span>ÉVÉNEMENTS</span><b>Boss niveau 100</b><small>Défie les personnages et gagne leurs récompenses signature.</small><i aria-hidden="true">→</i></button>
+   <button className="news-card news-portals" onClick={()=>open("summon")}><span>NOUVEAUX PORTAILS</span><b>Eos arrive le 25 novembre</b><small>Noctis & Prompto · Ignis & Gladio</small><i aria-hidden="true">→</i></button>
+  </div>
+  <button className="launch-news-close" onClick={close}>Fermer</button>
+ </WishDialog>;
+}
 
 function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
  const names=profile.equipped.filter(Boolean),duo=(names.length?names:["NEKU"]).map(name=>characterRoster.find(f=>f.name===name)!);
@@ -1108,6 +1118,7 @@ function App() {
   const [phase, setPhase] = useState<"ready" | "rates" | "confirm" | "crank" | "spin" | "drop" | "reveal">("ready");
   const turning = React.useRef(false);
   const [screen,setScreen]=useState<GameScreen>(gachaView?"summon":"home");
+  const [newsOpen,setNewsOpen]=useState(true);
   const [rateFighter,setRateFighter]=useState<string|null>(null);
   const navigate=(next:GameScreen)=>{if(turning.current)return;setRateFighter(null);setPhase("ready");setScreen(next);};
   const navigationRef=React.useRef({party,navigate});navigationRef.current={party,navigate};
@@ -1241,7 +1252,7 @@ function App() {
   if (party && resumeRun) return <Battle key={resumeRun.id} event={event} initialRun={resumeRun} initialTeam={party} loadout={battleLoadout} coins={profile.coins}
     onCheckpoint={(snapshot,gains)=>setProfile(p=>event?eventCheckpoint(p,snapshot):applyRunCheckpoint(p,snapshot,gains))}
     leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen(event?"events":"roguelike"); setResult([]); }} />;
-  const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
+  const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{<>{content}{newsOpen&&<LaunchNews navigate={navigate} close={()=>setNewsOpen(false)}/>}</>}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
   if(screen==="roguelike")return hub(<RoguelikeLaunch profile={profile} navigate={navigate} start={startRun} resume={resume} abandon={()=>setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p)}/>);
   if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);

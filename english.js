@@ -397,4 +397,13 @@ doublons|duplicates
 manquant|missing
 manquants|missing
 Éveiller|Awaken
+Nouveautés|What's new
+La Reapers’ Game bouge. Choisis une destination.|The Reapers' Game is moving. Choose a destination.
+ÉVÉNEMENTS|EVENTS
+Boss niveau 100|Level 100 bosses
+Défie les personnages et gagne leurs récompenses signature.|Challenge characters and earn their signature rewards.
+NOUVEAUX PORTAILS|NEW PORTALS
+Eos arrive le 25 novembre|Eos arrives November 25
+Noctis & Prompto · Ignis & Gladio|Noctis & Prompto · Ignis & Gladio
+Fermer|Close
 `.trim();
