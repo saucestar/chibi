@@ -64,7 +64,11 @@ const characterElements = {
   "2B": ["steel", "fighting"],
   A2: ["steel", "dark"],
   SORA: ["normal", "fairy"],
-  RIKU: ["dark", "psychic"]
+  RIKU: ["dark", "psychic"],
+  NOCTIS: ["dark", "steel"],
+  PROMPTO: ["electric"],
+  IGNIS: ["fire"],
+  GLADIO: ["rock", "fighting"]
 };
 const enemyElements = {
   frog: ["water"],
@@ -88,6 +92,10 @@ function affinityText(scale) {
 function badgeElement(pin) {
   const power = pin.psych,
     name = pin.name;
+  if (pin.id === "armiger") return "steel";
+  if (pin.id === "machinery") return "electric";
+  if (pin.id === "elemental-daggers") return "fire";
+  if (pin.id === "shield-of-the-king") return "rock";
   if (["buster-sword", "virtuous-contract", "type-40-blade"].includes(pin.id)) return "steel";
   if (pin.id === "kingdom-key") return "fairy";
   if (pin.id === "way-to-dawn") return "dark";
@@ -120,6 +128,54 @@ function TypeChips({
   }, elementNames[t])));
 }
 const characterRoster = [{
+  name: "NOCTIS",
+  role: "LUCIS",
+  hp: 130,
+  maxHp: 130,
+  sprite: "./assets/game/noctis-idle.png",
+  accent: "#586d9d",
+  frames: 16,
+  frameWidth: 56,
+  frameHeight: 77,
+  portraitCenter: 28,
+  portraitTop: 24
+}, {
+  name: "PROMPTO",
+  role: "CROWNSGUARD",
+  hp: 108,
+  maxHp: 108,
+  sprite: "./assets/game/prompto-idle.png",
+  accent: "#f5d36b",
+  frames: 4,
+  frameWidth: 54,
+  frameHeight: 76,
+  portraitCenter: 27,
+  portraitTop: 24
+}, {
+  name: "IGNIS",
+  role: "CROWNSGUARD",
+  hp: 114,
+  maxHp: 114,
+  sprite: "./assets/game/ignis-idle.png",
+  accent: "#b8a56d",
+  frames: 4,
+  frameWidth: 56,
+  frameHeight: 79,
+  portraitCenter: 28,
+  portraitTop: 24
+}, {
+  name: "GLADIO",
+  role: "CROWNSGUARD",
+  hp: 148,
+  maxHp: 148,
+  sprite: "./assets/game/gladio-idle.png",
+  accent: "#9a724e",
+  frames: 4,
+  frameWidth: 75,
+  frameHeight: 83,
+  portraitCenter: 38,
+  portraitTop: 26
+}, {
   name: "2B",
   role: "YORHA",
   hp: 128,
@@ -614,7 +670,11 @@ const basePsych = {
   "2B": "virtuous-contract",
   A2: "type-40-blade",
   SORA: "kingdom-key",
-  RIKU: "way-to-dawn"
+  RIKU: "way-to-dawn",
+  NOCTIS: "armiger",
+  PROMPTO: "machinery",
+  IGNIS: "elemental-daggers",
+  GLADIO: "shield-of-the-king"
 };
 const partnerPsychs = [{
   id: "virtuous-contract",
@@ -670,6 +730,30 @@ const partnerPsychs = [{
   psych: "Chute d’objets",
   kind: "special",
   power: 22
+}, {
+  id: "armiger",
+  name: "Armiger",
+  psych: "Armes royales",
+  kind: "physical",
+  power: 31
+}, {
+  id: "machinery",
+  name: "Machinery",
+  psych: "Tir de précision",
+  kind: "special",
+  power: 27
+}, {
+  id: "elemental-daggers",
+  name: "Elemental Daggers",
+  psych: "Lames élémentaires",
+  kind: "special",
+  power: 29
+}, {
+  id: "shield-of-the-king",
+  name: "Shield of the King",
+  psych: "Bouclier royal",
+  kind: "physical",
+  power: 33
 }].map(pin => ({
   ...pin,
   number: "",
@@ -726,7 +810,11 @@ function PinIcon({
     "virtuous-contract": "⚔",
     "type-40-blade": "⚔",
     "kingdom-key": "✦",
-    "way-to-dawn": "☾"
+    "way-to-dawn": "☾",
+    armiger: "✧",
+    machinery: "⌁",
+    "elemental-daggers": "♨",
+    "shield-of-the-king": "⬟"
   }[pin.id.replace(/^signature-/, "")]);
   return React.createElement("i", {
     "aria-hidden": "true",
@@ -746,8 +834,15 @@ const portals = {
   partners: "Partenaires",
   reality: "From another reality",
   apocalyptic: "Apocalyptic Future",
-  destiny: "Destiny Islands"
+  destiny: "Destiny Islands",
+  eosDawn: "Eos · Noctis & Prompto",
+  eosDusk: "Eos · Ignis & Gladio"
 };
+const portalReleaseAt = {
+  eosDawn: Date.parse("2026-11-25T00:00:00+01:00"),
+  eosDusk: Date.parse("2026-11-25T00:00:00+01:00")
+};
+const portalAvailable = id => !portalReleaseAt[id] || Date.now() >= portalReleaseAt[id];
 const bases = {
   NEKU: [24, 32, 14],
   SHIKI: [22, 26, 20],
@@ -758,7 +853,11 @@ const bases = {
   "2B": [32, 24, 21],
   A2: [35, 21, 19],
   SORA: [29, 29, 20],
-  RIKU: [27, 32, 21]
+  RIKU: [27, 32, 21],
+  NOCTIS: [32, 25, 20],
+  PROMPTO: [20, 34, 22],
+  IGNIS: [24, 32, 19],
+  GLADIO: [38, 17, 13]
 };
 const maxLevel = 99;
 function xpAtLevel(level) {
@@ -1261,7 +1360,7 @@ function wishQuote(p, count) {
 }
 const characterChance = 0.10;
 function portalRoster(id) {
-  const names = id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
+  const names = id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI", "BEAT", "JOSHUA"];
   return characterRoster.filter(f => names.includes(f.name));
 }
 function portalPool(id, _profile) {
@@ -2377,7 +2476,7 @@ function HubHome({
     "aria-label": "Choisir un mode de jeu"
   }, React.createElement("button", {
     className: "hub-play home-mode-card",
-    onClick: () => navigate("team")
+    onClick: () => navigate("roguelike")
   }, React.createElement("small", null, "MODE DE JEU"), React.createElement("b", null, "Roguelike"), React.createElement("span", null, "Gravis les 100 \xE9tages")), React.createElement("button", {
     className: "hub-play home-mode-card",
     onClick: () => navigate("events")
@@ -2391,6 +2490,87 @@ function HubHome({
     onClick: () => navigate("collection")
   }, React.createElement("span", null, "\u25A6"), React.createElement("b", null, "Collection"), React.createElement("small", null, profile.owned.length, " personnages"))));
 }
+function AwakeningPanel({
+  profile,
+  awaken
+}) {
+  const owned = characterRoster.filter(f => profile.owned.includes(f.name));
+  return React.createElement("section", {
+    className: "awakening-panel"
+  }, React.createElement("header", null, React.createElement("h2", null, "\xC9veil"), React.createElement("p", null, "Obtiens 5 doublons pour \xE9veiller un personnage et d\xE9bloquer son bonus permanent.")), !owned.length ? React.createElement("p", null, "D\xE9bloque des personnages dans les invocations pour suivre leur \xE9veil.") : React.createElement("div", {
+    className: "awakening-list"
+  }, owned.map(fighter => {
+    const copies = Math.min(5, profile.copies[fighter.name] || 0),
+      awakened = profile.awakened.includes(fighter.name);
+    return React.createElement("article", {
+      key: fighter.name
+    }, React.createElement(HudPortrait, {
+      fighter: fighter
+    }), React.createElement("div", null, React.createElement("b", null, fighter.name), React.createElement("small", null, awakened ? "Éveillé · bonus actif" : `${copies} / 5 doublons`), React.createElement("div", {
+      className: "awakening-ranks",
+      "aria-label": `${fighter.name} : ${copies} doublons`
+    }, ranks.map((_, rank) => React.createElement("span", {
+      key: rank,
+      className: rank <= copies ? "" : "locked"
+    }, React.createElement(RankBadge, {
+      level: rank
+    }))))), !awakened && React.createElement("button", {
+      disabled: copies < 5,
+      onClick: () => awaken(fighter.name)
+    }, copies < 5 ? `${5 - copies} manquant${5 - copies > 1 ? "s" : ""}` : "Éveiller"));
+  })));
+}
+function RoguelikeLaunch({
+  profile,
+  navigate,
+  start,
+  resume,
+  abandon
+}) {
+  const [confirm, setConfirm] = useState(false),
+    fighters = profile.equipped.filter(Boolean),
+    ready = fighters.length === 2 && fighters.every(name => profile.loadout[name]?.length) && fighters.some(name => profile.loadout[name]?.some(offensive)),
+    run = profile.run?.status === "active" ? profile.run : null;
+  return React.createElement("section", {
+    className: "hub-panel roguelike-launch"
+  }, React.createElement("h1", null, "Roguelike"), React.createElement("p", null, "Choisis ton duo et ses psychs dans Team, puis tente l\u2019ascension de 100 \xE9tages."), React.createElement("div", {
+    className: "roguelike-party"
+  }, fighters.map(name => {
+    const fighter = characterRoster.find(f => f.name === name);
+    return React.createElement("article", {
+      key: name
+    }, React.createElement(HudPortrait, {
+      fighter: fighter
+    }), React.createElement("b", null, name), React.createElement("small", null, profile.loadout[name]?.length || 0, " psych(s)"));
+  }), fighters.length < 2 && React.createElement("p", null, "Il manque ", 2 - fighters.length, " personnage(s) dans ta Team.")), !ready && !run && React.createElement("button", {
+    onClick: () => navigate("team")
+  }, "Pr\xE9parer Team"), run ? React.createElement(React.Fragment, null, React.createElement("p", {
+    className: "run-status"
+  }, "Run sauvegard\xE9e \xB7 \xC9tage ", run.wave, " \xB7 Palier ", difficultyAt(run.wave).tier, " \xB7 ", run.team.map(f => f.name).join(" / ")), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    className: "pull-button",
+    onClick: resume
+  }, "Reprendre l\u2019\xE9tage ", run.wave), React.createElement("button", {
+    onClick: () => setConfirm(true)
+  }, "Abandonner la run"))) : React.createElement("button", {
+    className: "pull-button",
+    disabled: !ready,
+    onClick: start
+  }, "Commencer le roguelike"), profile.run?.status === "lost" && React.createElement("p", null, "Run perdue \xB7 Une nouvelle run commence \xE0 l\u2019\xE9tage 1."), confirm && React.createElement(WishDialog, {
+    title: "Abandonner la run ?",
+    close: () => setConfirm(false)
+  }, React.createElement("p", null, "La reprise de cette run sera supprim\xE9e. Tes personnages, tes badges et tes r\xE9compenses d\xE9j\xE0 gagn\xE9es sont conserv\xE9s."), React.createElement("div", {
+    className: "dialog-actions"
+  }, React.createElement("button", {
+    onClick: () => setConfirm(false)
+  }, "Annuler"), React.createElement("button", {
+    onClick: () => {
+      abandon();
+      setConfirm(false);
+    }
+  }, "Abandonner"))));
+}
 function HubMenu({
   profile,
   navigate
@@ -2399,7 +2579,7 @@ function HubMenu({
     className: "hub-panel"
   }, React.createElement("h1", null, "Menu"), React.createElement("div", {
     className: "hub-menu-links"
-  }, [["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "2 personnages · 3 psychs chacun"]].map(([id, title, desc]) => React.createElement("button", {
+  }, [["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
@@ -2467,7 +2647,6 @@ function App() {
   const [editingSlot, setEditingSlot] = useState(null);
   const [battleLoadout, setBattleLoadout] = useState({});
   const [resumeRun, setResumeRun] = useState(null);
-  const [abandonConfirm, setAbandonConfirm] = useState(false);
   const [party, setParty] = useState(null);
   const [result, setResult] = useState([]);
   const [quantity, setQuantity] = useState(1);
@@ -2739,7 +2918,7 @@ function App() {
       runSignature.current = null;
       setParty(null);
       setResumeRun(null);
-      setScreen(event ? "events" : "team");
+      setScreen(event ? "events" : "roguelike");
       setResult([]);
     }
   });
@@ -2751,6 +2930,22 @@ function App() {
   if (screen === "home") return hub(React.createElement(HubHome, {
     profile: profile,
     navigate: navigate
+  }));
+  if (screen === "roguelike") return hub(React.createElement(RoguelikeLaunch, {
+    profile: profile,
+    navigate: navigate,
+    start: startRun,
+    resume: resume,
+    abandon: () => setProfile(p => p.run?.status === "active" ? {
+      ...p,
+      run: {
+        ...p.run,
+        status: "abandoned",
+        seq: p.run.seq + 1,
+        pending: null,
+        updatedAt: Date.now()
+      }
+    } : p)
   }));
   if (screen === "events") return hub(React.createElement(EventHall, {
     profile: profile,
@@ -2805,7 +3000,7 @@ function App() {
     className: "daily-wishes"
   }, "V\u0153ux gratuits \xB7 ", React.createElement("b", null, profile.freeWishes), React.createElement("small", null, parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), React.createElement("div", {
     className: "portal-list"
-  }, Object.entries(portals).map(([id, title]) => React.createElement("article", {
+  }, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => React.createElement("article", {
     key: id,
     className: "portal-card",
     "aria-label": title
@@ -2824,9 +3019,9 @@ function App() {
   }) : React.createElement(PortalVideo, {
     src: `./assets/bingo/${id}.mp4`,
     poster: `./assets/bingo/${id}.webp`
-  })), id === "partners" && React.createElement("div", {
+  })), (id === "partners" || id === "eosDawn" || id === "eosDusk") && React.createElement("div", {
     className: "portal-duo"
-  }, characterRoster.filter(f => ["BEAT", "JOSHUA"].includes(f.name)).map(f => React.createElement(SpritePreview, {
+  }, portalRoster(id).map(f => React.createElement(SpritePreview, {
     key: f.name,
     fighter: f,
     maximumScale: 1.6
@@ -2866,7 +3061,7 @@ function App() {
     className: "wish-free"
   }, wishQuote(profile, n).free, " ", wishQuote(profile, n).free > 1 ? "gratuits" : "gratuit", " inclus")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id === "eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id === "eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     className: rateFighter ? "character-sheet-dialog" : "portal-rates-dialog",
     title: rateFighter ? `Fiche · ${rateFighter}` : `Taux · ${portalName}`,
@@ -2981,17 +3176,7 @@ function App() {
     onClick: () => chooseFighter("")
   }, "Retirer"), React.createElement("button", {
     onClick: () => setEditingSlot(null)
-  }, "Fermer"))), historyFull(profile) && React.createElement("p", {
-    role: "status"
-  }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
-    className: "lobby-tools"
-  }, React.createElement("button", {
-    onClick: () => navigate("journal")
-  }, "Historique des v\u0153ux"), React.createElement("button", {
-    onClick: () => navigate("collection")
-  }, "Collection"), React.createElement("button", {
-    onClick: () => navigate("quests")
-  }, "Qu\xEAtes")), fighters.map(name => React.createElement(PsychEquipment, {
+  }, "Fermer"))), fighters.map(name => React.createElement(PsychEquipment, {
     key: name,
     name: name,
     profile: profile,
@@ -3002,39 +3187,10 @@ function App() {
         [name]: ids
       }
     }))
-  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), profile.run?.status === "active" && React.createElement("div", {
-    className: "run-resume"
-  }, React.createElement("p", null, "Run sauvegard\xE9e \xB7 \xC9tage ", profile.run.wave, " \xB7 Palier ", difficultyAt(profile.run.wave).tier, " \xB7 ", profile.run.team.map(f => f.name).join(" / ")), React.createElement("button", {
-    className: "pull-button",
-    onClick: resume
-  }, "Reprendre l\u2019\xE9tage ", profile.run.wave), React.createElement("button", {
-    onClick: () => setAbandonConfirm(true)
-  }, "Abandonner la run")), profile.run?.status === "lost" && React.createElement("p", null, "Run perdue \xB7 Une nouvelle run commence \xE0 l\u2019\xE9tage 1."), abandonConfirm && React.createElement(WishDialog, {
-    title: "Abandonner la run ?",
-    close: () => setAbandonConfirm(false)
-  }, React.createElement("p", null, "La reprise de cette run sera supprim\xE9e. Tes personnages, tes badges et tes r\xE9compenses d\xE9j\xE0 gagn\xE9es sont conserv\xE9s."), React.createElement("div", {
-    className: "dialog-actions"
-  }, React.createElement("button", {
-    onClick: () => setAbandonConfirm(false)
-  }, "Annuler"), React.createElement("button", {
-    onClick: () => {
-      setProfile(p => p.run?.status === "active" ? {
-        ...p,
-        run: {
-          ...p.run,
-          status: "abandoned",
-          seq: p.run.seq + 1,
-          pending: null,
-          updatedAt: Date.now()
-        }
-      } : p);
-      setAbandonConfirm(false);
-    }
-  }, "Abandonner"))), React.createElement("button", {
-    className: "pull-button",
-    disabled: profile.run?.status === "active" || fighters.length !== 2 || !fighters.every(name => profile.loadout[name]?.length) || !fighters.some(name => profile.loadout[name]?.some(offensive)),
-    onClick: startRun
-  }, "Lancer le roguelike"), saveError && React.createElement("p", {
+  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && React.createElement("p", null, "\xC9quipe au moins un psych offensif."), React.createElement(AwakeningPanel, {
+    profile: profile,
+    awaken: awaken
+  }), saveError && React.createElement("p", {
     role: "alert"
   }, "La sauvegarde locale est indisponible dans ce navigateur."))));
 }

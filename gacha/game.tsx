@@ -36,7 +36,7 @@ const typeChart:Record<ElementType,[ElementType[],ElementType[],ElementType[]]>=
  steel:[["ice","rock","fairy"],["fire","water","electric","steel"],[]],
  fairy:[["fighting","dragon","dark"],["fire","poison","steel"],[]]
 };
-const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"]};
+const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"],NOCTIS:["dark","steel"],PROMPTO:["electric"],IGNIS:["fire"],GLADIO:["rock","fighting"]};
 const enemyElements:Record<EnemyKind,ElementType[]>={frog:["water"],wolf:["dark"],shinigami:["dark","flying"],"jey-pengi":["water","ice"],"electro-pengi":["electric"],"psyche-fox":["psychic"]};
 function effectiveness(attack:ElementType,defense:ElementType[]):number {
  const [strong,weak,immune]=typeChart[attack];
@@ -48,6 +48,10 @@ function typedDamage(base:number,attack:ElementType,defense:ElementType[]):numbe
 function affinityText(scale:number):string {return scale===0?"Sans effet":scale>1?`Super efficace ×${scale}`:scale<1?`Résisté ×${scale}`:"×1";}
 function badgeElement(pin:Pin):ElementType {
  const power=pin.psych,name=pin.name;
+ if(pin.id==="armiger")return "steel";
+ if(pin.id==="machinery")return "electric";
+ if(pin.id==="elemental-daggers")return "fire";
+ if(pin.id==="shield-of-the-king")return "rock";
  if(["buster-sword","virtuous-contract","type-40-blade"].includes(pin.id))return "steel";
  if(pin.id==="kingdom-key")return "fairy";
  if(pin.id==="way-to-dawn")return "dark";
@@ -104,6 +108,10 @@ type Fighter = {
 };
 
 const characterRoster: Fighter[] = [
+  {name:"NOCTIS",role:"LUCIS",hp:130,maxHp:130,sprite:"./assets/game/noctis-idle.png",accent:"#586d9d",frames:16,frameWidth:56,frameHeight:77,portraitCenter:28,portraitTop:24},
+  {name:"PROMPTO",role:"CROWNSGUARD",hp:108,maxHp:108,sprite:"./assets/game/prompto-idle.png",accent:"#f5d36b",frames:4,frameWidth:54,frameHeight:76,portraitCenter:27,portraitTop:24},
+  {name:"IGNIS",role:"CROWNSGUARD",hp:114,maxHp:114,sprite:"./assets/game/ignis-idle.png",accent:"#b8a56d",frames:4,frameWidth:56,frameHeight:79,portraitCenter:28,portraitTop:24},
+  {name:"GLADIO",role:"CROWNSGUARD",hp:148,maxHp:148,sprite:"./assets/game/gladio-idle.png",accent:"#9a724e",frames:4,frameWidth:75,frameHeight:83,portraitCenter:38,portraitTop:26},
   {name:"2B",role:"YORHA",hp:128,maxHp:128,sprite:"./assets/game/2b-idle.png",accent:"#d2cce0",frames:4,frameWidth:176,frameHeight:160,portraitCenter:88,portraitTop:40},
   {name:"A2",role:"YORHA",hp:132,maxHp:132,sprite:"./assets/game/a2-idle.png",accent:"#b8b1be",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
   {name:"SORA",role:"KEYBLADE",hp:122,maxHp:122,sprite:"./assets/game/sora-idle.png",accent:"#ffd25c",frames:4,frameWidth:144,frameHeight:160,portraitCenter:72,portraitTop:40},
@@ -308,7 +316,7 @@ function PinRankInfo({pin}:{pin:Pin}) {
  return <span>{label} · Effets ×{pinRankMultiplier(pin).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span>;
 }
 declare const pinList: Pin[];
-const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn"};
+const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn",NOCTIS:"armiger",PROMPTO:"machinery",IGNIS:"elemental-daggers",GLADIO:"shield-of-the-king"};
 const partnerPsychs:Pin[] = [
   {id:"virtuous-contract",name:"Virtuous Contract",psych:"Lame YoRHa",kind:"physical",power:28},
   {id:"type-40-blade",name:"Type-40 Blade",psych:"Lame YoRHa",kind:"physical",power:31},
@@ -321,6 +329,10 @@ const partnerPsychs:Pin[] = [
   {id:"groove-pawn",name:"Groove Pawn",psych:"Mr. Mew",kind:"special",power:22},
   {id:"sk8-combo",name:"Beat Partner Pin",psych:"SK8 Combo",kind:"physical",power:22},
   {id:"joshua-phone",name:"Joshua Partner Pin",psych:"Chute d’objets",kind:"special",power:22},
+  {id:"armiger",name:"Armiger",psych:"Armes royales",kind:"physical",power:31},
+  {id:"machinery",name:"Machinery",psych:"Tir de précision",kind:"special",power:27},
+  {id:"elemental-daggers",name:"Elemental Daggers",psych:"Lames élémentaires",kind:"special",power:29},
+  {id:"shield-of-the-king",name:"Shield of the King",psych:"Bouclier royal",kind:"physical",power:33},
 ].map(pin=>({...pin,number:"",row:-1,col:0,drain:false,cost:1}));
 const psychs: Record<string, Pin> = Object.fromEntries([...pinList,...partnerPsychs].map(pin => [pin.id,{...pin,element:badgeElement(pin)}]));
 const signaturePins:Record<string,Pin>=Object.fromEntries(characterRoster.map(hero=>{
@@ -332,11 +344,13 @@ const collectionPins=[...pinList,...Object.values(signaturePins)];
 type Psych = string;
 const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
 function PinIcon({ pin }: {pin:Pin}) {
-  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾"}[pin.id.replace(/^signature-/,"")]}</i>;
+  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾",armiger:"✧",machinery:"⌁","elemental-daggers":"♨","shield-of-the-king":"⬟"}[pin.id.replace(/^signature-/,"")]}</i>;
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
-const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands" };
-const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18],"2B":[32,24,21],A2:[35,21,19],SORA:[29,29,20],RIKU:[27,32,21] };
+const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands",eosDawn:"Eos · Noctis & Prompto",eosDusk:"Eos · Ignis & Gladio" };
+const portalReleaseAt:Record<string,number>={eosDawn:Date.parse("2026-11-25T00:00:00+01:00"),eosDusk:Date.parse("2026-11-25T00:00:00+01:00")};
+const portalAvailable=(id:string)=>!portalReleaseAt[id]||Date.now()>=portalReleaseAt[id];
+const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18],"2B":[32,24,21],A2:[35,21,19],SORA:[29,29,20],RIKU:[27,32,21],NOCTIS:[32,25,20],PROMPTO:[20,34,22],IGNIS:[24,32,19],GLADIO:[38,17,13] };
 const maxLevel=99;
 function xpAtLevel(level:number) {
   const n=level-1;
@@ -565,7 +579,7 @@ function wishQuote(p:Profile,count:number) {
 
 const characterChance = 0.10;
 function portalRoster(id:string):Fighter[] {
-  const names=id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
+  const names=id==="eosDawn"?["NOCTIS","PROMPTO"]:id==="eosDusk"?["IGNIS","GLADIO"]:id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI","BEAT","JOSHUA"];
   return characterRoster.filter(f=>names.includes(f.name));
 }
 function portalPool(id:string, _profile?:Profile) {
@@ -930,7 +944,7 @@ function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profil
  return {...p,run,bestFloor:Math.max(p.bestFloor,41),specialRunRecoveries:marked};
 }
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null,p.eventRun?[p.eventRun.run.id,p.eventRun.run.seq]:null]);}
-type GameScreen="home"|"team"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"events"|"menu";
+type GameScreen="home"|"team"|"roguelike"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"events"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
 function gameFullscreen(){
  if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
@@ -1031,12 +1045,32 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
  const rewards=questsFor(profile).filter(q=>q.progress>=q.goal&&!profile.claimedQuests.includes(q.id)).length;
  return <section className="hub-home"><div className="hub-home-heading"><small>SHIBUYA · REAPERS’ GAME</small><h1>À toi de jouer.</h1><span>Record · Étage {profile.bestFloor} / 100</span></div>
   <div className="hub-home-stage"><div className="hub-home-halo" aria-hidden="true"/>{duo.map(f=><SpritePreview key={f.name} fighter={f} maximumScale={2.5}/>)}</div>
-  <div className="home-modes" aria-label="Choisir un mode de jeu"><button className="hub-play home-mode-card" onClick={()=>navigate("team")}><small>MODE DE JEU</small><b>Roguelike</b><span>Gravis les 100 étages</span></button><button className="hub-play home-mode-card" onClick={()=>navigate("events")}><small>MODE DE JEU</small><b>Événement</b><span>Défie les personnages</span></button></div>
+  <div className="home-modes" aria-label="Choisir un mode de jeu"><button className="hub-play home-mode-card" onClick={()=>navigate("roguelike")}><small>MODE DE JEU</small><b>Roguelike</b><span>Gravis les 100 étages</span></button><button className="hub-play home-mode-card" onClick={()=>navigate("events")}><small>MODE DE JEU</small><b>Événement</b><span>Défie les personnages</span></button></div>
   <div className="hub-shortcuts"><button onClick={()=>navigate("quests")}><span>◇</span><b>Quêtes</b><small>{rewards?`${rewards} récompense${rewards>1?"s":""}`:"Ta progression"}</small></button><button onClick={()=>navigate("summon")}><span>✦</span><b>Invocations</b><small>{profile.freeWishes} vœux gratuits</small></button><button onClick={()=>navigate("collection")}><span>▦</span><b>Collection</b><small>{profile.owned.length} personnages</small></button></div>
  </section>;
 }
+function AwakeningPanel({profile,awaken}:{profile:Profile;awaken:(name:string)=>void}) {
+ const owned=characterRoster.filter(f=>profile.owned.includes(f.name));
+ return <section className="awakening-panel"><header><h2>Éveil</h2><p>Obtiens 5 doublons pour éveiller un personnage et débloquer son bonus permanent.</p></header>
+  {!owned.length?<p>Débloque des personnages dans les invocations pour suivre leur éveil.</p>:<div className="awakening-list">{owned.map(fighter=>{
+    const copies=Math.min(5,profile.copies[fighter.name]||0),awakened=profile.awakened.includes(fighter.name);
+    return <article key={fighter.name}><HudPortrait fighter={fighter}/><div><b>{fighter.name}</b><small>{awakened?"Éveillé · bonus actif":`${copies} / 5 doublons`}</small><div className="awakening-ranks" aria-label={`${fighter.name} : ${copies} doublons`}>
+      {ranks.map((_,rank)=><span key={rank} className={rank<=copies?"":"locked"}><RankBadge level={rank}/></span>)}
+    </div></div>{!awakened&&<button disabled={copies<5} onClick={()=>awaken(fighter.name)}>{copies<5?`${5-copies} manquant${5-copies>1?"s":""}`:"Éveiller"}</button>}</article>;
+  })}</div>}</section>;
+}
+function RoguelikeLaunch({profile,navigate,start,resume,abandon}:{profile:Profile;navigate:(screen:GameScreen)=>void;start:()=>void;resume:()=>void;abandon:()=>void}) {
+ const [confirm,setConfirm]=useState(false),fighters=profile.equipped.filter(Boolean),ready=fighters.length===2&&fighters.every(name=>profile.loadout[name]?.length)&&fighters.some(name=>profile.loadout[name]?.some(offensive)),run=profile.run?.status==="active"?profile.run:null;
+ return <section className="hub-panel roguelike-launch"><h1>Roguelike</h1><p>Choisis ton duo et ses psychs dans Team, puis tente l’ascension de 100 étages.</p>
+  <div className="roguelike-party">{fighters.map(name=>{const fighter=characterRoster.find(f=>f.name===name)!;return <article key={name}><HudPortrait fighter={fighter}/><b>{name}</b><small>{profile.loadout[name]?.length||0} psych(s)</small></article>})}{fighters.length<2&&<p>Il manque {2-fighters.length} personnage(s) dans ta Team.</p>}</div>
+  {!ready&&!run&&<button onClick={()=>navigate("team")}>Préparer Team</button>}
+  {run?<><p className="run-status">Run sauvegardée · Étage {run.wave} · Palier {difficultyAt(run.wave).tier} · {run.team.map(f=>f.name).join(" / ")}</p><div className="dialog-actions"><button className="pull-button" onClick={resume}>Reprendre l’étage {run.wave}</button><button onClick={()=>setConfirm(true)}>Abandonner la run</button></div></>:<button className="pull-button" disabled={!ready} onClick={start}>Commencer le roguelike</button>}
+  {profile.run?.status==="lost"&&<p>Run perdue · Une nouvelle run commence à l’étage 1.</p>}
+  {confirm&&<WishDialog title="Abandonner la run ?" close={()=>setConfirm(false)}><p>La reprise de cette run sera supprimée. Tes personnages, tes badges et tes récompenses déjà gagnées sont conservés.</p><div className="dialog-actions"><button onClick={()=>setConfirm(false)}>Annuler</button><button onClick={()=>{abandon();setConfirm(false);}}>Abandonner</button></div></WishDialog>}
+ </section>;
+}
 function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","2 personnages · 3 psychs chacun"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
 }
 
 function BestiaryMenu(){
@@ -1059,7 +1093,6 @@ function App() {
   const [editingSlot,setEditingSlot]=useState<number|null>(null);
   const [battleLoadout,setBattleLoadout]=useState<Record<string,string[]>>({});
   const [resumeRun,setResumeRun]=useState<RunSave|null>(null);
-  const [abandonConfirm,setAbandonConfirm]=useState(false);
   const [party, setParty] = useState<Fighter[] | null>(null);
   const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
@@ -1199,9 +1232,10 @@ function App() {
   const event=resumeRun&&profile.eventRun?.run.id===resumeRun.id?profile.eventRun:null;
   if (party && resumeRun) return <Battle key={resumeRun.id} event={event} initialRun={resumeRun} initialTeam={party} loadout={battleLoadout} coins={profile.coins}
     onCheckpoint={(snapshot,gains)=>setProfile(p=>event?eventCheckpoint(p,snapshot):applyRunCheckpoint(p,snapshot,gains))}
-    leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen(event?"events":"team"); setResult([]); }} />;
+    leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen(event?"events":"roguelike"); setResult([]); }} />;
   const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{content}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
+  if(screen==="roguelike")return hub(<RoguelikeLaunch profile={profile} navigate={navigate} start={startRun} resume={resume} abandon={()=>setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p)}/>);
   if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);
   if(screen==="settings")return hub(<AudioSettings back={()=>navigate("menu")}/>);
   if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
@@ -1215,7 +1249,7 @@ function App() {
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
     <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
-    <div className="portal-list">{Object.entries(portals).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
+    <div className="portal-list">{Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
           <PortalVideo src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp"/>}
@@ -1225,7 +1259,7 @@ function App() {
         {(id==="apocalyptic"||id==="destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches
           ? <img className="portal-art" src={`./assets/bingo/${id}.webp`} alt=""/>
           : <PortalVideo src={`./assets/bingo/${id}.mp4`} poster={`./assets/bingo/${id}.webp`}/>)}
-        {id==="partners" && <div className="portal-duo">{characterRoster.filter(f=>["BEAT","JOSHUA"].includes(f.name)).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
+        {(id==="partners"||id==="eosDawn"||id==="eosDusk") && <div className="portal-duo">{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setRateFighter(null);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
@@ -1237,7 +1271,7 @@ function App() {
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} {wishQuote(profile,n).free>1?"gratuits":"gratuit"} inclus</small>}
         </div>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua ont 2 fois plus de chances d’être recrutés que les autres personnages disponibles."}</p>
       </div>
 
     </article>)}</div>
@@ -1279,15 +1313,9 @@ function App() {
       </button>)}</div>
       <div className="dialog-actions">{profile.equipped[editingSlot] && <button onClick={()=>chooseFighter("")}>Retirer</button>}<button onClick={()=>setEditingSlot(null)}>Fermer</button></div>
     </WishDialog>}
-    {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
-    <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     {fighters.map(name=><PsychEquipment key={name} name={name} profile={profile} save={ids=>setProfile(p=>assignBasePsychs({...p,loadout:{...p.loadout,[name]:ids}}))}/>)}
     {fighters.length===2 && !fighters.some(name=>profile.loadout[name]?.some(offensive)) && <p>Équipe au moins un psych offensif.</p>}
-    {profile.run?.status==="active"&&<div className="run-resume"><p>Run sauvegardée · Étage {profile.run.wave} · Palier {difficultyAt(profile.run.wave).tier} · {profile.run.team.map(f=>f.name).join(" / ")}</p><button className="pull-button" onClick={resume}>Reprendre l’étage {profile.run.wave}</button><button onClick={()=>setAbandonConfirm(true)}>Abandonner la run</button></div>}
-    {profile.run?.status==="lost"&&<p>Run perdue · Une nouvelle run commence à l’étage 1.</p>}
-    {abandonConfirm&&<WishDialog title="Abandonner la run ?" close={()=>setAbandonConfirm(false)}><p>La reprise de cette run sera supprimée. Tes personnages, tes badges et tes récompenses déjà gagnées sont conservés.</p><div className="dialog-actions"><button onClick={()=>setAbandonConfirm(false)}>Annuler</button><button onClick={()=>{setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p);setAbandonConfirm(false);}}>Abandonner</button></div></WishDialog>}
-    <button className="pull-button" disabled={profile.run?.status==="active" || fighters.length!==2 || !fighters.every(name=>profile.loadout[name]?.length) || !fighters.some(name=>profile.loadout[name]?.some(offensive))}
-      onClick={startRun}>Lancer le roguelike</button>
+    <AwakeningPanel profile={profile} awaken={awaken}/>
     {saveError && <p role="alert">La sauvegarde locale est indisponible dans ce navigateur.</p>}
   </section></main>);
 }

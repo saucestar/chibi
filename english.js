@@ -374,4 +374,27 @@ Pause|Pause
 MODE DE JEU|GAME MODE
 Gravis les 100 étages|Climb all 100 floors
 Défie les personnages|Challenge the characters
+Les armes royales de Lucis.|The royal weapons of Lucis.
+Les gardiens de la couronne.|The guardians of the crown.
+Noctis et Prompto · Les armes royales de Lucis.|Noctis and Prompto · The royal weapons of Lucis.
+Ignis et Gladio · Les gardiens de la couronne.|Ignis and Gladio · The guardians of the crown.
+Roguelike|Roguelike
+Lancer ou reprendre une run|Start or resume a run
+Duo, psychs et éveils|Duo, psychs and awakenings
+Défie les personnages|Challenge the characters
+Défie les personnages|Challenge the characters
+Gravis les 100 étages|Climb all 100 floors
+Choisis ton duo et ses psychs dans Team, puis tente l’ascension de 100 étages.|Choose your duo and psychs in Team, then try to climb all 100 floors.
+Préparer Team|Set up Team
+Commencer le roguelike|Start roguelike
+Reprendre l’étage|Resume floor
+Run sauvegardée|Saved run
+Éveil|Awakening
+Obtiens 5 doublons pour éveiller un personnage et débloquer son bonus permanent.|Get 5 duplicates to awaken a character and unlock their permanent bonus.
+Débloque des personnages dans les invocations pour suivre leur éveil.|Recruit characters through summons to track their awakening.
+Éveillé · bonus actif|Awakened · bonus active
+doublons|duplicates
+manquant|missing
+manquants|missing
+Éveiller|Awaken
 `.trim();
