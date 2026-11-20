@@ -570,8 +570,26 @@ const gameSound = (() => {
   const volumes={music:32,sfx:55};
   let muted=false,visible=false,track:MusicTrack|null=null;
   let music:HTMLAudioElement|null=null, cue:HTMLAudioElement|null=null, clickSound:HTMLAudioElement|null=null;
-  // Some mobile browsers leave media-element volume under hardware control.
-  let context:AudioContext|null=null,needsGain=false;
+  const clickUrl="./assets/audio/menu-click.mp3";
+  let context:AudioContext|null=null,clickBuffer:AudioBuffer|null=null,clickGain:GainNode|null=null;
+  let clickSource:AudioBufferSourceNode|null=null;
+  // Decode during loading. Starting a buffer in the input handler avoids a media seek on first press.
+  function prepareClick(){
+    const Engine=window.AudioContext||(window as any).webkitAudioContext;
+    if(!Engine || location.protocol==="file:"){prepareFallback();return;}
+    try{
+      const engine:AudioContext=new Engine({latencyHint:"interactive"});
+      context=engine;engine.onstatechange=()=>{if(engine.state==="running")mix();};clickGain=engine.createGain();clickGain.connect(engine.destination);
+      fetch(clickUrl).then(r=>{if(!r.ok)throw Error();return r.arrayBuffer();})
+        .then(bytes=>engine.decodeAudioData(bytes)).then(buffer=>{clickBuffer=buffer;}).catch(prepareFallback);
+    }catch{prepareFallback();}
+  }
+  function prepareFallback(){
+    if(!clickSound){clickSound=new Audio();clickSound.preload="auto";clickSound.src=clickUrl;clickSound.load();}
+  }
+  function stopClick(){
+    clickSource?.stop();clickSource=null;clickSound?.pause();
+  }
   const gains=new WeakMap<HTMLAudioElement,GainNode>();
   try {
     muted=localStorage.getItem(key)==="1";
@@ -588,14 +606,15 @@ const gameSound = (() => {
       gains.set(player,gain);
     }
     if(gain){player.volume=1;gain.gain.value=volume;}
-    else {player.volume=volume;if(Math.abs(player.volume-volume)>.001)needsGain=true;}
+    else player.volume=volume;
     player.muted=muted || volume===0;
   }
   function mix(){
+    if(clickGain)clickGain.gain.value=muted?0:volumes.sfx/100*.62;
     level(music,volumes.music/100);level(cue,volumes.sfx/100);level(clickSound,volumes.sfx/100*.62);
   }
   function sync(){
-    if(!visible||document.hidden||muted){music?.pause();cue?.pause();clickSound?.pause();return;}
+    if(!visible||document.hidden||muted){music?.pause();cue?.pause();stopClick();return;}
     if(!track || !volumes.music){music?.pause();return;}
     if(!music)music=new Audio();
     if(music.dataset.track!==track){
@@ -606,7 +625,15 @@ const gameSound = (() => {
   }
   function preview(){
     if(muted||!visible||document.hidden||!volumes.sfx)return;
-    if(!clickSound)clickSound=new Audio("./assets/audio/menu-click.mp3");
+    if(clickBuffer && context && clickGain){
+      if(context.state!=="running")context.resume().catch(()=>{});
+      stopClick();clickGain.gain.value=volumes.sfx/100*.62;
+      const source=context.createBufferSource();source.buffer=clickBuffer;source.connect(clickGain);
+      source.onended=()=>{source.disconnect();if(clickSource===source)clickSource=null;};
+      clickSource=source;source.start();return;
+    }
+    prepareFallback();
+    if(!clickSound)return;
     level(clickSound,volumes.sfx/100*.62);clickSound.currentTime=0;clickSound.play().catch(()=>{});
   }
   function effect(id:SoundCue){
@@ -618,6 +645,7 @@ const gameSound = (() => {
     if(!Number.isFinite(value))return;
     volumes[channel]=Math.min(100,Math.max(0,Math.round(value)));
     try{localStorage.setItem("chibi.reapers-run.volume."+channel,String(volumes[channel]));}catch{}
+    if(context?.state==="suspended")context.resume().then(mix).catch(()=>{});
     mix();sync();
   }
   function toggle(){
@@ -625,29 +653,39 @@ const gameSound = (() => {
     mix();sync();if(!muted)preview();window.dispatchEvent(new Event("chibi:audio-setting"));
   }
   function connect(){
+    if(!context&&!clickSound)prepareClick();
     function interact(){
-      if(needsGain && !context){
-        const AudioEngine=window.AudioContext||(window as any).webkitAudioContext;
-        if(AudioEngine)context=new AudioEngine();
-      }
       if(context?.state==="suspended")context.resume().then(mix).catch(()=>{});
       sync();
     }
-    const click=(event:MouseEvent)=>{
-      interact();
+    const eligible=(event:Event)=>{
       const button=(event.target as Element)?.closest?.("button");
-      if(button && !button.matches(":disabled,[aria-disabled=true],.audio-control"))preview();
+      return button&&!button.matches(":disabled,[aria-disabled=true],.audio-control")?button:null;
+    };
+    let pressed:HTMLButtonElement|null=null;
+    const down=(event:PointerEvent)=>{
+      pressed=null;
+      if(!event.isPrimary||event.button!==0)return;
+      if(context?.state==="suspended")context.resume().catch(()=>{});
+      // Touch activation is confirmed on release so that scrolling a menu stays silent.
+      if(event.pointerType==="mouse" && (pressed=eligible(event)))preview();
+    };
+    const click=(event:MouseEvent)=>{
+      const button=eligible(event);
+      if(button && (event.detail===0 || button!==pressed))preview();
+      pressed=null;interact();
     };
     // Retry inside the launch gesture when the embedding page already loaded the game.
     const frame=window.frameElement;
     const host=frame?.ownerDocument;
     const opening=()=>{if(frame?.getClientRects().length){visible=true;interact();}};
     host?.addEventListener("click",opening);
+    document.addEventListener("pointerdown",down,true);
     document.addEventListener("click",click,true);document.addEventListener("keydown",interact,true);
     document.addEventListener("pointerup",interact,true);document.addEventListener("visibilitychange",sync);
     const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});
     observer.observe(document.documentElement);
-    return ()=>{observer.disconnect();host?.removeEventListener("click",opening);document.removeEventListener("pointerup",interact,true);document.removeEventListener("click",click,true);document.removeEventListener("keydown",interact,true);document.removeEventListener("visibilitychange",sync);visible=false;sync();};
+    return ()=>{observer.disconnect();document.removeEventListener("pointerdown",down,true);host?.removeEventListener("click",opening);document.removeEventListener("pointerup",interact,true);document.removeEventListener("click",click,true);document.removeEventListener("keydown",interact,true);document.removeEventListener("visibilitychange",sync);visible=false;sync();};
   }
   return {connect,toggle,effect,preview,setVolume,volumes,get muted(){return muted;},scene(next:MusicTrack|null){track=next;sync();}};
 })();
