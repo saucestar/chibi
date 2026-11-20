@@ -568,9 +568,10 @@ const gameSound = (() => {
   const key="chibi.reapers-run.audio-muted";
   let muted=false,unlocked=false,visible=true,track:MusicTrack|null=null;
   let music:HTMLAudioElement|null=null, cue:HTMLAudioElement|null=null;
+  let clickSound:HTMLAudioElement|null=null;
   try { muted=localStorage.getItem(key)==="1"; } catch {}
   function sync() {
-    if(!track || muted || !unlocked || !visible || document.hidden){music?.pause();cue?.pause();return;}
+    if(!track || muted || !unlocked || !visible || document.hidden){music?.pause();cue?.pause();clickSound?.pause();return;}
     if(!music || music.dataset.track!==track){
       music?.pause();music=new Audio("./assets/audio/"+track+".mp3");
       music.dataset.track=track;music.volume=.32;music.loop=track!=="victory";
@@ -579,19 +580,30 @@ const gameSound = (() => {
   }
   function toggle(){
     muted=!muted;try{localStorage.setItem(key,muted?"1":"0");}catch{}
-    sync();window.dispatchEvent(new Event("chibi:audio-setting"));
+    sync();if(!muted)playClick();window.dispatchEvent(new Event("chibi:audio-setting"));
   }
   function effect(id:SoundCue){
     if(muted||!unlocked||!visible||document.hidden)return;
     cue?.pause();cue=new Audio("./assets/audio/"+id+".mp3");cue.volume=.55;cue.play().catch(()=>{});
   }
+  function playClick(){
+    if(muted||!visible||document.hidden)return;
+    if(!clickSound){clickSound=new Audio("./assets/audio/menu-click.mp3");clickSound.volume=.34;}
+    clickSound.currentTime=0;
+    clickSound.play().catch(()=>{});
+  }
   function connect(){
     const unlock=()=>{unlocked=true;sync();};
-    document.addEventListener("click",unlock,true);document.addEventListener("keydown",unlock,true);
+    const click=(event:MouseEvent)=>{
+      unlock();
+      const button=(event.target as Element)?.closest?.("button");
+      if(button && !button.matches(":disabled,[aria-disabled=true],.audio-control"))playClick();
+    };
+    document.addEventListener("click",click,true);document.addEventListener("keydown",unlock,true);
     document.addEventListener("visibilitychange",sync);
     const observer=new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;sync();});
     observer.observe(document.documentElement);
-    return ()=>{observer.disconnect();document.removeEventListener("click",unlock,true);document.removeEventListener("keydown",unlock,true);document.removeEventListener("visibilitychange",sync);music?.pause();cue?.pause();};
+    return ()=>{observer.disconnect();document.removeEventListener("click",click,true);document.removeEventListener("keydown",unlock,true);document.removeEventListener("visibilitychange",sync);music?.pause();cue?.pause();clickSound?.pause();};
   }
   return {connect,toggle,effect,get muted(){return muted;},scene(next:MusicTrack|null){track=next;sync();}};
 })();
@@ -1510,7 +1522,7 @@ function Battle({ initialRun,initialTeam,loadout,coins,onCheckpoint,leave }:{ini
                 {plan&&<small>{planCost(plan)} EN · Modifier</small>}
               </button>;
             })}</div>
-            <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={()=>{gameSound.effect("execute");resolveRound();}}>{busy?"Tour en cours…":"Lancer le tour"}</button>
+            <button className="resolve-round" disabled={busy||reward||!ready||teamDefeated} onClick={()=>resolveRound()}>{busy?"Tour en cours…":"Lancer le tour"}</button>
             </>}
           </section>
         </section>

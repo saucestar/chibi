@@ -1250,6 +1250,7 @@ const gameSound = (() => {
     track = null;
   let music = null,
     cue = null;
+  let clickSound = null;
   try {
     muted = localStorage.getItem(key) === "1";
   } catch {}
@@ -1257,6 +1258,7 @@ const gameSound = (() => {
     if (!track || muted || !unlocked || !visible || document.hidden) {
       music?.pause();
       cue?.pause();
+      clickSound?.pause();
       return;
     }
     if (!music || music.dataset.track !== track) {
@@ -1274,6 +1276,7 @@ const gameSound = (() => {
       localStorage.setItem(key, muted ? "1" : "0");
     } catch {}
     sync();
+    if (!muted) playClick();
     window.dispatchEvent(new Event("chibi:audio-setting"));
   }
   function effect(id) {
@@ -1283,12 +1286,26 @@ const gameSound = (() => {
     cue.volume = .55;
     cue.play().catch(() => {});
   }
+  function playClick() {
+    if (muted || !visible || document.hidden) return;
+    if (!clickSound) {
+      clickSound = new Audio("./assets/audio/menu-click.mp3");
+      clickSound.volume = .34;
+    }
+    clickSound.currentTime = 0;
+    clickSound.play().catch(() => {});
+  }
   function connect() {
     const unlock = () => {
       unlocked = true;
       sync();
     };
-    document.addEventListener("click", unlock, true);
+    const click = event => {
+      unlock();
+      const button = event.target?.closest?.("button");
+      if (button && !button.matches(":disabled,[aria-disabled=true],.audio-control")) playClick();
+    };
+    document.addEventListener("click", click, true);
     document.addEventListener("keydown", unlock, true);
     document.addEventListener("visibilitychange", sync);
     const observer = new IntersectionObserver(entries => {
@@ -1298,11 +1315,12 @@ const gameSound = (() => {
     observer.observe(document.documentElement);
     return () => {
       observer.disconnect();
-      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("click", click, true);
       document.removeEventListener("keydown", unlock, true);
       document.removeEventListener("visibilitychange", sync);
       music?.pause();
       cue?.pause();
+      clickSound?.pause();
     };
   }
   return {
@@ -3330,10 +3348,7 @@ function Battle({
   })), React.createElement("button", {
     className: "resolve-round",
     disabled: busy || reward || !ready || teamDefeated,
-    onClick: () => {
-      gameSound.effect("execute");
-      resolveRound();
-    }
+    onClick: () => resolveRound()
   }, busy ? "Tour en cours…" : "Lancer le tour")))), React.createElement("aside", {
     className: "route-panel"
   }, React.createElement("div", {
