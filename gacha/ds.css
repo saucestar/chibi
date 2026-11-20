@@ -1049,7 +1049,7 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .event-preview {height:clamp(80px,20dvh,155px);}
 .event-preview .sprite-preview {width:100%;height:100%;}
 .event-rail article>button {min-height:44px;width:100%;}
-@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}.game-hub .home-modes .home-mode-card {flex-basis:min(76%,400px);}}
+@media (orientation:landscape){.game-hub .home-modes {grid-column:1;grid-row:2;align-self:center;}.game-hub .home-modes .home-mode-card {flex-basis:100%;}}
 @media (orientation:landscape) and (min-width:560px) and (max-width:760px){.game-hub .home-modes {grid-column:1/3;}}
 
 .awakening-panel,.roguelike-launch {margin-top:1rem;padding:1rem;border:1px solid #b9a8ce;border-radius:1.1rem;background:linear-gradient(145deg,#ffffffd9,#e9e0f2);box-shadow:0 4px 0 #aa98bd;color:#352641;}
