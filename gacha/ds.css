@@ -1037,7 +1037,7 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 .game-hub .home-mode-switcher {display:grid;grid-template-columns:38px minmax(0,1fr) 38px;align-items:center;gap:.35rem;width:100%;min-width:0;}
 .game-hub .home-modes {display:flex;gap:.7rem;width:100%;margin:0;min-width:0;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;touch-action:pan-x;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:4px 1px 10px;}
 .game-hub .home-modes::-webkit-scrollbar {display:none;}
-.game-hub .home-modes .home-mode-card {display:grid;place-content:center;gap:.18rem;flex:0 0 min(86%,420px);scroll-snap-align:center;min-width:0;width:auto;margin:0;padding:12px 14px;min-height:92px;text-align:center;}
+.game-hub .home-modes .home-mode-card {display:grid;place-content:center;gap:.18rem;flex:0 0 100%;scroll-snap-align:start;min-width:0;width:auto;margin:0;padding:12px 14px;min-height:92px;text-align:center;}
 .home-modes .hub-play b {font-size:clamp(1rem,3.8vw,1.35rem);}
 .home-modes .hub-play small {font-size:.62rem;letter-spacing:.14em;opacity:.76;}
 .home-modes .hub-play span {font-size:.78rem;font-weight:800;opacity:.9;}
