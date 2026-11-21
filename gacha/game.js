@@ -706,6 +706,8 @@ function Sprite({
     className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
+      backgroundRepeat: "no-repeat",
+      backgroundPosition: "0 0",
       ...(frameCount ? {
         backgroundSize: `${frameCount * 100}% 100%`
       } : {}),
