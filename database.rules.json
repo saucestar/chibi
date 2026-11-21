@@ -374,6 +374,46 @@
         }
       }
     },
+    "pvpQueue": {
+      "$mode": {
+        ".read": "auth != null && ($mode === 'casual' || $mode === 'ranked')",
+        "$uid": {
+          ".write": "auth != null && auth.token.discordId === $uid",
+          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','rating','team','joinedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 64 && newData.child('rating').isNumber() && newData.child('rating').val() >= 100 && newData.child('rating').val() <= 5000 && newData.child('team').numChildren() === 2 && newData.child('joinedAt').isNumber())"
+        }
+      }
+    },
+    "pvpPairLocks": {
+      "$mode": {
+        "$pair": {
+          ".read": "auth != null",
+          ".write": "auth != null",
+          ".validate": "newData.hasChildren(['id','expiresAt']) && newData.child('id').isString() && newData.child('id').val().length <= 100 && newData.child('expiresAt').isNumber() && newData.child('expiresAt').val() <= now + 60000"
+        }
+      }
+    },
+    "pvpActive": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        ".write": "auth != null && (auth.token.discordId === $uid || (newData.isString() && root.child('pvpMatches').child(newData.val()).child('host').val() === auth.token.discordId && root.child('pvpMatches').child(newData.val()).child('guest').val() === $uid))",
+        ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 100)"
+      }
+    },
+    "pvpMatches": {
+      "$match": {
+        ".read": "auth != null && (data.child('host').val() === auth.token.discordId || data.child('guest').val() === auth.token.discordId)",
+        ".write": "auth != null && ((data.exists() && (data.child('host').val() === auth.token.discordId || data.child('guest').val() === auth.token.discordId)) || (!data.exists() && (newData.child('host').val() === auth.token.discordId || newData.child('guest').val() === auth.token.discordId)))",
+        ".validate": "newData.hasChildren(['version','mode','status','turn','host','guest','players','updatedAt']) && newData.child('version').val() === 1 && (newData.child('mode').val() === 'casual' || newData.child('mode').val() === 'ranked') && (newData.child('status').val() === 'active' || newData.child('status').val() === 'finished') && newData.child('turn').isNumber() && newData.child('turn').val() >= 1 && newData.child('turn').val() <= 200 && newData.child('host').isString() && newData.child('guest').isString() && newData.child('host').val() !== newData.child('guest').val() && newData.child('updatedAt').isNumber()"
+      }
+    },
+    "pvpRatings": {
+      ".read": "auth != null",
+      ".indexOn": ["rating"],
+      "$uid": {
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['name','rating','wins','losses','draws','games','updatedAt']) && newData.child('name').isString() && newData.child('name').val().length <= 64 && newData.child('rating').isNumber() && newData.child('rating').val() >= 100 && newData.child('rating').val() <= 5000 && newData.child('wins').isNumber() && newData.child('losses').isNumber() && newData.child('draws').isNumber() && newData.child('games').isNumber() && newData.child('updatedAt').isNumber() && ((!data.exists() && newData.child('rating').val() === 1000 && newData.child('games').val() === 0) || (data.exists() && newData.child('games').val() === data.child('games').val() + 1 && newData.child('rating').val() >= data.child('rating').val() - 32 && newData.child('rating').val() <= data.child('rating').val() + 32))"
+      }
+    },
     "wishHistory": {
       "$uid": {
         ".read": "auth != null && auth.token.discordId === $uid",

@@ -12,6 +12,7 @@ Le site|Website
 Déconnexion|Sign out
 Ouvrir le jeu|Open game
 Consulter les nouveautés|View news
+Monocible|Single target
 Badge Joueur|Player Pin
 Compte Discord|Discord account
 Aujourd'hui|Today
@@ -212,6 +213,10 @@ Doublon|Duplicate
 Éveiller|Awaken
 Sans classe|Ungraded
 Classe|Grade
+Puissance|Power
+Trier les badges|Sort pins
+Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.|An attack sharing a type with its character receives STAB: its power is multiplied by 1.2.
+Sans classe · effets ×1, comme la classe C, mais avec la fréquence d’obtention la plus élevée.|Ungraded · ×1 effects, like grade C, but with the highest drop rate.
 Effets|Effects
 Visuels DS · NightOwl35. Données · TWEWY Wiki.|DS artwork · NightOwl35. Data · TWEWY Wiki.
 Progression du niveau|Level progress
@@ -441,5 +446,35 @@ Défie les personnages et gagne leurs récompenses signature.|Challenge characte
 NOUVEAUX PORTAILS|NEW PORTALS
 Eos arrive le 25 novembre|Eos arrives November 25
 Noctis & Prompto · Ignis & Gladio|Noctis & Prompto · Ignis & Gladio
+MODE EN LIGNE|ONLINE MODE
+PVP EN LIGNE|ONLINE PVP
+Affronte le duo d’un autre joueur avec tes personnages et tes psychs équipés.|Battle another player's duo with your equipped characters and psychs.
+Combat libre|Free battle
+Statistiques normalisées · aucun point perdu|Normalized stats · no rating loss
+Niv. 50 · Rang étoile|Lv. 50 · Star rank
+Niveaux et rangs réels|Real levels and ranks
+Classement compétitif|Competitive rating
+Recherche en cours…|Searching…
+Annuler la recherche|Cancel search
+Choisis une action par personnage|Choose one action per character
+Actions envoyées · attente de l’adversaire|Actions submitted · waiting for opponent
+Actions prêtes|Actions ready
+Valider le tour|Confirm turn
+Abandonner|Forfeit
+VICTOIRE|VICTORY
+DÉFAITE|DEFEAT
+Égalité|Draw
+Retour au PVP|Back to PVP
+Choisir la cible|Choose target
+Connecte-toi à Discord pour jouer en ligne.|Sign in with Discord to play online.
+Prépare un duo complet avec au moins un psych offensif dans Team.|Set up a full duo with at least one offensive psych in Team.
+Rebirth disponible|Rebirth available
+Activer le Rebirth|Activate Rebirth
+Confirmer le Rebirth|Confirm Rebirth
+Bonus de rareté|Rarity bonus
+L’étage 100 est vaincu et 5 000 pièces ont été ajoutées. Recommence l’ascension avec de meilleurs taux de badges rares.|Floor 100 has been cleared and 5,000 coins were added. Start the climb again with improved rare badge rates.
+Termine ou abandonne la run sauvegardée avant le Rebirth.|Finish or abandon the saved run before Rebirth.
+Activer le Rebirth ?|Activate Rebirth?
+Les personnages non éveillés reviennent au rang E. Les badges sous les rangs Reaper et Ange sont retirés, à l’exception des psychs de base nécessaires. Les personnages éveillés, niveaux, monnaies et badges Reaper/Ange sont conservés.|Non-awakened characters return to E rank. Badges below Reaper and Angel are removed, except required starter psychs. Awakened characters, levels, currencies and Reaper/Angel badges are kept.
 Fermer|Close
 `.trim();

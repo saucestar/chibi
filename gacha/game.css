@@ -303,7 +303,7 @@ button, input { font: inherit; }
   );
 }
 .portrait .hero-sprite {
-  transform: scale(1.28);
+  transform: scale(1.28) scale(var(--fighter-normalize, 1));
   transform-origin: bottom;
 }
 .portrait > span {
@@ -675,12 +675,12 @@ button, input { font: inherit; }
   top: 70%;
 }
 .arena-hero .hero-sprite {
-  transform: scale(-1.5, 1.5);
+  transform: scale(-1.5, 1.5) scale(var(--fighter-normalize, 1));
   transform-origin: bottom;
   margin-bottom: 0;
 }
 .arena-hero .attack-sprite {
-  transform: scale(-1.5, 1.5);
+  transform: scale(-1.5, 1.5) scale(var(--fighter-normalize, 1));
 }
 .arena-hero > span {
   position: absolute;
@@ -1115,7 +1115,7 @@ button, input { font: inherit; }
     margin: 0;
   }
   .portrait .hero-sprite {
-    transform: scale(0.9);
+    transform: scale(0.9) scale(var(--fighter-normalize, 1));
   }
   .fighter-info {
     padding: 12px 8px;

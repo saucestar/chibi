@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Contrôle du scaling · TWEWY Reapers' Run</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box}html{background:#130d22;color:#fff8dd;font-family:Montserrat,Arial,sans-serif}body{margin:0;padding:clamp(16px,4vw,44px)}
+    header{display:flex;align-items:end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:0 auto 24px;max-width:1280px}h1{margin:0;font-size:clamp(26px,5vw,54px);font-style:italic}p{margin:.45rem 0;color:#cdbfe0;font-size:12px;line-height:1.5}.controls{display:flex;gap:8px}.controls button{padding:10px 14px;border:1px solid #d7c8ff;border-radius:999px;background:linear-gradient(#7560b3,#39275f);box-shadow:0 4px 0 #211536;color:#fff;font:900 11px Montserrat;cursor:pointer}.controls button[aria-pressed=true]{color:#2a1839;background:linear-gradient(#ffe99c,#e9aa42)}
+    main{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;max-width:1280px;margin:auto}.card{display:grid;grid-template-rows:170px auto;min-width:0;overflow:hidden;border:1px solid #8066ad;border-radius:18px;background:linear-gradient(150deg,#32264c,#211834);box-shadow:0 5px 0 #0b0712}.stage{position:relative;overflow:hidden;background:radial-gradient(circle,#8f80a9,#564769 72%)}.stage::before{content:"";position:absolute;left:0;right:0;bottom:32px;height:1px;background:#d7c8f477}.stage::after{content:attr(data-scale);position:absolute;right:7px;bottom:6px;color:#e9dfff;font:900 7px Montserrat;letter-spacing:.08em;text-shadow:0 1px 2px #21152e}.sprite{position:absolute;left:50%;image-rendering:pixelated;background-repeat:no-repeat;transform-origin:center bottom;filter:drop-shadow(0 8px 4px #08050a99)}.meta{display:grid;gap:5px;padding:12px 14px;border-top:1px solid #765f9d}.meta b{font-size:17px}.meta small{color:#bca9d3;font-size:9px;line-height:1.4}.types{color:#ffcf62!important}.status{justify-self:start;padding:3px 6px;border-radius:999px;color:#2a1839!important;background:#ffd466}.legend{max-width:1280px;margin:0 auto 20px;padding:10px 14px;border-left:4px solid #f0b04f;background:#211733;color:#e3d8ef;font-size:11px}
+  </style>
+</head>
+<body>
+  <header><div><h1>CHARACTER SCALE CHECK</h1><p>Toutes les silhouettes utilisent la même hauteur visible de référence. La résolution native et les marges transparentes ne changent plus leur taille.</p></div><div class="controls"><button id="play" aria-pressed="true">Animations</button><button id="still" aria-pressed="false">Frame 1</button></div></header>
+  <div class="legend">Référence du jeu : <b>100 px de silhouette visible</b> et <b>même ligne de sol</b>. Le groupe Sonic/Mega Man est volontairement réduit à <b>82 px</b> pour rester cohérent avec les autres sprites. Les personnages masqués sont inclus.</div>
+  <main id="grid"></main>
+  <script>
+    const roster=[
+      ["X","x",10,122,116,70,92,12,"Acier · Électrik"],["SONIC","sonic",7,152,156,104,132,12,"Normal · Électrik"],["ZERO","zero",4,177,168,129,144,12,"Acier · Feu"],["SHADOW","shadow",6,213,204,155,180,12,"Ténèbres · Psy"],["KNUCKLES","knuckles",6,178,194,130,170,12,"Combat · Sol"],["TAILS","tails",9,130,90,82,66,12,"Vol · Électrik"],
+      ["MARLUXIA","marluxia",4,296,292,248,268,12,"Plante · Ténèbres"],["LEXAEUS","lexaeus",8,174,204,124,180,12,"Roche · Combat"],["AXEL","axel",6,217,170,169,146,12,"Feu · Ténèbres"],["LARXENE","larxene",5,198,369,140,345,12,"Électrik · Ténèbres"],
+      ["NOCTIS","noctis",16,56,77,50,66,6,"Ténèbres · Acier",true],["PROMPTO","prompto",4,54,76,42,66,5,"Électrik",true],["IGNIS","ignis",4,56,79,42,68,6,"Feu",true],["GLADIO","gladio",4,75,83,65,73,5,"Roche · Combat",true],
+      ["2B","2b",4,176,160,119,142,6,"Acier · Combat"],["A2","a2",4,144,160,96,128,13,"Acier · Ténèbres"],["SORA","sora",4,144,160,108,102,16,"Normal · Fée"],["RIKU","riku",4,144,160,89,103,15,"Ténèbres · Psy"],["CLOUD","cloud",20,128,116,86,92,6,"Combat · Acier"],["AERITH","aerith",4,80,116,75,90,6,"Plante · Fée"],
+      ["NEKU","neku",6,80,116,46,98,0,"Psy"],["BEAT","beat",6,80,116,71,94,0,"Combat"],["SHIKI","shiki",3,80,116,45,92,0,"Normal"],["JOSHUA","joshua",6,32,72,27,56,10,"Psy · Vol"]
+    ];
+    const grid=document.querySelector('#grid');let running=true,frame=0;
+    for(const [name,file,frames,fw,fh,vw,vh,bottomMargin,types,hidden=false] of roster){
+      const reduced=["X","SONIC","ZERO","SHADOW","KNUCKLES","TAILS"].includes(name);const card=document.createElement('article');card.className='card';card.innerHTML=`<div class="stage" data-scale="${reduced?82:100} px visibles · sol commun"><div class="sprite" role="img" aria-label="${name}"></div></div><div class="meta"><b>${name}</b><small class="types">${types}</small>${hidden?'<small class="status">Masqué actuellement</small>':''}<small>Source ${fw}×${fh} · silhouette ${vw}×${vh}</small></div>`;
+      const scale=(reduced?82:100)/vh,sprite=card.querySelector('.sprite');Object.assign(sprite.style,{width:fw+'px',height:fh+'px',bottom:(32-bottomMargin*scale)+'px',backgroundImage:`url(./assets/game/${file}-idle.png)`,backgroundSize:(frames*100)+'% 100%',transform:`translateX(-50%) scale(${scale})`});sprite.dataset.frames=frames;grid.append(card);
+    }
+    function draw(){document.querySelectorAll('.sprite').forEach(sprite=>{const n=Number(sprite.dataset.frames),i=frame%n;sprite.style.backgroundPosition=`${n===1?0:i/(n-1)*100}% 0`;});}
+    setInterval(()=>{if(running){frame++;draw()}},150);draw();
+    const play=document.querySelector('#play'),still=document.querySelector('#still');
+    play.onclick=()=>{running=true;play.setAttribute('aria-pressed','true');still.setAttribute('aria-pressed','false')};
+    still.onclick=()=>{running=false;frame=0;draw();still.setAttribute('aria-pressed','true');play.setAttribute('aria-pressed','false')};
+  </script>
+</body>
+</html>
