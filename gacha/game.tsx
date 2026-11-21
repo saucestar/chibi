@@ -1,4 +1,4 @@
-declare global { interface Window { ChibiGameSync?: any; ChibiPvp?: any; } }
+declare global { interface Window { ChibiGameSync?: any; ChibiPvp?: any; ChibiSocial?: any; } }
 const { useEffect, useMemo, useState } = React;
 const nekuSprite = "./assets/game/neku-idle.png";
 const beatSprite = "./assets/game/beat-idle.png";
@@ -928,7 +928,7 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
   const equipped=profile.loadout[name]||[];
   const inspect=inspected?psychs[inspected]:null;
   const toggle=(id:string)=>{
-    setInspected(id);
+    if(inspected!==id){setInspected(id);return;}
     if(equippedBy(profile,name,id))return;
     setDraft(old=>old.includes(id)?old.filter(value=>value!==id):old.length<3?[...old,id]:old);
   };
@@ -947,7 +947,7 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
         const id=sorted[page*16+i],pin=psychs[id];
         return pin?<button key={id} className="badge-slot" aria-label={`${pin.name} · ${pinTargetLabel(pin)} · ${profile.pinCopies[id]||1} exemplaire(s)${equippedBy(profile,name,id)?` · Équipé par ${equippedBy(profile,name,id)}`:""}`} disabled={Boolean(equippedBy(profile,name,id))} aria-pressed={draft.includes(id)} onClick={()=>toggle(id)}><BadgeArt pin={pin}/><PinTargetBadge pin={pin}/>{(profile.pinCopies[id]||1)>1&&<span className="badge-copy">×{profile.pinCopies[id]}</span>}{equippedBy(profile,name,id)&&<small className="badge-owner">{equippedBy(profile,name,id)}</small>}</button>:<span key={i} className="badge-slot" aria-hidden="true"/>;
       })}</div>
-      {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {pinTargetLabel(inspect)} · {inspect.cost} EN · <PinRankInfo pin={inspect}/> <TypeChips elements={[inspect.element||badgeElement(inspect)]}/>{equippedBy(profile,name,inspect.id)&&<span> · Équipé par {equippedBy(profile,name,inspect.id)}</span>}</p>}
+      {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {pinTargetLabel(inspect)} · {inspect.cost} EN · <PinRankInfo pin={inspect}/> <TypeChips elements={[inspect.element||badgeElement(inspect)]}/>{equippedBy(profile,name,inspect.id)&&<span> · Équipé par {equippedBy(profile,name,inspect.id)}</span>}<small> · Retouche ce badge pour {draft.includes(inspect.id)?"le retirer":"l’équiper"}.</small></p>}
       {draft.length===3 && <p className="equipment-help">Retire un psych équipé pour le remplacer.</p>}
       {!draft.length && <p className="equipment-help">Équipe au moins 1 psych.</p>}
       <nav aria-label="Pages des psychs"><button disabled={!page} onClick={()=>setPage(page-1)} aria-label="Page précédente">‹</button><span>{page+1} / {pages}</span><button disabled={page+1>=pages} onClick={()=>setPage(page+1)} aria-label="Page suivante">›</button></nav>
@@ -1068,13 +1068,13 @@ function applyCetrucRecovery(p:Profile,identity?:{id:string;name:string}):Profil
  return {...p,run,bestFloor:Math.max(p.bestFloor,41),specialRunRecoveries:marked};
 }
 function combatFingerprint(p:Profile):string {return JSON.stringify([p.owned,p.equipped,p.loadout,p.xp,p.awakened,p.levels,p.run?[p.run.id,p.run.seq,p.run.status]:null,p.eventRun?[p.eventRun.run.id,p.eventRun.run.seq]:null]);}
-type GameScreen="home"|"team"|"roguelike"|"summon"|"collection"|"quests"|"journal"|"bestiary"|"settings"|"events"|"pvp"|"menu";
+type GameScreen="home"|"team"|"roguelike"|"summon"|"collection"|"social"|"quests"|"journal"|"bestiary"|"settings"|"events"|"pvp"|"menu";
 function InlinePanel({title,children,className=""}:{title:string;children:React.ReactNode;className?:string;close?:()=>void}) {return <section className={`hub-panel ${className}`}><h2>{title}</h2>{children}</section>;}
 function gameFullscreen(){
  if(window.parent!==window){window.parent.postMessage({type:"chibi:fullscreen",action:"toggle"},location.protocol==="file:"?"*":location.origin);return;}
  if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
 }
-const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["menu","Menu","☰"]];
+const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["social","Social","◎"],["menu","Menu","☰"]];
 function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;openNews:()=>void;children:React.ReactNode}) {
  useMusic("hub");
  const content=React.useRef<HTMLDivElement>(null);
@@ -1227,6 +1227,39 @@ function PvpLobby({profile}:{profile:Profile}){
  if(matchId)return <PvpBattle matchId={matchId} close={()=>{setMatchId(null);service.rating(window.ChibiGameSync.accountId).then(setRating).catch(()=>{});}}/>;
  return <section className="pvp-panel"><header><small>REAPERS’ NETWORK</small><h1>PVP</h1><p>Affronte le duo d’un autre joueur avec tes personnages et tes psychs équipés.</p></header><div className="pvp-modes"><button aria-pressed={mode==="casual"} disabled={searching} onClick={()=>setMode("casual")}><span>CASUAL</span><b>Niv. 50 · Rang étoile</b><small>Statistiques normalisées · aucun point perdu</small></button><button aria-pressed={mode==="ranked"} disabled={searching} onClick={()=>setMode("ranked")}><span>RANKED</span><b>{rating?.rating||1000} Elo</b><small>{rating?`${rating.wins} V · ${rating.losses} D · ${rating.draws} N`:"Niveaux et rangs réels"}</small></button></div><div className="pvp-party">{team.map(f=><article key={f.name}><HudPortrait fighter={characterRoster.find(x=>x.name===f.name)}/><b>{f.name}</b><small>{f.loadout.length} psych(s)</small></article>)}</div>{message&&<p role="status">{message}</p>}<button className="pvp-search" disabled={!ready||searching} onClick={search}>{searching?"Recherche en cours…":`Chercher en ${mode==="ranked"?"Ranked":"Casual"}`}</button>{searching&&<button onClick={cancel}>Annuler la recherche</button>}</section>;
 }
+function socialProfile(profile:Profile){
+ const member=(name:string)=>({name,level:experience(profile.xp[name]||0).level,rank:Math.min(5,profile.copies[name]||0),awakened:profile.awakened.includes(name),loadout:[...(profile.loadout[name]||[])]});
+ return {bestFloor:profile.bestFloor,rebirths:profile.rebirths,team:profile.equipped.filter(Boolean).map(member),owned:profile.owned.map(member)};
+}
+function SocialHub({profile}:{profile:Profile}){
+ const service=window.ChibiSocial,pvp=window.ChibiPvp;
+ const [tab,setTab]=useState<"players"|"friends"|"requests"|"invites">("players"),[data,setData]=useState<any>({profiles:[],friends:[],requests:[],invites:[]}),[selected,setSelected]=useState<any>(null),[message,setMessage]=useState(""),[matchId,setMatchId]=useState<string|null>(null),[sent,setSent]=useState<string[]>([]);
+ const team=pvpTeam(profile,"casual"),canFight=team.length===2&&team.every(f=>f.loadout.length>0)&&team.some(f=>f.loadout.some(offensive));
+ const fail=(error:any)=>/permission.denied|permission_denied/i.test(String(error?.code||error?.message||error))?"Social attend la publication des nouvelles règles Firebase.":String(error?.message||error||"Action impossible.");
+ useEffect(()=>{
+  if(!service?.ready())return;
+  service.publish(socialProfile(profile)).catch((error:any)=>setMessage(fail(error)));
+  const stop=service.watch(setData,(error:any)=>setMessage(fail(error)));
+  const stopActive=pvp?.watchActive((id:string|null)=>id&&setMatchId(id),(error:any)=>setMessage(fail(error)));
+  pvp?.currentMatch().then((id:string|null)=>id&&setMatchId(id)).catch(()=>{});
+  return()=>{stop?.();stopActive?.();};
+ },[]);
+ if(matchId)return <PvpBattle matchId={matchId} close={()=>setMatchId(null)}/>;
+ if(!service?.ready())return <section className="social-panel hub-panel"><header><small>REAPERS’ NETWORK</small><h1>Social</h1><p>Connecte-toi à Discord pour retrouver les autres joueurs, ajouter des amis et lancer des défis Casual.</p></header></section>;
+ const profileById=(uid:string)=>data.profiles.find((item:any)=>String(item.uid)===String(uid));
+ const friendIds=new Set(data.friends.map((item:any)=>String(item.uid)));
+ const challenge=async(player:any)=>{setMessage("");if(!canFight)return setMessage("Prépare un duo complet avec un psych offensif dans Team.");try{await service.invite(player.uid,team);setMessage(`Invitation Casual envoyée à ${player.name}.`);}catch(error){setMessage(fail(error));}};
+ const playerCard=(player:any,friend=false)=><article className="social-player" key={player.uid}><button className="social-player-main" onClick={()=>setSelected(profileById(player.uid)||player)}>{player.team?.[0]?<HudPortrait fighter={characterRoster.find(f=>f.name===player.team[0].name)}/>:<span className="social-avatar">◎</span>}<span><b>{player.name}</b><small>Étage {player.bestFloor||0} · Rebirth {player.rebirths||0}</small><em>{player.owned?.length||0} personnages · Voir le profil</em></span></button><div className="social-actions">{friend?<><button disabled={!canFight} onClick={()=>challenge(profileById(player.uid)||player)}>Défier</button><button className="quiet" onClick={()=>service.removeFriend(player.uid).catch((error:any)=>setMessage(fail(error)))}>Retirer</button></>:<button disabled={friendIds.has(String(player.uid))||sent.includes(String(player.uid))} onClick={()=>service.request(player.uid,player.name).then(()=>setSent(old=>[...old,String(player.uid)])).catch((error:any)=>setMessage(fail(error)))}>{friendIds.has(String(player.uid))?"Ami":sent.includes(String(player.uid))?"Envoyée":"Ajouter"}</button>}</div></article>;
+ const shown=tab==="players"?data.profiles:tab==="friends"?data.friends:[];
+ return <section className="social-panel hub-panel"><header><small>REAPERS’ NETWORK</small><h1>Social</h1><p>Ajoute des amis, inspecte leurs équipes et lance un combat Casual directement.</p></header>
+  <div className="social-tabs">{([["players","Joueurs",data.profiles.length],["friends","Amis",data.friends.length],["requests","Demandes",data.requests.length],["invites","Défis",data.invites.length]] as const).map(([id,label,count])=><button key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}><b>{label}</b><span>{count}</span></button>)}</div>
+  {message&&<p className="social-message" role="status">{message}</p>}
+  {(tab==="players"||tab==="friends")&&<div className="social-list">{shown.length?shown.map((entry:any)=>playerCard(profileById(entry.uid)||entry,tab==="friends")):<p>Aucun joueur dans cette section pour le moment.</p>}</div>}
+  {tab==="requests"&&<div className="social-list">{data.requests.length?data.requests.map((player:any)=><article className="social-request" key={player.uid}><b>{player.name}</b><span>veut devenir ton ami.</span><div><button onClick={()=>service.acceptRequest(player).catch((error:any)=>setMessage(fail(error)))}>Accepter</button><button className="quiet" onClick={()=>service.declineRequest(player.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucune demande d’ami en attente.</p>}</div>}
+  {tab==="invites"&&<div className="social-list">{data.invites.length?data.invites.map((invitation:any)=><article className="social-request social-challenge" key={invitation.uid}><b>{invitation.name}</b><span>te défie en Casual · Niv. 50 · Rang étoile.</span><div><button disabled={!canFight} onClick={()=>service.acceptInvite(invitation,team).then(setMatchId).catch((error:any)=>setMessage(fail(error)))}>Combattre</button><button className="quiet" onClick={()=>service.declineInvite(invitation.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucun défi PVP en attente.</p>}</div>}
+  {selected&&<WishDialog className="social-profile-dialog" title={`Profil · ${selected.name}`} close={()=>setSelected(null)}><div className="social-record"><span>Record <b>Étage {selected.bestFloor||0}</b></span><span>Rebirth <b>{selected.rebirths||0}</b></span><span>Collection <b>{selected.owned?.length||0}</b></span></div><h3>Team</h3><div className="social-team">{selected.team?.length?selected.team.map((member:any)=><article key={member.name}><div className="social-team-hero"><SpritePreview fighter={characterRoster.find(f=>f.name===member.name)!} maximumScale={1.25}/><span><b>{member.name}</b><small>Niv. {member.level} · Rang {member.rank===5?"★":ranks[member.rank||0]}</small><TypeChips elements={characterElements[member.name]}/></span></div><div className="social-psychs">{member.loadout?.map((id:string)=>{const pin=psychs[id];return pin?<span key={id}><PinIcon pin={pin}/><small>{pin.name.replace(" (Pin)","")} · {pinTargetLabel(pin)}</small></span>:null;})}</div></article>):<p>Team non configurée.</p>}</div><h3>Personnages obtenus</h3><div className="social-collection">{selected.owned?.map((member:any)=>{const fighter=characterRoster.find(f=>f.name===member.name);return fighter?<span key={member.name}><HudPortrait fighter={fighter}/><b>{member.name}</b><small>Niv. {member.level} · {member.rank===5?"★":ranks[member.rank||0]}</small></span>:null;})}</div><button onClick={()=>setSelected(null)}>Fermer</button></WishDialog>}
+ </section>;
+}
 function LaunchNews({navigate,close}:{navigate:(screen:GameScreen)=>void;close:()=>void}) {
  const open=(screen:GameScreen)=>{close();navigate(screen);};
  const previewNames=["X","SONIC","MARLUXIA","AXEL"];
@@ -1238,13 +1271,14 @@ function LaunchNews({navigate,close}:{navigate:(screen:GameScreen)=>void;close:(
    <small>Publication le 1er décembre 2026 · Ouvrir les portails <b>→</b></small>
   </button>
   <section className="news-copy"><p>La mise à jour de la seconde vague est prête. Voici l’ensemble des changements :</p>
-   <ol><li><b>PVP en ligne</b> — Casual normalisé au niveau 50 et rang étoile, ou Ranked avec classement Elo et progression réelle.</li><li><b>Roguelike cauchemar</b> — difficulté fortement renforcée dès l’étage 50 et reprise plafonnée au palier 6 après avoir quitté une run plus avancée.</li><li><b>Rebirth</b> — vaincre l’étage 100 offre 5 000 pièces et débloque un nouveau cycle aux taux de badges rares renforcés.</li><li><b>2 nouveaux portails</b> — X, Sonic, Zero, Shadow, Knuckles et Tails dans « Final Fantasy Sonic X » ; Marluxia, Lexaeus, Axel et Larxene dans « XIII ».</li><li><b>Garantie débutant</b> — la toute première invocation du compte donne toujours un personnage, même dans un multi de 10.</li><li><b>Garantie revue</b> — un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.</li><li><b>Rareté graduelle</b> — les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.</li><li><b>Combat enrichi</b> — psychs monocibles ou AoE et Sync Burst égal à 5× la meilleure statistique offensive.</li><li><b>Quêtes quotidiennes</b> — 3 objectifs journaliers pour 200 pièces au total.</li></ol>
+   <ol><li><b>Social</b> — profils joueurs, collections, équipes détaillées, amis et défis PVP Casual directs.</li><li><b>PVP en ligne</b> — Casual normalisé au niveau 50 et rang étoile, ou Ranked avec classement Elo et progression réelle.</li><li><b>Roguelike cauchemar</b> — difficulté fortement renforcée dès l’étage 50 et reprise plafonnée au palier 6 après avoir quitté une run plus avancée.</li><li><b>Rebirth</b> — vaincre l’étage 100 offre 5 000 pièces et débloque un nouveau cycle aux taux de badges rares renforcés.</li><li><b>2 nouveaux portails</b> — X, Sonic, Zero, Shadow, Knuckles et Tails dans « Final Fantasy Sonic X » ; Marluxia, Lexaeus, Axel et Larxene dans « XIII ».</li><li><b>Garantie débutant</b> — la toute première invocation du compte donne toujours un personnage, même dans un multi de 10.</li><li><b>Garantie revue</b> — un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.</li><li><b>Rareté graduelle</b> — les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.</li><li><b>Combat enrichi</b> — psychs monocibles ou AoE et Sync Burst égal à 5× la meilleure statistique offensive.</li><li><b>Quêtes quotidiennes</b> — 3 objectifs journaliers pour 200 pièces au total.</li></ol>
   </section>
   <button className="news-update news-daily" onClick={()=>open("quests")}><span className="news-update-art"><Icon name="coin"/><b>200</b></span><span><small>QUÊTES DU JOUR</small><b>3 missions · 2 vœux</b><em>Vague, ennemis et Sync Burst</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-rates" onClick={()=>open("summon")}><span className="news-update-art news-pin-art">{rarePins.map(pin=><span className="news-pin-cell" key={pin.id}><BadgeArt pin={pin}/></span>)}</span><span><small>TAUX D’OBTENTION</small><b>1er vœu personnage garanti</b><em>Puis garantie au 100e · Les hauts rangs sont plus rares</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-combat" onClick={()=>open("team")}><span className="news-update-art">{["ZERO","SHADOW"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.58}/>)}</span><span><small>SYSTÈME DE COMBAT</small><b>AoE · Cible · Burst ultime</b><em>Prépare tes psychs dans Team</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-events" onClick={()=>open("events")}><span className="news-update-art">{["NEKU","AERITH"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.75}/>)}</span><span><small>ÉVÉNEMENTS</small><b>Boss niveau 200</b><em>Personnages et badges signature à gagner</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-pvp" onClick={()=>open("pvp")}><span className="news-update-art"><b>VS</b></span><span><small>PVP EN LIGNE</small><b>Casual · Ranked</b><em>Niveau 50 normalisé ou classement Elo</em></span><i aria-hidden="true">→</i></button>
+  <button className="news-update news-social" onClick={()=>open("social")}><span className="news-update-art"><b>◎</b></span><span><small>REAPERS’ NETWORK</small><b>Profils · Amis · Défis</b><em>Inspecte les Teams et lance un Casual direct</em></span><i aria-hidden="true">→</i></button>
   </div>
   <button className="launch-news-close" onClick={close}>Fermer</button>
  </WishDialog>;
@@ -1291,7 +1325,7 @@ function RoguelikeLaunch({profile,navigate,start,resume,abandon,rebirth}:{profil
  </section>;
 }
 function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["pvp","PVP","Casual normalisé et Ranked Elo"],["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["social","Social","Amis, profils et défis Casual"],["pvp","PVP","Casual normalisé et Ranked Elo"],["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
 }
 
 function BestiaryMenu(){
@@ -1327,7 +1361,7 @@ function App() {
   const navigationRef=React.useRef({party,navigate});navigationRef.current={party,navigate};
   useEffect(()=>{
    const receive=(event:MessageEvent)=>{if(event.source!==window.parent||(event.origin!==location.origin&&!(location.protocol==="file:"&&event.origin==="null"))||event.data?.type!=="chibi:game-navigate"||navigationRef.current.party)return;
-    if(["home","team","summon","collection","quests","journal","bestiary","menu"].includes(event.data.screen))navigationRef.current.navigate(event.data.screen);
+    if(["home","team","summon","collection","social","quests","journal","bestiary","menu"].includes(event.data.screen))navigationRef.current.navigate(event.data.screen);
    };
    window.addEventListener("message",receive);
    if(window.parent!==window)window.parent.postMessage({type:"chibi:game-ready"},location.protocol==="file:"?"*":location.origin);
@@ -1462,6 +1496,7 @@ function App() {
   if(screen==="roguelike")return hub(<RoguelikeLaunch profile={profile} navigate={navigate} start={startRun} resume={resume} abandon={()=>setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p)} rebirth={()=>setProfile(applyRebirth)}/>);
   if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);
   if(screen==="pvp")return hub(<PvpLobby profile={profile}/>);
+  if(screen==="social")return hub(<SocialHub profile={profile}/>);
   if(screen==="settings")return hub(<AudioSettings back={()=>navigate("menu")}/>);
   if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate}/>);
   if(screen==="bestiary")return hub(<BestiaryMenu/>);

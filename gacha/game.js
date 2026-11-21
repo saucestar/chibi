@@ -2295,7 +2295,10 @@ function PsychEquipment({
   const equipped = profile.loadout[name] || [];
   const inspect = inspected ? psychs[inspected] : null;
   const toggle = id => {
-    setInspected(id);
+    if (inspected !== id) {
+      setInspected(id);
+      return;
+    }
     if (equippedBy(profile, name, id)) return;
     setDraft(old => old.includes(id) ? old.filter(value => value !== id) : old.length < 3 ? [...old, id] : old);
   };
@@ -2378,7 +2381,7 @@ function PsychEquipment({
     pin: inspect
   }), " ", /*#__PURE__*/React.createElement(TypeChips, {
     elements: [inspect.element || badgeElement(inspect)]
-  }), equippedBy(profile, name, inspect.id) && /*#__PURE__*/React.createElement("span", null, " \xB7 \xC9quip\xE9 par ", equippedBy(profile, name, inspect.id))), draft.length === 3 && /*#__PURE__*/React.createElement("p", {
+  }), equippedBy(profile, name, inspect.id) && /*#__PURE__*/React.createElement("span", null, " \xB7 \xC9quip\xE9 par ", equippedBy(profile, name, inspect.id)), /*#__PURE__*/React.createElement("small", null, " \xB7 Retouche ce badge pour ", draft.includes(inspect.id) ? "le retirer" : "l’équiper", ".")), draft.length === 3 && /*#__PURE__*/React.createElement("p", {
     className: "equipment-help"
   }, "Retire un psych \xE9quip\xE9 pour le remplacer."), !draft.length && /*#__PURE__*/React.createElement("p", {
     className: "equipment-help"
@@ -2715,7 +2718,7 @@ function gameFullscreen() {
   }
   if (document.fullscreenElement) document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(() => {});
 }
-const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["collection", "Collection", "▦"], ["menu", "Menu", "☰"]];
+const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["collection", "Collection", "▦"], ["social", "Social", "◎"], ["menu", "Menu", "☰"]];
 function GameHub({
   profile,
   screen,
@@ -3453,6 +3456,166 @@ function PvpLobby({
     onClick: cancel
   }, "Annuler la recherche"));
 }
+function socialProfile(profile) {
+  const member = name => ({
+    name,
+    level: experience(profile.xp[name] || 0).level,
+    rank: Math.min(5, profile.copies[name] || 0),
+    awakened: profile.awakened.includes(name),
+    loadout: [...(profile.loadout[name] || [])]
+  });
+  return {
+    bestFloor: profile.bestFloor,
+    rebirths: profile.rebirths,
+    team: profile.equipped.filter(Boolean).map(member),
+    owned: profile.owned.map(member)
+  };
+}
+function SocialHub({
+  profile
+}) {
+  const service = window.ChibiSocial,
+    pvp = window.ChibiPvp;
+  const [tab, setTab] = useState("players"),
+    [data, setData] = useState({
+      profiles: [],
+      friends: [],
+      requests: [],
+      invites: []
+    }),
+    [selected, setSelected] = useState(null),
+    [message, setMessage] = useState(""),
+    [matchId, setMatchId] = useState(null),
+    [sent, setSent] = useState([]);
+  const team = pvpTeam(profile, "casual"),
+    canFight = team.length === 2 && team.every(f => f.loadout.length > 0) && team.some(f => f.loadout.some(offensive));
+  const fail = error => /permission.denied|permission_denied/i.test(String(error?.code || error?.message || error)) ? "Social attend la publication des nouvelles règles Firebase." : String(error?.message || error || "Action impossible.");
+  useEffect(() => {
+    if (!service?.ready()) return;
+    service.publish(socialProfile(profile)).catch(error => setMessage(fail(error)));
+    const stop = service.watch(setData, error => setMessage(fail(error)));
+    const stopActive = pvp?.watchActive(id => id && setMatchId(id), error => setMessage(fail(error)));
+    pvp?.currentMatch().then(id => id && setMatchId(id)).catch(() => {});
+    return () => {
+      stop?.();
+      stopActive?.();
+    };
+  }, []);
+  if (matchId) return /*#__PURE__*/React.createElement(PvpBattle, {
+    matchId: matchId,
+    close: () => setMatchId(null)
+  });
+  if (!service?.ready()) return /*#__PURE__*/React.createElement("section", {
+    className: "social-panel hub-panel"
+  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Social"), /*#__PURE__*/React.createElement("p", null, "Connecte-toi \xE0 Discord pour retrouver les autres joueurs, ajouter des amis et lancer des d\xE9fis Casual.")));
+  const profileById = uid => data.profiles.find(item => String(item.uid) === String(uid));
+  const friendIds = new Set(data.friends.map(item => String(item.uid)));
+  const challenge = async player => {
+    setMessage("");
+    if (!canFight) return setMessage("Prépare un duo complet avec un psych offensif dans Team.");
+    try {
+      await service.invite(player.uid, team);
+      setMessage(`Invitation Casual envoyée à ${player.name}.`);
+    } catch (error) {
+      setMessage(fail(error));
+    }
+  };
+  const playerCard = (player, friend = false) => /*#__PURE__*/React.createElement("article", {
+    className: "social-player",
+    key: player.uid
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "social-player-main",
+    onClick: () => setSelected(profileById(player.uid) || player)
+  }, player.team?.[0] ? /*#__PURE__*/React.createElement(HudPortrait, {
+    fighter: characterRoster.find(f => f.name === player.team[0].name)
+  }) : /*#__PURE__*/React.createElement("span", {
+    className: "social-avatar"
+  }, "\u25CE"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, player.name), /*#__PURE__*/React.createElement("small", null, "\xC9tage ", player.bestFloor || 0, " \xB7 Rebirth ", player.rebirths || 0), /*#__PURE__*/React.createElement("em", null, player.owned?.length || 0, " personnages \xB7 Voir le profil"))), /*#__PURE__*/React.createElement("div", {
+    className: "social-actions"
+  }, friend ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    disabled: !canFight,
+    onClick: () => challenge(profileById(player.uid) || player)
+  }, "D\xE9fier"), /*#__PURE__*/React.createElement("button", {
+    className: "quiet",
+    onClick: () => service.removeFriend(player.uid).catch(error => setMessage(fail(error)))
+  }, "Retirer")) : /*#__PURE__*/React.createElement("button", {
+    disabled: friendIds.has(String(player.uid)) || sent.includes(String(player.uid)),
+    onClick: () => service.request(player.uid, player.name).then(() => setSent(old => [...old, String(player.uid)])).catch(error => setMessage(fail(error)))
+  }, friendIds.has(String(player.uid)) ? "Ami" : sent.includes(String(player.uid)) ? "Envoyée" : "Ajouter")));
+  const shown = tab === "players" ? data.profiles : tab === "friends" ? data.friends : [];
+  return /*#__PURE__*/React.createElement("section", {
+    className: "social-panel hub-panel"
+  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Social"), /*#__PURE__*/React.createElement("p", null, "Ajoute des amis, inspecte leurs \xE9quipes et lance un combat Casual directement.")), /*#__PURE__*/React.createElement("div", {
+    className: "social-tabs"
+  }, [["players", "Joueurs", data.profiles.length], ["friends", "Amis", data.friends.length], ["requests", "Demandes", data.requests.length], ["invites", "Défis", data.invites.length]].map(([id, label, count]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    "aria-pressed": tab === id,
+    onClick: () => setTab(id)
+  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), message && /*#__PURE__*/React.createElement("p", {
+    className: "social-message",
+    role: "status"
+  }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
+    className: "social-list"
+  }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry, tab === "friends")) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement("div", {
+    className: "social-list"
+  }, data.requests.length ? data.requests.map(player => /*#__PURE__*/React.createElement("article", {
+    className: "social-request",
+    key: player.uid
+  }, /*#__PURE__*/React.createElement("b", null, player.name), /*#__PURE__*/React.createElement("span", null, "veut devenir ton ami."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    onClick: () => service.acceptRequest(player).catch(error => setMessage(fail(error)))
+  }, "Accepter"), /*#__PURE__*/React.createElement("button", {
+    className: "quiet",
+    onClick: () => service.declineRequest(player.uid).catch(error => setMessage(fail(error)))
+  }, "Refuser")))) : /*#__PURE__*/React.createElement("p", null, "Aucune demande d\u2019ami en attente.")), tab === "invites" && /*#__PURE__*/React.createElement("div", {
+    className: "social-list"
+  }, data.invites.length ? data.invites.map(invitation => /*#__PURE__*/React.createElement("article", {
+    className: "social-request social-challenge",
+    key: invitation.uid
+  }, /*#__PURE__*/React.createElement("b", null, invitation.name), /*#__PURE__*/React.createElement("span", null, "te d\xE9fie en Casual \xB7 Niv. 50 \xB7 Rang \xE9toile."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
+    disabled: !canFight,
+    onClick: () => service.acceptInvite(invitation, team).then(setMatchId).catch(error => setMessage(fail(error)))
+  }, "Combattre"), /*#__PURE__*/React.createElement("button", {
+    className: "quiet",
+    onClick: () => service.declineInvite(invitation.uid).catch(error => setMessage(fail(error)))
+  }, "Refuser")))) : /*#__PURE__*/React.createElement("p", null, "Aucun d\xE9fi PVP en attente.")), selected && /*#__PURE__*/React.createElement(WishDialog, {
+    className: "social-profile-dialog",
+    title: `Profil · ${selected.name}`,
+    close: () => setSelected(null)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "social-record"
+  }, /*#__PURE__*/React.createElement("span", null, "Record ", /*#__PURE__*/React.createElement("b", null, "\xC9tage ", selected.bestFloor || 0)), /*#__PURE__*/React.createElement("span", null, "Rebirth ", /*#__PURE__*/React.createElement("b", null, selected.rebirths || 0)), /*#__PURE__*/React.createElement("span", null, "Collection ", /*#__PURE__*/React.createElement("b", null, selected.owned?.length || 0))), /*#__PURE__*/React.createElement("h3", null, "Team"), /*#__PURE__*/React.createElement("div", {
+    className: "social-team"
+  }, selected.team?.length ? selected.team.map(member => /*#__PURE__*/React.createElement("article", {
+    key: member.name
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "social-team-hero"
+  }, /*#__PURE__*/React.createElement(SpritePreview, {
+    fighter: characterRoster.find(f => f.name === member.name),
+    maximumScale: 1.25
+  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, member.name), /*#__PURE__*/React.createElement("small", null, "Niv. ", member.level, " \xB7 Rang ", member.rank === 5 ? "★" : ranks[member.rank || 0]), /*#__PURE__*/React.createElement(TypeChips, {
+    elements: characterElements[member.name]
+  }))), /*#__PURE__*/React.createElement("div", {
+    className: "social-psychs"
+  }, member.loadout?.map(id => {
+    const pin = psychs[id];
+    return pin ? /*#__PURE__*/React.createElement("span", {
+      key: id
+    }, /*#__PURE__*/React.createElement(PinIcon, {
+      pin: pin
+    }), /*#__PURE__*/React.createElement("small", null, pin.name.replace(" (Pin)", ""), " \xB7 ", pinTargetLabel(pin))) : null;
+  })))) : /*#__PURE__*/React.createElement("p", null, "Team non configur\xE9e.")), /*#__PURE__*/React.createElement("h3", null, "Personnages obtenus"), /*#__PURE__*/React.createElement("div", {
+    className: "social-collection"
+  }, selected.owned?.map(member => {
+    const fighter = characterRoster.find(f => f.name === member.name);
+    return fighter ? /*#__PURE__*/React.createElement("span", {
+      key: member.name
+    }, /*#__PURE__*/React.createElement(HudPortrait, {
+      fighter: fighter
+    }), /*#__PURE__*/React.createElement("b", null, member.name), /*#__PURE__*/React.createElement("small", null, "Niv. ", member.level, " \xB7 ", member.rank === 5 ? "★" : ranks[member.rank || 0])) : null;
+  })), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setSelected(null)
+  }, "Fermer")));
+}
 function LaunchNews({
   navigate,
   close
@@ -3481,7 +3644,7 @@ function LaunchNews({
     maximumScale: .62
   }))), /*#__PURE__*/React.createElement("small", null, "Publication le 1er d\xE9cembre 2026 \xB7 Ouvrir les portails ", /*#__PURE__*/React.createElement("b", null, "\u2192"))), /*#__PURE__*/React.createElement("section", {
     className: "news-copy"
-  }, /*#__PURE__*/React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), /*#__PURE__*/React.createElement("ol", null, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "PVP en ligne"), " \u2014 Casual normalis\xE9 au niveau 50 et rang \xE9toile, ou Ranked avec classement Elo et progression r\xE9elle."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Roguelike cauchemar"), " \u2014 difficult\xE9 fortement renforc\xE9e d\xE8s l\u2019\xE9tage 50 et reprise plafonn\xE9e au palier 6 apr\xE8s avoir quitt\xE9 une run plus avanc\xE9e."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Rebirth"), " \u2014 vaincre l\u2019\xE9tage 100 offre 5 000 pi\xE8ces et d\xE9bloque un nouveau cycle aux taux de badges rares renforc\xE9s."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie d\xE9butant"), " \u2014 la toute premi\xE8re invocation du compte donne toujours un personnage, m\xEAme dans un multi de 10."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 5\xD7 la meilleure statistique offensive."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), /*#__PURE__*/React.createElement("ol", null, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Social"), " \u2014 profils joueurs, collections, \xE9quipes d\xE9taill\xE9es, amis et d\xE9fis PVP Casual directs."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "PVP en ligne"), " \u2014 Casual normalis\xE9 au niveau 50 et rang \xE9toile, ou Ranked avec classement Elo et progression r\xE9elle."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Roguelike cauchemar"), " \u2014 difficult\xE9 fortement renforc\xE9e d\xE8s l\u2019\xE9tage 50 et reprise plafonn\xE9e au palier 6 apr\xE8s avoir quitt\xE9 une run plus avanc\xE9e."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Rebirth"), " \u2014 vaincre l\u2019\xE9tage 100 offre 5 000 pi\xE8ces et d\xE9bloque un nouveau cycle aux taux de badges rares renforc\xE9s."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie d\xE9butant"), " \u2014 la toute premi\xE8re invocation du compte donne toujours un personnage, m\xEAme dans un multi de 10."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 5\xD7 la meilleure statistique offensive."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), /*#__PURE__*/React.createElement("button", {
     className: "news-update news-daily",
     onClick: () => open("quests")
   }, /*#__PURE__*/React.createElement("span", {
@@ -3530,6 +3693,13 @@ function LaunchNews({
   }, /*#__PURE__*/React.createElement("span", {
     className: "news-update-art"
   }, /*#__PURE__*/React.createElement("b", null, "VS")), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "PVP EN LIGNE"), /*#__PURE__*/React.createElement("b", null, "Casual \xB7 Ranked"), /*#__PURE__*/React.createElement("em", null, "Niveau 50 normalis\xE9 ou classement Elo")), /*#__PURE__*/React.createElement("i", {
+    "aria-hidden": "true"
+  }, "\u2192")), /*#__PURE__*/React.createElement("button", {
+    className: "news-update news-social",
+    onClick: () => open("social")
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "news-update-art"
+  }, /*#__PURE__*/React.createElement("b", null, "\u25CE")), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("b", null, "Profils \xB7 Amis \xB7 D\xE9fis"), /*#__PURE__*/React.createElement("em", null, "Inspecte les Teams et lance un Casual direct")), /*#__PURE__*/React.createElement("i", {
     "aria-hidden": "true"
   }, "\u2192"))), /*#__PURE__*/React.createElement("button", {
     className: "launch-news-close",
@@ -3718,7 +3888,7 @@ function HubMenu({
     className: "hub-panel"
   }, /*#__PURE__*/React.createElement("h1", null, "Menu"), /*#__PURE__*/React.createElement("div", {
     className: "hub-menu-links"
-  }, [["pvp", "PVP", "Casual normalisé et Ranked Elo"], ["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => /*#__PURE__*/React.createElement("button", {
+  }, [["social", "Social", "Amis, profils et défis Casual"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"], ["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, /*#__PURE__*/React.createElement("b", null, title), /*#__PURE__*/React.createElement("small", null, desc), /*#__PURE__*/React.createElement("span", {
@@ -3812,7 +3982,7 @@ function App() {
   useEffect(() => {
     const receive = event => {
       if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
-      if (["home", "team", "summon", "collection", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+      if (["home", "team", "summon", "collection", "social", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
     };
     window.addEventListener("message", receive);
     if (window.parent !== window) window.parent.postMessage({
@@ -4119,6 +4289,9 @@ function App() {
     }) : p)
   }));
   if (screen === "pvp") return hub(/*#__PURE__*/React.createElement(PvpLobby, {
+    profile: profile
+  }));
+  if (screen === "social") return hub(/*#__PURE__*/React.createElement(SocialHub, {
     profile: profile
   }));
   if (screen === "settings") return hub(/*#__PURE__*/React.createElement(AudioSettings, {

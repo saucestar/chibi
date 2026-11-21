@@ -28,7 +28,7 @@
     const lock = db().ref('pvpPairLocks/' + mode + '/' + pairKey);
     const matchId = mode + '-' + pairKey + '-' + now;
     const claimed = await lock.transaction(current => !current || Number(current.expiresAt) < now ? { id: matchId, expiresAt: now + 30000 } : undefined, undefined, false);
-    if (!claimed.committed || claimed.snapshot.val().id !== matchId) return;
+    if (!claimed.committed || claimed.snapshot.val().id !== matchId) return null;
     const players = {};
     players[me.uid] = { name: me.name, rating: me.rating, team: me.team };
     players[rival.uid] = { name: rival.name, rating: rival.rating, team: rival.team };
@@ -39,6 +39,7 @@
     update['pvpActive/' + rival.uid] = matchId;
     update['pvpQueue/' + mode + '/' + me.uid] = null;
     await db().ref().update(update);
+    return matchId;
   }
   async function join(mode, team, callbacks) {
     mode = safeMode(mode);
@@ -104,6 +105,20 @@
     const who = identity(); if (!who || !db()) return null;
     return (await db().ref('pvpActive/' + who.id).get()).val() || null;
   }
+  function watchActive(update, error) {
+    const who = identity();
+    if (!who || !db()) return () => {};
+    const ref = db().ref('pvpActive/' + who.id), listener = snapshot => update(snapshot.val() || null);
+    ref.on('value', listener, error);
+    return () => ref.off('value', listener);
+  }
+  async function direct(team, rival) {
+    if (!ready()) throw Error('Connecte-toi à Discord pour jouer en ligne.');
+    if (!rival || !rival.uid || !Array.isArray(rival.team)) throw Error('Invitation PVP invalide.');
+    const who = identity(), currentRating = await rating(who.id);
+    const me = { uid: who.id, name: who.name, rating: currentRating.rating, team: clean(team) };
+    return createMatch('casual', me, { uid: rival.uid, name: rival.name || 'Joueur', rating: Number(rival.rating) || 1000, team: clean(rival.team) });
+  }
   async function settle(matchId, room) {
     const who = identity();
     if (!who || !room || room.status !== 'finished' || room.mode !== 'ranked') return null;
@@ -125,5 +140,5 @@
     }));
     return rating(who.id);
   }
-  window.ChibiPvp = { ready, rating, currentMatch, join, cancel, watch, submit, resolve, forfeit, closeMatch, settle };
+  window.ChibiPvp = { ready, rating, currentMatch, watchActive, direct, join, cancel, watch, submit, resolve, forfeit, closeMatch, settle };
 })();

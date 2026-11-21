@@ -374,6 +374,40 @@
         }
       }
     },
+    "socialProfiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['uid','name','bestFloor','rebirths','updatedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('bestFloor').isNumber() && newData.child('bestFloor').val() >= 0 && newData.child('bestFloor').val() <= 100 && newData.child('rebirths').isNumber() && newData.child('rebirths').val() >= 0 && newData.child('rebirths').val() <= 1000 && newData.child('updatedAt').isNumber()"
+      }
+    },
+    "friendRequests": {
+      "$to": {
+        ".read": "auth != null && auth.token.discordId === $to",
+        "$from": {
+          ".write": "auth != null && (auth.token.discordId === $from || (auth.token.discordId === $to && !newData.exists()))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','createdAt']) && newData.child('uid').val() === $from && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('createdAt').isNumber())"
+        }
+      }
+    },
+    "friends": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        "$other": {
+          ".write": "auth != null && (auth.token.discordId === $uid || auth.token.discordId === $other)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','since']) && newData.child('uid').val() === $other && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('since').isNumber())"
+        }
+      }
+    },
+    "pvpInvites": {
+      "$to": {
+        ".read": "auth != null && auth.token.discordId === $to",
+        "$from": {
+          ".write": "auth != null && (auth.token.discordId === $from || (auth.token.discordId === $to && !newData.exists()))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','rating','team','createdAt']) && newData.child('uid').val() === $from && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('rating').isNumber() && newData.child('rating').val() >= 100 && newData.child('rating').val() <= 5000 && newData.child('team').hasChildren(['0','1']) && !newData.child('team').child('2').exists() && newData.child('createdAt').isNumber())"
+        }
+      }
+    },
     "pvpQueue": {
       "$mode": {
         ".read": "auth != null && ($mode === 'casual' || $mode === 'ranked')",
