@@ -68,7 +68,17 @@ const characterElements = {
   NOCTIS: ["dark", "steel"],
   PROMPTO: ["electric"],
   IGNIS: ["fire"],
-  GLADIO: ["rock", "fighting"]
+  GLADIO: ["rock", "fighting"],
+  X: ["steel", "electric"],
+  SONIC: ["normal", "electric"],
+  ZERO: ["steel", "fire"],
+  SHADOW: ["dark", "psychic"],
+  KNUCKLES: ["fighting", "ground"],
+  TAILS: ["flying", "electric"],
+  MARLUXIA: ["grass", "dark"],
+  LEXAEUS: ["rock", "fighting"],
+  AXEL: ["fire", "dark"],
+  LARXENE: ["electric", "dark"]
 };
 const enemyElements = {
   frog: ["water"],
@@ -92,6 +102,19 @@ function affinityText(scale) {
 function badgeElement(pin) {
   const power = pin.psych,
     name = pin.name;
+  const signatureElements = {
+    "x-buster": "electric",
+    "sonic-wind": "flying",
+    "z-saber": "steel",
+    "chaos-spear": "psychic",
+    "meteor-punch": "fighting",
+    "energy-ball": "electric",
+    "graceful-dahlia": "grass",
+    skysplitter: "rock",
+    "eternal-flames": "fire",
+    "fulgurant-lightning": "electric"
+  };
+  if (signatureElements[pin.id.replace(/^signature-/, "")]) return signatureElements[pin.id.replace(/^signature-/, "")];
   if (pin.id === "armiger") return "steel";
   if (pin.id === "machinery") return "electric";
   if (pin.id === "elemental-daggers") return "fire";
@@ -128,6 +151,106 @@ function TypeChips({
   }, elementNames[t])));
 }
 const characterRoster = [{
+  name: "X",
+  role: "MAVERICK HUNTER",
+  hp: 140,
+  maxHp: 140,
+  sprite: "./assets/game/x-idle.png",
+  accent: "#39a7ff",
+  frames: 10,
+  frameWidth: 122,
+  frameHeight: 116
+}, {
+  name: "SONIC",
+  role: "SPEED HERO",
+  hp: 118,
+  maxHp: 118,
+  sprite: "./assets/game/sonic-idle.png",
+  accent: "#176cff",
+  frames: 7,
+  frameWidth: 152,
+  frameHeight: 156
+}, {
+  name: "ZERO",
+  role: "MAVERICK HUNTER",
+  hp: 136,
+  maxHp: 136,
+  sprite: "./assets/game/zero-idle.png",
+  accent: "#ff3b32",
+  frames: 4,
+  frameWidth: 177,
+  frameHeight: 168
+}, {
+  name: "SHADOW",
+  role: "ULTIMATE LIFEFORM",
+  hp: 128,
+  maxHp: 128,
+  sprite: "./assets/game/shadow-idle.png",
+  accent: "#d9273e",
+  frames: 6,
+  frameWidth: 213,
+  frameHeight: 204
+}, {
+  name: "KNUCKLES",
+  role: "GUARDIAN",
+  hp: 148,
+  maxHp: 148,
+  sprite: "./assets/game/knuckles-idle.png",
+  accent: "#ed3037",
+  frames: 6,
+  frameWidth: 178,
+  frameHeight: 194
+}, {
+  name: "TAILS",
+  role: "MECHANIC",
+  hp: 110,
+  maxHp: 110,
+  sprite: "./assets/game/tails-idle.png",
+  accent: "#ffb52f",
+  frames: 9,
+  frameWidth: 130,
+  frameHeight: 90
+}, {
+  name: "MARLUXIA",
+  role: "ORGANISATION XIII",
+  hp: 132,
+  maxHp: 132,
+  sprite: "./assets/game/marluxia-idle.png",
+  accent: "#e980b6",
+  frames: 4,
+  frameWidth: 296,
+  frameHeight: 292
+}, {
+  name: "LEXAEUS",
+  role: "ORGANISATION XIII",
+  hp: 160,
+  maxHp: 160,
+  sprite: "./assets/game/lexaeus-idle.png",
+  accent: "#c36b38",
+  frames: 8,
+  frameWidth: 174,
+  frameHeight: 204
+}, {
+  name: "AXEL",
+  role: "ORGANISATION XIII",
+  hp: 138,
+  maxHp: 138,
+  sprite: "./assets/game/axel-idle.png",
+  accent: "#ff4e32",
+  frames: 6,
+  frameWidth: 217,
+  frameHeight: 170
+}, {
+  name: "LARXENE",
+  role: "ORGANISATION XIII",
+  hp: 112,
+  maxHp: 112,
+  sprite: "./assets/game/larxene-idle.png",
+  accent: "#ffe43b",
+  frames: 5,
+  frameWidth: 198,
+  frameHeight: 369
+}, {
   name: "NOCTIS",
   role: "LUCIS",
   hp: 130,
@@ -295,7 +418,9 @@ const characterRoster = [{
   portraitTop: 0
 }];
 const hiddenCollectionAndEventCharacters = new Set(["NOCTIS", "PROMPTO", "IGNIS", "GLADIO"]);
-const visibleCollectionRoster = () => characterRoster.filter(f => !hiddenCollectionAndEventCharacters.has(f.name));
+const secondWaveReleaseAt = Date.parse("2026-12-01T00:00:00+01:00");
+const secondWaveCharacters = new Set(["X", "SONIC", "ZERO", "SHADOW", "KNUCKLES", "TAILS", "MARLUXIA", "LEXAEUS", "AXEL", "LARXENE"]);
+const visibleCollectionRoster = () => characterRoster.filter(f => !hiddenCollectionAndEventCharacters.has(f.name) && (!secondWaveCharacters.has(f.name) || Date.now() >= secondWaveReleaseAt));
 const Icon = ({
   name
 }) => {
@@ -678,7 +803,17 @@ const basePsych = {
   NOCTIS: "armiger",
   PROMPTO: "machinery",
   IGNIS: "elemental-daggers",
-  GLADIO: "shield-of-the-king"
+  GLADIO: "shield-of-the-king",
+  X: "x-buster",
+  SONIC: "sonic-wind",
+  ZERO: "z-saber",
+  SHADOW: "chaos-spear",
+  KNUCKLES: "meteor-punch",
+  TAILS: "energy-ball",
+  MARLUXIA: "graceful-dahlia",
+  LEXAEUS: "skysplitter",
+  AXEL: "eternal-flames",
+  LARXENE: "fulgurant-lightning"
 };
 const partnerPsychs = [{
   id: "virtuous-contract",
@@ -758,6 +893,73 @@ const partnerPsychs = [{
   psych: "Bouclier royal",
   kind: "physical",
   power: 33
+}, {
+  id: "x-buster",
+  name: "X-Buster",
+  psych: "Tir chargé",
+  kind: "special",
+  power: 32
+}, {
+  id: "sonic-wind",
+  name: "Sonic Wind",
+  psych: "Vortex Saber",
+  kind: "special",
+  power: 30,
+  target: "aoe"
+}, {
+  id: "z-saber",
+  name: "Z-Saber",
+  psych: "Burst Sword",
+  kind: "physical",
+  power: 35,
+  target: "aoe"
+}, {
+  id: "chaos-spear",
+  name: "Chaos Spear",
+  psych: "Piercing Pillar",
+  kind: "special",
+  power: 34,
+  target: "aoe"
+}, {
+  id: "meteor-punch",
+  name: "Meteor Punch",
+  psych: "Massive Hit",
+  kind: "physical",
+  power: 36
+}, {
+  id: "energy-ball",
+  name: "Energy Ball",
+  psych: "Energy Rounds",
+  kind: "special",
+  power: 29
+}, {
+  id: "graceful-dahlia",
+  name: "Graceful Dahlia",
+  psych: "Entanglement",
+  kind: "special",
+  power: 34,
+  target: "aoe"
+}, {
+  id: "skysplitter",
+  name: "Skysplitter",
+  psych: "Earthquake",
+  kind: "physical",
+  power: 38,
+  target: "aoe"
+}, {
+  id: "eternal-flames",
+  name: "Eternal Flames",
+  psych: "Pyrokinesis",
+  kind: "special",
+  power: 35,
+  target: "aoe"
+}, {
+  id: "fulgurant-lightning",
+  name: "Fulgurant Lightning",
+  psych: "Thundercloud",
+  kind: "special",
+  power: 35,
+  target: "aoe"
 }].map(pin => ({
   ...pin,
   number: "",
@@ -818,8 +1020,18 @@ function PinIcon({
     armiger: "✧",
     machinery: "⌁",
     "elemental-daggers": "♨",
-    "shield-of-the-king": "⬟"
-  }[pin.id.replace(/^signature-/, "")]);
+    "shield-of-the-king": "⬟",
+    "x-buster": "◎",
+    "sonic-wind": "◉",
+    "z-saber": "⚔",
+    "chaos-spear": "✦",
+    "meteor-punch": "◆",
+    "energy-ball": "●",
+    "graceful-dahlia": "✿",
+    skysplitter: "⬢",
+    "eternal-flames": "♨",
+    "fulgurant-lightning": "ϟ"
+  }[pin.id.replace(/^signature-/, "")] || "✦");
   return React.createElement("i", {
     "aria-hidden": "true",
     style: {
@@ -840,11 +1052,15 @@ const portals = {
   apocalyptic: "Apocalyptic Future",
   destiny: "Destiny Islands",
   eosDawn: "Eos · Noctis & Prompto",
-  eosDusk: "Eos · Ignis & Gladio"
+  eosDusk: "Eos · Ignis & Gladio",
+  sonicx: "Final Fantasy Sonic X",
+  xiii: "XIII"
 };
 const portalReleaseAt = {
   eosDawn: Date.parse("2026-11-25T00:00:00+01:00"),
-  eosDusk: Date.parse("2026-11-25T00:00:00+01:00")
+  eosDusk: Date.parse("2026-11-25T00:00:00+01:00"),
+  sonicx: secondWaveReleaseAt,
+  xiii: secondWaveReleaseAt
 };
 const portalAvailable = id => !portalReleaseAt[id] || Date.now() >= portalReleaseAt[id];
 const bases = {
@@ -861,7 +1077,17 @@ const bases = {
   NOCTIS: [32, 25, 20],
   PROMPTO: [20, 34, 22],
   IGNIS: [24, 32, 19],
-  GLADIO: [38, 17, 13]
+  GLADIO: [38, 17, 13],
+  X: [30, 34, 18],
+  SONIC: [32, 28, 30],
+  ZERO: [38, 25, 21],
+  SHADOW: [34, 36, 28],
+  KNUCKLES: [40, 18, 17],
+  TAILS: [20, 36, 25],
+  MARLUXIA: [28, 38, 22],
+  LEXAEUS: [42, 16, 12],
+  AXEL: [32, 36, 24],
+  LARXENE: [24, 40, 30]
 };
 const maxLevel = 99;
 function xpAtLevel(level) {
@@ -951,6 +1177,44 @@ function pick(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 const offensive = id => ["physical", "special"].includes(psychs[id]?.kind);
+const pinGradeWeights = {
+  "---": 36,
+  C: 27,
+  B: 18,
+  A: 10,
+  Reaper: 6,
+  Angel: 3
+};
+function pinGrade(pin) {
+  return pin.grade && pin.grade !== "---" ? pin.grade : "---";
+}
+function weightedPinPick() {
+  const groups = Object.entries(pinGradeWeights).map(([grade, weight]) => ({
+    grade,
+    weight,
+    pins: pinList.filter(pin => pinGrade(pin) === grade)
+  })).filter(group => group.pins.length);
+  const total = groups.reduce((sum, group) => sum + group.weight, 0),
+    roll = Math.random() * total;
+  let cursor = 0;
+  for (const group of groups) {
+    cursor += group.weight;
+    if (roll < cursor) return pick(group.pins);
+  }
+  return pick(groups.at(-1).pins);
+}
+function pinGradeRates() {
+  const active = Object.entries(pinGradeWeights).filter(([grade]) => pinList.some(pin => pinGrade(pin) === grade)),
+    total = active.reduce((sum, [, weight]) => sum + weight, 0);
+  return active.map(([grade, weight]) => ({
+    grade,
+    rate: weight / total
+  }));
+}
+function pinTargetMode(pin) {
+  if (pin.target) return pin.target;
+  return /Earthquake|Pyrokinesis|Explosion|Time Bomb|Pressure Mine|Thundercloud|Street Jam|Piercing Pillar|Psychokinesis|Vortex Saber|Entanglement|Bullet Sword|Burst Sword|Sweeper|Black Hole|Flame Blast|Discharge|Shockwave/i.test(pin.psych) ? "aoe" : "single";
+}
 function validWishEvent(e) {
   try {
     return e && typeof e.id === "string" && /^[a-zA-Z0-9-]+$/.test(e.id) && typeof e.portal === "string" && Number.isFinite(e.at) && [1, 10].includes(e.count) && [e.freeUsed, e.coinsPaid, e.coinsBefore, e.coinsAfter, e.freeBefore, e.freeAfter, e.first, e.last].every(n => Number.isSafeInteger(n) && n >= 0) && typeof e.drawsJson === "string" && Array.isArray(JSON.parse(e.drawsJson)) && JSON.parse(e.drawsJson).length === e.count;
@@ -1146,7 +1410,7 @@ function applyRunCheckpoint(p, snapshot, gains = {}) {
     ...p.xp
   };
   if (gains.xp) for (const f of snapshot.team) xp[f.name] = experience((xp[f.name] || 0) + gains.xp).xp;
-  return {
+  return advanceDailyProgress({
     ...p,
     run: snapshot,
     xp,
@@ -1155,7 +1419,7 @@ function applyRunCheckpoint(p, snapshot, gains = {}) {
     hasPlayed: true,
     bestFloor: Math.max(p.bestFloor, snapshot.wave),
     floorRecoveryAvailable: p.floorRecoveryAvailable && snapshot.wave < 10
-  };
+  }, gains);
 }
 const profileKey = "chibi.reapers-run.party.v1";
 function equippedBy(profile, name, id) {
@@ -1243,8 +1507,15 @@ function loadProfile() {
       const count = value !== undefined && Number.isFinite(Number(value)) ? Math.min(5, Math.max(0, Math.floor(Number(value)))) : saved.awakened?.includes(name) || Number(saved.levels?.[name]) === 5 ? 5 : 0;
       return [name, count];
     }));
-    const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 10 ? saved.wishStep : 0;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(assignBasePsychs({
+    const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 100 ? saved.wishStep : 0;
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
+      dailyQuestDay: typeof saved.dailyQuestDay === "string" ? saved.dailyQuestDay : "",
+      dailyQuestProgress: {
+        waves: Math.max(0, Math.floor(Number(saved.dailyQuestProgress?.waves) || 0)),
+        enemies: Math.max(0, Math.floor(Number(saved.dailyQuestProgress?.enemies) || 0)),
+        bursts: Math.max(0, Math.floor(Number(saved.dailyQuestProgress?.bursts) || 0))
+      },
+      claimedDailyQuests: Array.isArray(saved.claimedDailyQuests) ? [...new Set(saved.claimedDailyQuests.filter(id => typeof id === "string"))] : [],
       specialRunRecoveries: Array.isArray(saved.specialRunRecoveries) ? [...new Set(saved.specialRunRecoveries.filter(id => typeof id === "string" && id.length < 100))] : [],
       eventRun: readEvent(saved.eventRun, owned, copies, Array.isArray(saved.awakened) ? saved.awakened : []),
       run: validRun(saved.run, owned, copies, Array.isArray(saved.awakened) ? saved.awakened : []),
@@ -1276,9 +1547,16 @@ function loadProfile() {
       awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
       loadout: saved.loadout || {},
       coins: saved.coins
-    }));
+    })));
   } catch {}
-  return accrueDailyWishes(assignBasePsychs({
+  return accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
+    dailyQuestDay: "",
+    dailyQuestProgress: {
+      waves: 0,
+      enemies: 0,
+      bursts: 0
+    },
+    claimedDailyQuests: [],
     specialRunRecoveries: [],
     run: null,
     wishEvents: [],
@@ -1307,7 +1585,7 @@ function loadProfile() {
     equipped: ["", ""],
     loadout: {},
     coins: 180
-  }));
+  })));
 }
 const freeWishStartDay = "2026-11-18";
 function parisDay(now = new Date()) {
@@ -1318,6 +1596,32 @@ function parisDay(now = new Date()) {
     day: "2-digit"
   }).formatToParts(now);
   return ["year", "month", "day"].map(key => parts.find(p => p.type === key).value).join("-");
+}
+function refreshDailyQuests(p, now = new Date()) {
+  const today = parisDay(now);
+  return p.dailyQuestDay === today ? p : {
+    ...p,
+    dailyQuestDay: today,
+    dailyQuestProgress: {
+      waves: 0,
+      enemies: 0,
+      bursts: 0
+    },
+    claimedDailyQuests: []
+  };
+}
+function advanceDailyProgress(p, gains) {
+  const current = refreshDailyQuests(p),
+    progress = {
+      ...current.dailyQuestProgress
+    };
+  if (gains.victory) progress.waves += 1;
+  progress.enemies += gains.defeated || 0;
+  progress.bursts += gains.bursts || 0;
+  return {
+    ...current,
+    dailyQuestProgress: progress
+  };
 }
 function dayIndex(day) {
   return /^\d{4}-\d{2}-\d{2}$/.test(day) ? Date.parse(day + "T00:00:00Z") / 86400000 : NaN;
@@ -1364,7 +1668,7 @@ function wishQuote(p, count) {
 }
 const characterChance = 0.10;
 function portalRoster(id) {
-  const names = id === "partners" ? ["BEAT", "JOSHUA"] : id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI"];
+  const names = id === "sonicx" ? ["X", "SONIC", "ZERO", "SHADOW", "KNUCKLES", "TAILS"] : id === "xiii" ? ["MARLUXIA", "LEXAEUS", "AXEL", "LARXENE"] : id === "partners" ? ["BEAT", "JOSHUA"] : id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI"];
   return characterRoster.filter(f => names.includes(f.name));
 }
 function portalPool(id, _profile) {
@@ -1977,7 +2281,7 @@ function BadgeCatalogue({
   })), selected && React.createElement("p", {
     className: "badge-info",
     "aria-live": "polite"
-  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], " \xB7 ", selected.cost, " EN \xB7 ", React.createElement(PinRankInfo, {
+  }, React.createElement("b", null, "#", selected.number, " ", selected.name), " \xB7 ", types[selected.kind], offensive(selected.id) ? ` · ${pinTargetMode(selected) === "aoe" ? "AoE" : "Monocible"}` : "", " \xB7 ", selected.cost, " EN \xB7 ", React.createElement(PinRankInfo, {
     pin: selected
   }), " ", React.createElement(TypeChips, {
     elements: [selected.element || badgeElement(selected)]
@@ -2037,6 +2341,28 @@ function questsFor(p) {
     reward: 150
   }];
 }
+function dailyQuestsFor(p) {
+  const progress = refreshDailyQuests(p).dailyQuestProgress;
+  return [{
+    id: "daily-wave",
+    title: "Remporter 1 vague",
+    progress: progress.waves,
+    goal: 1,
+    reward: 50
+  }, {
+    id: "daily-enemies",
+    title: "Vaincre 5 ennemis",
+    progress: progress.enemies,
+    goal: 5,
+    reward: 50
+  }, {
+    id: "daily-burst",
+    title: "Déclencher 1 Sync Burst",
+    progress: progress.bursts,
+    goal: 1,
+    reward: 100
+  }];
+}
 function applyPcMissionCoins(p, scores) {
   const paid = {
     ...p.pcMissionCoins
@@ -2065,6 +2391,15 @@ function claimQuests(p, ids) {
     claimedQuests: [...p.claimedQuests, ...ready.map(q => q.id)]
   };
 }
+function claimDailyQuests(p, ids) {
+  const current = refreshDailyQuests(p),
+    ready = dailyQuestsFor(current).filter(q => ids.includes(q.id) && q.progress >= q.goal && !current.claimedDailyQuests.includes(q.id));
+  return {
+    ...current,
+    coins: current.coins + ready.reduce((sum, q) => sum + q.reward, 0),
+    claimedDailyQuests: [...current.claimedDailyQuests, ...ready.map(q => q.id)]
+  };
+}
 function QuestMenu({
   profile,
   save,
@@ -2079,15 +2414,17 @@ function QuestMenu({
   }, []);
   const [open, setOpen] = useState(false);
   const quests = questsFor(profile),
-    ready = quests.filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id));
-  const [category, setCategory] = useState("floor");
+    daily = dailyQuestsFor(profile),
+    ready = quests.filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)),
+    dailyReady = daily.filter(q => q.progress >= q.goal && !profile.claimedDailyQuests.includes(q.id));
+  const [category, setCategory] = useState("daily");
   return React.createElement(React.Fragment, null, !embedded && React.createElement("button", {
     onClick: () => setOpen(true)
   }, "Qu\xEAtes", ready.length ? ` · ${ready.length}` : ""), (open || embedded) && React.createElement(Panel, {
     className: "quest-menu",
     title: "Qu\xEAtes",
     close: () => setOpen(false)
-  }, React.createElement("p", null, "R\xE9compenses uniques \xB7 Progression r\xE9troactive"), profile.floorRecoveryAvailable && React.createElement("button", {
+  }, React.createElement("p", null, category === "daily" ? "3 missions par jour · 200 pièces au total" : "Récompenses uniques · Progression rétroactive"), profile.floorRecoveryAvailable && React.createElement("button", {
     className: "floor-recovery",
     onClick: () => save(p => ({
       ...p,
@@ -2096,7 +2433,7 @@ function QuestMenu({
     }))
   }, "Rattraper mon ancien \xE9tage 10"), React.createElement("div", {
     className: "quest-tabs"
-  }, [["floor", "Étages"], ["badges", "Collection"], ["other", "Personnages"], ["pc", "Missions PC"]].map(([id, name]) => React.createElement("button", {
+  }, [["daily", "Quotidiennes"], ["floor", "Étages"], ["badges", "Collection"], ["other", "Personnages"], ["pc", "Missions PC"]].map(([id, name]) => React.createElement("button", {
     key: id,
     "aria-pressed": category === id,
     onClick: () => setCategory(id)
@@ -2108,8 +2445,8 @@ function QuestMenu({
     key: day
   }, React.createElement("b", null, day.split("-").reverse().join("/")), React.createElement("span", null, coins, " pi\xE8ces cr\xE9dit\xE9es"))) : React.createElement("p", null, "Ouvre le jeu connect\xE9 au m\xEAme compte que sur PC pour r\xE9cup\xE9rer tes missions pass\xE9es.")) : React.createElement("div", {
     className: "quest-list"
-  }, quests.filter(q => category === "other" ? !/^(floor|badges)-/.test(q.id) : q.id.startsWith(category + "-")).map(q => {
-    const claimed = profile.claimedQuests.includes(q.id),
+  }, (category === "daily" ? daily : quests.filter(q => category === "other" ? !/^(floor|badges)-/.test(q.id) : q.id.startsWith(category + "-"))).map(q => {
+    const claimed = category === "daily" ? profile.claimedDailyQuests.includes(q.id) : profile.claimedQuests.includes(q.id),
       done = q.progress >= q.goal;
     return React.createElement("article", {
       key: q.id
@@ -2119,14 +2456,14 @@ function QuestMenu({
       "aria-label": q.title
     })), React.createElement("button", {
       disabled: claimed || !done,
-      onClick: () => save(p => claimQuests(p, [q.id]))
+      onClick: () => save(p => category === "daily" ? claimDailyQuests(p, [q.id]) : claimQuests(p, [q.id]))
     }, claimed ? "Récupéré" : "Récupérer"));
   })), React.createElement("div", {
     className: "dialog-actions"
   }, React.createElement("button", {
-    disabled: !ready.length,
-    onClick: () => save(p => claimQuests(p, questsFor(p).map(q => q.id)))
-  }, "Tout r\xE9cup\xE9rer \xB7 ", ready.reduce((sum, q) => sum + q.reward, 0), " pi\xE8ces"), !embedded && React.createElement("button", {
+    disabled: category === "daily" ? !dailyReady.length : !ready.length,
+    onClick: () => save(p => category === "daily" ? claimDailyQuests(p, dailyQuestsFor(p).map(q => q.id)) : claimQuests(p, questsFor(p).map(q => q.id)))
+  }, "Tout r\xE9cup\xE9rer \xB7 ", (category === "daily" ? dailyReady : ready).reduce((sum, q) => sum + q.reward, 0), " pi\xE8ces"), !embedded && React.createElement("button", {
     onClick: () => setOpen(false)
   }, "Fermer"))));
 }
@@ -2354,7 +2691,7 @@ function readEvent(raw, owned, copies, awake) {
     prize: ["character", "pin"].includes(raw.prize) ? raw.prize : "none"
   };
 }
-function eventCheckpoint(p, snapshot) {
+function eventCheckpoint(p, snapshot, gains = {}) {
   const active = p.eventRun;
   if (!active || active.run.status !== "active" || snapshot.id !== active.run.id || snapshot.seq <= active.run.seq) return p;
   let prize = "none",
@@ -2383,14 +2720,14 @@ function eventCheckpoint(p, snapshot) {
       };
     }
   }
-  return {
+  return advanceDailyProgress({
     ...next,
     eventRun: {
       ...active,
       run: snapshot,
       prize
     }
-  };
+  }, gains);
 }
 function EventHall({
   profile,
@@ -2465,22 +2802,68 @@ function LaunchNews({
     close();
     navigate(screen);
   };
+  const previewNames = ["X", "SONIC", "MARLUXIA", "AXEL"];
+  const rarePins = pinList.filter(pin => ["A", "Reaper", "Angel"].includes(pin.grade || "")).slice(0, 3);
   return React.createElement(WishDialog, {
     className: "launch-news",
-    title: "Nouveaut\xE9s"
-  }, React.createElement("p", {
-    className: "launch-news-lead"
-  }, "La Reapers\u2019 Game bouge. Choisis une destination."), React.createElement("div", {
-    className: "launch-news-grid"
+    title: "Update Details"
+  }, React.createElement("div", {
+    className: "launch-news-feed"
   }, React.createElement("button", {
-    className: "news-card news-events",
-    onClick: () => open("events")
-  }, React.createElement("span", null, "\xC9V\xC9NEMENTS"), React.createElement("b", null, "Boss niveau 100"), React.createElement("small", null, "D\xE9fie les personnages et gagne leurs r\xE9compenses signature."), React.createElement("i", {
+    className: "news-feature",
+    onClick: () => open("summon")
+  }, React.createElement("span", {
+    className: "news-kicker"
+  }, "CHECK!! \xB7 SECONDE VAGUE"), React.createElement("strong", null, "Final Fantasy Sonic X", React.createElement("br", null), React.createElement("em", null, "\xD7"), " Organisation XIII"), React.createElement("span", {
+    className: "news-feature-cast"
+  }, previewNames.map(name => React.createElement(SpritePreview, {
+    key: name,
+    fighter: characterRoster.find(f => f.name === name),
+    maximumScale: .62
+  }))), React.createElement("small", null, "Publication le 1er d\xE9cembre 2026 \xB7 Ouvrir les portails ", React.createElement("b", null, "\u2192"))), React.createElement("section", {
+    className: "news-copy"
+  }, React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), React.createElement("ol", null, React.createElement("li", null, React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), React.createElement("li", null, React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), React.createElement("li", null, React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), React.createElement("li", null, React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 10\xD7 la meilleure statistique offensive."), React.createElement("li", null, React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), React.createElement("button", {
+    className: "news-update news-daily",
+    onClick: () => open("quests")
+  }, React.createElement("span", {
+    className: "news-update-art"
+  }, React.createElement(Icon, {
+    name: "coin"
+  }), React.createElement("b", null, "200")), React.createElement("span", null, React.createElement("small", null, "QU\xCATES DU JOUR"), React.createElement("b", null, "3 missions \xB7 2 v\u0153ux"), React.createElement("em", null, "Vague, ennemis et Sync Burst")), React.createElement("i", {
     "aria-hidden": "true"
   }, "\u2192")), React.createElement("button", {
-    className: "news-card news-portals",
+    className: "news-update news-rates",
     onClick: () => open("summon")
-  }, React.createElement("span", null, "NOUVEAUX PORTAILS"), React.createElement("b", null, "Eos arrive le 25 novembre"), React.createElement("small", null, "Noctis & Prompto \xB7 Ignis & Gladio"), React.createElement("i", {
+  }, React.createElement("span", {
+    className: "news-update-art news-pin-art"
+  }, rarePins.map(pin => React.createElement("span", {
+    className: "news-pin-cell",
+    key: pin.id
+  }, React.createElement(BadgeArt, {
+    pin: pin
+  })))), React.createElement("span", null, React.createElement("small", null, "TAUX D\u2019OBTENTION"), React.createElement("b", null, "Les hauts rangs sont rares"), React.createElement("em", null, "Consulte le d\xE9tail sur chaque portail")), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "\u2192")), React.createElement("button", {
+    className: "news-update news-combat",
+    onClick: () => open("team")
+  }, React.createElement("span", {
+    className: "news-update-art"
+  }, ["ZERO", "SHADOW"].map(name => React.createElement(SpritePreview, {
+    key: name,
+    fighter: characterRoster.find(f => f.name === name),
+    maximumScale: .58
+  }))), React.createElement("span", null, React.createElement("small", null, "SYST\xC8ME DE COMBAT"), React.createElement("b", null, "AoE \xB7 Cible \xB7 Burst ultime"), React.createElement("em", null, "Pr\xE9pare tes psychs dans Team")), React.createElement("i", {
+    "aria-hidden": "true"
+  }, "\u2192")), React.createElement("button", {
+    className: "news-update news-events",
+    onClick: () => open("events")
+  }, React.createElement("span", {
+    className: "news-update-art"
+  }, ["NEKU", "AERITH"].map(name => React.createElement(SpritePreview, {
+    key: name,
+    fighter: characterRoster.find(f => f.name === name),
+    maximumScale: .75
+  }))), React.createElement("span", null, React.createElement("small", null, "\xC9V\xC9NEMENTS"), React.createElement("b", null, "Boss niveau 100"), React.createElement("em", null, "Personnages et badges signature \xE0 gagner")), React.createElement("i", {
     "aria-hidden": "true"
   }, "\u2192"))), React.createElement("button", {
     className: "launch-news-close",
@@ -2493,7 +2876,7 @@ function HubHome({
 }) {
   const names = profile.equipped.filter(Boolean),
     duo = (names.length ? names : ["NEKU"]).map(name => characterRoster.find(f => f.name === name));
-  const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length;
+  const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length + dailyQuestsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedDailyQuests.includes(q.id)).length;
   const modeRail = React.useRef(null);
   const moveMode = direction => {
     const rail = modeRail.current;
@@ -2644,14 +3027,14 @@ function HubMenu({
     className: "hub-panel"
   }, React.createElement("h1", null, "Menu"), React.createElement("div", {
     className: "hub-menu-links"
-  }, [["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => React.createElement("button", {
+  }, [["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
     "aria-hidden": "true"
   }, "\u203A")))), React.createElement("section", {
     className: "hub-help"
-  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Chaque vague vaincue rapporte 5 pi\xE8ces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e v\u0153u en garantit un. Les taux d\xE9taill\xE9s et les fiches sont accessibles sur chaque portail."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
+  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Chaque vague vaincue rapporte 5 pi\xE8ces. Les invocations ont 10 % de chances de donner un personnage et chaque 100e v\u0153u en garantit un. Les taux d\xE9taill\xE9s et les fiches sont accessibles sur chaque portail."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
 }
 function BestiaryMenu() {
   const [filter, setFilter] = useState("known"),
@@ -2784,7 +3167,7 @@ function App() {
     try {
       if (localStorage.getItem(profileKey)) current = loadProfile();
     } catch {}
-    const next = assignBasePsychs(update(accrueDailyWishes(applyCetrucRecovery(current, window.ChibiGameSync?.identity))));
+    const next = assignBasePsychs(refreshDailyQuests(update(accrueDailyWishes(applyCetrucRecovery(current, window.ChibiGameSync?.identity)))));
     if (JSON.stringify(next) === JSON.stringify(current) && localStorage.getItem(profileKey) === JSON.stringify(next)) return;
     try {
       localStorage.setItem(profileKey, JSON.stringify(next));
@@ -2837,7 +3220,7 @@ function App() {
     setPhase("confirm");
   };
   const pool = portalPool(portal, profile);
-  const guaranteed = profile.wishStep === 9;
+  const guaranteed = profile.wishStep === 99;
   const percent = v => v.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     style: "percent",
     maximumFractionDigits: 3
@@ -2867,9 +3250,9 @@ function App() {
         }
       };
       for (let i = 0; i < count; i++) {
-        next.wishStep = (next.wishStep + 1) % 10;
+        next.wishStep = (next.wishStep + 1) % 100;
         if (next.wishStep !== 0 && Math.random() >= characterChance) {
-          const pin = pick(pinList);
+          const pin = weightedPinPick();
           if (!next.pins.includes(pin.id)) next.pins.push(pin.id);
           draws.push({
             pin
@@ -2979,7 +3362,7 @@ function App() {
     initialTeam: party,
     loadout: battleLoadout,
     coins: profile.coins,
-    onCheckpoint: (snapshot, gains) => setProfile(p => event ? eventCheckpoint(p, snapshot) : applyRunCheckpoint(p, snapshot, gains)),
+    onCheckpoint: (snapshot, gains) => setProfile(p => event ? eventCheckpoint(p, snapshot, gains) : applyRunCheckpoint(p, snapshot, gains)),
     leave: () => {
       runSignature.current = null;
       setParty(null);
@@ -3055,7 +3438,7 @@ function App() {
   })));
   if (screen === "summon") return hub(React.createElement("main", {
     className: "game-shell party-lobby"
-  }, React.createElement("section", null, React.createElement("h1", null, "Invocations"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", characterRoster.length, " personnages d\xE9bloqu\xE9s \xB7 Garantie dans ", 10 - profile.wishStep, " ", profile.wishStep === 9 ? "vœu" : "vœux"), historyFull(profile) && React.createElement("p", {
+  }, React.createElement("section", null, React.createElement("h1", null, "Invocations"), React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", visibleCollectionRoster().length, " personnages disponibles \xB7 Garantie dans ", 100 - profile.wishStep, " ", profile.wishStep === 99 ? "vœu" : "vœux"), historyFull(profile) && React.createElement("p", {
     role: "status"
   }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), React.createElement("div", {
     className: "lobby-tools"
@@ -3094,6 +3477,12 @@ function App() {
     key: f.name,
     fighter: f,
     maximumScale: 1.6
+  }))), (id === "sonicx" || id === "xiii") && React.createElement("div", {
+    className: `portal-cast portal-cast-${id}`
+  }, portalRoster(id).map(f => React.createElement(SpritePreview, {
+    key: f.name,
+    fighter: f,
+    maximumScale: id === "sonicx" ? 0.82 : 1.05
   }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("button", {
     className: "portal-rates",
     onClick: () => {
@@ -3130,7 +3519,7 @@ function App() {
     className: "wish-free"
   }, wishQuote(profile, n).free, " ", wishQuote(profile, n).free > 1 ? "gratuits" : "gratuit", " inclus")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id === "eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id === "eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id === "eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id === "eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : id === "sonicx" ? "X, Zero, Sonic, Shadow, Knuckles et Tails · La seconde vague entre en action." : id === "xiii" ? "Marluxia, Lexaeus, Axel et Larxene · L’Organisation XIII se rassemble." : "Beat et Joshua · Les partenaires de la Reapers’ Game."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     className: rateFighter ? "character-sheet-dialog" : "portal-rates-dialog",
     title: rateFighter ? `Fiche · ${rateFighter}` : `Taux · ${portalName}`,
@@ -3142,7 +3531,7 @@ function App() {
     rate: pool.filter(x => x.name === rateFighter).length / pool.length * (guaranteed ? 1 : characterChance)
   }), React.createElement("button", {
     onClick: () => setRateFighter(null)
-  }, "Retour aux taux")) : React.createElement(React.Fragment, null, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 10e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("p", null, "Touche un personnage pour voir sa fiche."), React.createElement("div", {
+  }, "Retour aux taux")) : React.createElement(React.Fragment, null, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 100e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("p", null, "Touche un personnage pour voir sa fiche."), React.createElement("div", {
     className: "rates-character-list"
   }, portalRoster(portal).map(f => React.createElement("button", {
     key: f.name,
@@ -3152,7 +3541,11 @@ function App() {
     fighter: f
   }), React.createElement("span", null, React.createElement("b", null, f.name), React.createElement("small", null, "Stats & psych de d\xE9part")), React.createElement("strong", null, percent(pool.filter(x => x.name === f.name).length / pool.length * (guaranteed ? 1 : characterChance))), React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u203A")))), React.createElement("p", null, "Badges psych \xB7 ", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance))), React.createElement("p", null, "Les ", pinList.length, " badges sont \xE9quiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l\u2019\xE9veiller ne modifie pas sa probabilit\xE9.")), React.createElement("button", {
+  }, "\u203A")))), React.createElement("p", null, "Badges psych \xB7 ", React.createElement("b", null, percent(guaranteed ? 0 : 1 - characterChance))), React.createElement("div", {
+    className: "pin-rarity-rates"
+  }, pinGradeRates().map(item => React.createElement("span", {
+    key: item.grade
+  }, React.createElement("b", null, item.grade === "---" ? "Sans classe" : item.grade), " ", percent(item.rate * (guaranteed ? 0 : 1 - characterChance))))), React.createElement("p", null, "Les badges d\u2019une m\xEAme raret\xE9 sont \xE9quiprobables. Plus leur rang est \xE9lev\xE9, plus ils sont rares. Les taux par personnage restent fixes apr\xE8s un drop ou un \xE9veil.")), React.createElement("button", {
     onClick: closeDialog
   }, "Fermer")), phase === "confirm" && React.createElement(WishDialog, {
     key: "confirm",
@@ -3594,13 +3987,15 @@ function Battle({
           setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         } else if (plan.kind === "burst") {
+          const damage = Math.max(fighter.atk || 1, fighter.mag || 1) * 10;
           sync = 0;
-          monsters = monsters.map(e => ({
+          monsters = monsters.map(e => e.hp > 0 ? {
             ...e,
-            hp: Math.max(0, e.hp - enemyDamageTaken(e, typedDamage(58, "normal", enemyElements[e.kind])))
-          }));
+            hp: Math.max(0, e.hp - damage)
+          } : e);
           setActiveAction("burst");
-          setMessage(`${fighter.name} · Sync Burst · 58 dégâts sur tous les ennemis !`);
+          gains.bursts = 1;
+          setMessage(`${fighter.name} · Sync Burst · ${damage} dégâts sur chaque ennemi !`);
         } else {
           const pin = psychs[plan.pin];
           if (pin.kind === "heal") {
@@ -3616,30 +4011,37 @@ function Battle({
             setActiveAction("guard");
             setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           } else {
-            const target = monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0);
             const physical = pin.kind === "physical";
             const amount = scaledPinEffect(pin, (physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100));
-            const scale = effectiveness(pin.element, enemyElements[target.kind]);
-            const damage = enemyDamageTaken(target, typedDamage(Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3), pin.element, enemyElements[target.kind]));
+            const targets = pinTargetMode(pin) === "aoe" ? monsters.filter(e => e.hp > 0) : [monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0)];
+            const damages = new Map(targets.map(target => {
+              const base = Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3);
+              return [target.id, enemyDamageTaken(target, typedDamage(base, pin.element, enemyElements[target.kind]))];
+            }));
+            const total = [...damages.values()].reduce((sum, damage) => sum + damage, 0),
+              primary = targets[0],
+              primaryDamage = damages.get(primary.id) || 0,
+              scale = effectiveness(pin.element, enemyElements[primary.kind]);
             setHitFeedback({
               side: "enemy",
-              target: String(target.id),
-              label: scale === 0 ? "Sans effet" : `${damage} dégâts · ${affinityText(scale)}`
+              target: String(primary.id),
+              label: scale === 0 ? "Sans effet" : `${primaryDamage} dégâts · ${affinityText(scale)}`
             });
-            monsters = monsters.map(e => e.id === target.id ? {
+            monsters = monsters.map(e => damages.has(e.id) ? {
               ...e,
-              hp: Math.max(0, e.hp - damage)
+              hp: Math.max(0, e.hp - (damages.get(e.id) || 0))
             } : e);
-            if (pin.drain) healParty(Math.ceil(damage / 4));
-            if (damage) gameSound.effect("hit");
+            if (pin.drain) healParty(Math.ceil(total / 4));
+            if (total) gameSound.effect("hit");
             sync = Math.min(100, sync + 18);
-            setSelected(target.id);
-            setImpact(target.id);
+            setSelected(primary.id);
+            setImpact(primary.id);
             setActiveAction(physical ? "shockwave" : "pyro");
-            setMessage(`${fighter.name} · ${pin.name} → ${target.name} · ${damage} dégâts`);
+            setMessage(pinTargetMode(pin) === "aoe" ? `${fighter.name} · ${pin.name} · ${total} dégâts répartis sur tous les ennemis` : `${fighter.name} · ${pin.name} → ${primary.name} · ${primaryDamage} dégâts`);
           }
         }
         const defeated = monsters.filter(e => e.hp <= 0 && !awarded.current.has(e.id));
+        gains.defeated = defeated.length;
         defeated.forEach(e => awarded.current.add(e.id));
         const earned = defeated.reduce((sum, e) => sum + e.xp, 0);
         if (earned) {
@@ -3647,7 +4049,7 @@ function Battle({
           gains.xp = earned;
           fighters = fighters.map(f => gainExperience(f, earned));
         }
-        const found = event ? [] : defeated.filter(() => Math.random() < .25).map(() => pick(pinList));
+        const found = event ? [] : defeated.filter(() => Math.random() < .25).map(() => weightedPinPick());
         if (found.length) {
           drops.push(...found);
           gains.pins = found.map(pin => pin.id);
@@ -3924,17 +4326,18 @@ function Battle({
   }, "Retour aux actions")) : React.createElement(React.Fragment, null, React.createElement("div", {
     className: "psych-action-menu"
   }, (loadout[choosing.name] || []).map(id => {
-    const pin = psychs[id];
+    const pin = psychs[id],
+      aoe = offensive(id) && pinTargetMode(pin) === "aoe";
     return React.createElement("button", {
       key: id,
       disabled: pin.cost + otherCost > energy,
-      onClick: () => offensive(id) ? setTargetPin(id) : choose({
+      onClick: () => offensive(id) && !aoe ? setTargetPin(id) : choose({
         kind: "psych",
         pin: id
       })
     }, React.createElement(PinIcon, {
       pin: pin
-    }), React.createElement("b", null, pin.name), React.createElement("span", null, elementNames[pin.element || badgeElement(pin)], " \xB7 ", types[pin.kind], " \xB7 ", pin.cost, " EN"));
+    }), React.createElement("b", null, pin.name), React.createElement("span", null, elementNames[pin.element || badgeElement(pin)], " \xB7 ", types[pin.kind], " \xB7 ", offensive(id) ? aoe ? "AoE" : "Monocible" : "Duo", " \xB7 ", pin.cost, " EN"));
   }), React.createElement("button", {
     onClick: () => choose({
       kind: "guard"

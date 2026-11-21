@@ -37,7 +37,7 @@ Lance le launcher PC (connecté à Discord) pour publier ta progression.|Open th
 Langue|Language
 Guide du jeu|Game guide
 Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.|Pick 2 teammates and equip up to 3 psychs each. Choose both actions, then start the turn. The portraits at the top show who acts next. Double-tap an enemy to inspect its stats.
-Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 10e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.|Clearing a wave earns 5 coins. Each wish has a 10% character chance, with a guaranteed character every 10th wish. Open a banner’s rates to see its odds and character profiles.
+Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 100e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.|Clearing a wave earns 5 coins. Each wish has a 10% character chance, with a guaranteed character every 100th wish. Open a banner’s rates to see its odds and character profiles.
 Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.|Partners cannot equip the same psych. Duplicates increase a character’s rank. At 5 duplicates, they reach star rank.
 Préparer le combat|Prepare for battle
 Former ma Team|Build my team
@@ -152,8 +152,37 @@ Taux de|Rates for
 Taux|Rates
 Retour aux taux|Back to rates
 Touche un personnage pour voir sa fiche.|Tap a character to view their profile.
-badge. Chaque 10e vœu garantit un personnage.|pin. Every 10th wish guarantees a character.
-badges sont équiprobables. Les taux par personnage sont fixes : obtenir un personnage ou l’éveiller ne modifie pas sa probabilité.|pins are equally likely. Character rates stay the same after recruiting or awakening a character.
+badge. Chaque 100e vœu garantit un personnage.|pin. Every 100th wish guarantees a character.
+badges d’une même rareté sont équiprobables. Plus leur rang est élevé, plus ils sont rares. Les taux par personnage restent fixes après un drop ou un éveil.|pins in the same rarity are equally likely. Higher-rank pins are rarer. Character rates stay fixed after a drop or awakening.
+Update Details|Update Details
+CHECK!! · SECONDE VAGUE|CHECK!! · SECOND WAVE
+Publication le 1er décembre 2026 · Ouvrir les portails|Releases December 1, 2026 · Open banners
+La mise à jour de la seconde vague est prête. Voici l’ensemble des changements :|The second-wave update is ready. Here is the full list of changes:
+2 nouveaux portails|2 new banners
+Garantie revue|Updated guarantee
+un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.|a guaranteed character on the 100th wish, with a 10% chance on every other summon.
+Rareté graduelle|Graded rarity
+les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.|higher-rank pins are now rarer from both banners and enemies.
+Combat enrichi|Expanded combat
+psychs monocibles ou AoE et Sync Burst égal à 10× la meilleure statistique offensive.|single-target or AoE psychs, plus Sync Burst at 10× the highest offensive stat.
+Quêtes quotidiennes|Daily quests
+3 objectifs journaliers pour 200 pièces au total.|3 daily objectives worth 200 coins in total.
+QUÊTES DU JOUR|DAILY QUESTS
+3 missions · 2 vœux|3 missions · 2 wishes
+Vague, ennemis et Sync Burst|Wave, enemies and Sync Burst
+TAUX D’OBTENTION|DROP RATES
+Les hauts rangs sont rares|Higher ranks are rarer
+Consulte le détail sur chaque portail|See details on each banner
+SYSTÈME DE COMBAT|COMBAT SYSTEM
+AoE · Cible · Burst ultime|AoE · Target · Ultimate Burst
+Prépare tes psychs dans Team|Prepare your psychs in Team
+Personnages et badges signature à gagner|Characters and signature pins to win
+3 missions par jour · 200 pièces au total|3 daily missions · 200 coins total
+Remporter 1 vague|Win 1 wave
+Vaincre 5 ennemis|Defeat 5 enemies
+Déclencher 1 Sync Burst|Trigger 1 Sync Burst
+Quotidiennes|Daily
+Monocible|Single target
 Les|The
 Stats & psych de départ|Stats & starting psych
 Psych de départ|Starting psych
