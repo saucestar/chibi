@@ -29,8 +29,6 @@
     const matchId = mode + '-' + pairKey + '-' + now;
     const claimed = await lock.transaction(current => !current || Number(current.expiresAt) < now ? { id: matchId, expiresAt: now + 30000 } : undefined, undefined, false);
     if (!claimed.committed || claimed.snapshot.val().id !== matchId) return;
-    const active = await Promise.all(pair.map(uid => db().ref('pvpActive/' + uid).get()));
-    if (active.some(snapshot => snapshot.exists())) return;
     const players = {};
     players[me.uid] = { name: me.name, rating: me.rating, team: me.team };
     players[rival.uid] = { name: rival.name, rating: rival.rating, team: rival.team };
@@ -50,6 +48,8 @@
     const entry = { uid: who.id, name: who.name, rating: currentRating.rating, team: clean(team), joinedAt: firebase.database.ServerValue.TIMESTAMP };
     queueRef = db().ref('pvpQueue/' + mode + '/' + who.id);
     activeRef = db().ref('pvpActive/' + who.id);
+    const existing = (await activeRef.get()).val();
+    if (existing) { callbacks.match(existing); return; }
     await queueRef.set(entry);
     queueRef.onDisconnect().remove();
     activeListener = snapshot => { if (snapshot.val()) { callbacks.match(snapshot.val()); clearQueue(); } };
