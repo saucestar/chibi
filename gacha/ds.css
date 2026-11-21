@@ -763,7 +763,7 @@
 }
 .sprite-frames-20 { animation:cloud-idle 2.5s steps(1,end) infinite; }
 .hero-noctis { animation:noctis-idle 2.25s steps(1,end) infinite; }
-.hero-joshua { animation:joshua-idle 1.2s steps(1,end) infinite; }
+.hero-joshua { animation:joshua-idle 1.6s steps(1,end) infinite; }
 .hero-prompto,.hero-ignis,.hero-gladio { animation:eos-idle .8s steps(1,end) infinite; }
 @keyframes noctis-idle {
   0%,6.24% {background-position:0 0} 6.25%,12.49% {background-position:6.666667% 0} 12.5%,18.74% {background-position:13.333333% 0} 18.75%,24.99% {background-position:20% 0}
@@ -772,7 +772,8 @@
   75%,81.24% {background-position:80% 0} 81.25%,87.49% {background-position:86.666667% 0} 87.5%,93.74% {background-position:93.333333% 0} 93.75%,100% {background-position:100% 0}
 }
 @keyframes eos-idle {0%,24.99%{background-position:0 0}25%,49.99%{background-position:33.333333% 0}50%,74.99%{background-position:66.666667% 0}75%,100%{background-position:100% 0}}
-@keyframes joshua-idle {0%,12.49%{background-position:0 0}12.5%,24.99%{background-position:14.285714% 0}25%,37.49%{background-position:28.571429% 0}37.5%,49.99%{background-position:42.857143% 0}50%,62.49%{background-position:57.142857% 0}62.5%,74.99%{background-position:71.428571% 0}75%,87.49%{background-position:85.714286% 0}87.5%,100%{background-position:100% 0}}
+/* Joshua uses fixed pixel offsets: browser scaling cannot interpolate between frames. */
+@keyframes joshua-idle {0%,12.49%{background-position:0 0}12.5%,24.99%{background-position:-30px 0}25%,37.49%{background-position:-60px 0}37.5%,49.99%{background-position:-90px 0}50%,62.49%{background-position:-120px 0}62.5%,74.99%{background-position:-150px 0}75%,87.49%{background-position:-180px 0}87.5%,100%{background-position:-210px 0}}
 @media(prefers-reduced-motion:reduce) { .sprite-frames-20,.hero-noctis,.hero-joshua,.hero-prompto,.hero-ignis,.hero-gladio { animation:none; } }
 
 .save-sync-notice { margin:0; padding:8px 12px; color:#fff4d7; background:#241a3d; font:600 12px/1.4 Segoe UI,sans-serif; }
