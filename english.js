@@ -401,7 +401,7 @@ Effets sonores|Sound effects
 Retour au menu|Back to menu
 Événement|Event
 Événements|Events
-2 vagues puis le boss · Tous les ennemis niveau 100|2 waves, then the boss · All enemies are level 100
+2 vagues niveau 100 puis un boss niveau 200|2 level 100 waves, then a level 200 boss
 Préparer le duo|Set up your team
 Défier|Challenge
 Abandonner cet événement ?|Abandon this event?
@@ -442,6 +442,7 @@ Nouveautés|What's new
 La Reapers’ Game bouge. Choisis une destination.|The Reapers' Game is moving. Choose a destination.
 ÉVÉNEMENTS|EVENTS
 Boss niveau 100|Level 100 bosses
+Boss niveau 200|Level 200 bosses
 Défie les personnages et gagne leurs récompenses signature.|Challenge characters and earn their signature rewards.
 NOUVEAUX PORTAILS|NEW PORTALS
 Eos arrive le 25 novembre|Eos arrives November 25

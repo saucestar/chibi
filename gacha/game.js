@@ -2859,16 +2859,16 @@ function eventWave(boss, stage, seed) {
   }
   const hero = characterRoster.find(f => f.name === boss),
     stats = bases[boss],
-    hp = (hero.maxHp + 99 * 5) * 8;
+    hp = (hero.maxHp + 199 * 5) * 10;
   return [{
     id: 30,
     kind: "event-" + boss,
     name: boss,
     hp,
     maxHp: hp,
-    attack: Math.round((Math.max(stats[0], stats[1]) + 198) * 1.35),
-    speed: stats[2] + 115,
-    level: 100,
+    attack: Math.round((Math.max(stats[0], stats[1]) + 398) * 1.5),
+    speed: stats[2] + 215,
+    level: 200,
     boss: true,
     trait: "berserk",
     xp: 0
@@ -2877,10 +2877,20 @@ function eventWave(boss, stage, seed) {
 function readEvent(raw, owned, copies, awake) {
   if (!raw || !characterRoster.some(f => f.name === raw.boss)) return null;
   const run = validRun(raw.run, owned, copies, awake);
-  if (!run || run.wave > 3 || run.enemies.some(e => e.level !== 100) || run.wave === 3 && !run.enemies.every(e => e.kind === "event-" + raw.boss)) return null;
+  if (!run || run.wave > 3 || run.wave < 3 && run.enemies.some(e => e.level !== 100) || run.wave === 3 && !run.enemies.every(e => e.kind === "event-" + raw.boss)) return null;
+  const migrated = run.wave === 3 && run.enemies.some(e => e.level !== 200) ? {
+    ...run,
+    enemies: eventWave(raw.boss, 3, run.id).map((enemy, index) => {
+      const old = run.enemies[index];
+      return {
+        ...enemy,
+        hp: old ? Math.max(0, Math.round(enemy.maxHp * old.hp / Math.max(1, old.maxHp))) : enemy.hp
+      };
+    })
+  } : run;
   return {
     boss: raw.boss,
-    run,
+    run: migrated,
     prize: ["character", "pin"].includes(raw.prize) ? raw.prize : "none"
   };
 }
@@ -2948,7 +2958,7 @@ function EventHall({
   }, "\u2039"), /*#__PURE__*/React.createElement("button", {
     "aria-label": "Suivant",
     onClick: () => scroll(1)
-  }, "\u203A"))), /*#__PURE__*/React.createElement("p", null, "2 vagues puis le boss \xB7 Tous les ennemis niveau 100"), active && /*#__PURE__*/React.createElement("div", {
+  }, "\u203A"))), /*#__PURE__*/React.createElement("p", null, "2 vagues niveau 100 puis un boss niveau 200"), active && /*#__PURE__*/React.createElement("div", {
     className: "event-resume"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => start(active.boss)
@@ -3370,7 +3380,7 @@ function LaunchNews({
     key: name,
     fighter: characterRoster.find(f => f.name === name),
     maximumScale: .75
-  }))), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "\xC9V\xC9NEMENTS"), /*#__PURE__*/React.createElement("b", null, "Boss niveau 100"), /*#__PURE__*/React.createElement("em", null, "Personnages et badges signature \xE0 gagner")), /*#__PURE__*/React.createElement("i", {
+  }))), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "\xC9V\xC9NEMENTS"), /*#__PURE__*/React.createElement("b", null, "Boss niveau 200"), /*#__PURE__*/React.createElement("em", null, "Personnages et badges signature \xE0 gagner")), /*#__PURE__*/React.createElement("i", {
     "aria-hidden": "true"
   }, "\u2192")), /*#__PURE__*/React.createElement("button", {
     className: "news-update news-pvp",

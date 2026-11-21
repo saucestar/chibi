@@ -1115,14 +1115,15 @@ function eventWave(boss:string,stage:number,seed:string):Enemy[]{
       return {...enemy,id:stage*10+i,level:100,maxHp:hp,hp,attack:Math.max(150,Math.round(spec.attack*scale.attack)),speed:Math.max(90,(spec.speed??18)+scale.speed),xp:0};
     });
   }
-  const hero=characterRoster.find(f=>f.name===boss)!,stats=bases[boss],hp=(hero.maxHp+99*5)*8;
-  return [{id:30,kind:"event-"+boss,name:boss,hp,maxHp:hp,attack:Math.round((Math.max(stats[0],stats[1])+198)*1.35),speed:stats[2]+115,level:100,boss:true,trait:"berserk",xp:0}];
+  const hero=characterRoster.find(f=>f.name===boss)!,stats=bases[boss],hp=(hero.maxHp+199*5)*10;
+  return [{id:30,kind:"event-"+boss,name:boss,hp,maxHp:hp,attack:Math.round((Math.max(stats[0],stats[1])+398)*1.5),speed:stats[2]+215,level:200,boss:true,trait:"berserk",xp:0}];
 }
 function readEvent(raw:any,owned:string[],copies:Record<string,number>,awake:string[]):EventSave|null{
   if(!raw||!characterRoster.some(f=>f.name===raw.boss))return null;
   const run=validRun(raw.run,owned,copies,awake);
-  if(!run||run.wave>3||run.enemies.some(e=>e.level!==100)||(run.wave===3&&!run.enemies.every(e=>e.kind==="event-"+raw.boss)))return null;
-  return {boss:raw.boss,run,prize:["character","pin"].includes(raw.prize)?raw.prize:"none"};
+  if(!run||run.wave>3||(run.wave<3&&run.enemies.some(e=>e.level!==100))||(run.wave===3&&!run.enemies.every(e=>e.kind==="event-"+raw.boss)))return null;
+  const migrated=run.wave===3&&run.enemies.some(e=>e.level!==200)?{...run,enemies:eventWave(raw.boss,3,run.id).map((enemy,index)=>{const old=run.enemies[index];return {...enemy,hp:old?Math.max(0,Math.round(enemy.maxHp*old.hp/Math.max(1,old.maxHp))):enemy.hp};})}:run;
+  return {boss:raw.boss,run:migrated,prize:["character","pin"].includes(raw.prize)?raw.prize:"none"};
 }
 function eventCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profile{
   const active=p.eventRun;
@@ -1150,7 +1151,7 @@ function EventHall({profile,start,navigate,abandon}:{profile:Profile;start:(name
    el.scrollTo({left:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetLeft,behavior:"smooth"});
  }
  return <section className="hub-panel event-hall"><header><h1>Événement</h1><div><button aria-label="Précédent" onClick={()=>scroll(-1)}>‹</button><button aria-label="Suivant" onClick={()=>scroll(1)}>›</button></div></header>
- <p>2 vagues puis le boss · Tous les ennemis niveau 100</p>
+ <p>2 vagues niveau 100 puis un boss niveau 200</p>
  {active&&<div className="event-resume"><button onClick={()=>start(active.boss)}>Reprendre · {active.boss} · {active.run.wave}/3</button><button onClick={()=>setConfirm(true)}>Abandonner</button></div>}
  {confirm&&<WishDialog title="Abandonner cet événement ?" close={()=>setConfirm(false)}><button onClick={()=>setConfirm(false)}>Annuler</button><button onClick={()=>{abandon();setConfirm(false);}}>Confirmer</button></WishDialog>}
  {!ready&&!active&&<button onClick={()=>navigate("team")}>Préparer le duo</button>}
@@ -1231,7 +1232,7 @@ function LaunchNews({navigate,close}:{navigate:(screen:GameScreen)=>void;close:(
   <button className="news-update news-daily" onClick={()=>open("quests")}><span className="news-update-art"><Icon name="coin"/><b>200</b></span><span><small>QUÊTES DU JOUR</small><b>3 missions · 2 vœux</b><em>Vague, ennemis et Sync Burst</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-rates" onClick={()=>open("summon")}><span className="news-update-art news-pin-art">{rarePins.map(pin=><span className="news-pin-cell" key={pin.id}><BadgeArt pin={pin}/></span>)}</span><span><small>TAUX D’OBTENTION</small><b>1er vœu personnage garanti</b><em>Puis garantie au 100e · Les hauts rangs sont plus rares</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-combat" onClick={()=>open("team")}><span className="news-update-art">{["ZERO","SHADOW"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.58}/>)}</span><span><small>SYSTÈME DE COMBAT</small><b>AoE · Cible · Burst ultime</b><em>Prépare tes psychs dans Team</em></span><i aria-hidden="true">→</i></button>
-  <button className="news-update news-events" onClick={()=>open("events")}><span className="news-update-art">{["NEKU","AERITH"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.75}/>)}</span><span><small>ÉVÉNEMENTS</small><b>Boss niveau 100</b><em>Personnages et badges signature à gagner</em></span><i aria-hidden="true">→</i></button>
+  <button className="news-update news-events" onClick={()=>open("events")}><span className="news-update-art">{["NEKU","AERITH"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.75}/>)}</span><span><small>ÉVÉNEMENTS</small><b>Boss niveau 200</b><em>Personnages et badges signature à gagner</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-pvp" onClick={()=>open("pvp")}><span className="news-update-art"><b>VS</b></span><span><small>PVP EN LIGNE</small><b>Casual · Ranked</b><em>Niveau 50 normalisé ou classement Elo</em></span><i aria-hidden="true">→</i></button>
   </div>
   <button className="launch-news-close" onClick={close}>Fermer</button>
