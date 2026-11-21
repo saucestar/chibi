@@ -1116,10 +1116,10 @@ function LaunchNews({navigate,close}:{navigate:(screen:GameScreen)=>void;close:(
    <small>Publication le 1er décembre 2026 · Ouvrir les portails <b>→</b></small>
   </button>
   <section className="news-copy"><p>La mise à jour de la seconde vague est prête. Voici l’ensemble des changements :</p>
-   <ol><li><b>2 nouveaux portails</b> — X, Sonic, Zero, Shadow, Knuckles et Tails dans « Final Fantasy Sonic X » ; Marluxia, Lexaeus, Axel et Larxene dans « XIII ».</li><li><b>Garantie revue</b> — un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.</li><li><b>Rareté graduelle</b> — les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.</li><li><b>Combat enrichi</b> — psychs monocibles ou AoE et Sync Burst égal à 10× la meilleure statistique offensive.</li><li><b>Quêtes quotidiennes</b> — 3 objectifs journaliers pour 200 pièces au total.</li></ol>
+   <ol><li><b>2 nouveaux portails</b> — X, Sonic, Zero, Shadow, Knuckles et Tails dans « Final Fantasy Sonic X » ; Marluxia, Lexaeus, Axel et Larxene dans « XIII ».</li><li><b>Garantie débutant</b> — la toute première invocation du compte donne toujours un personnage, même dans un multi de 10.</li><li><b>Garantie revue</b> — un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.</li><li><b>Rareté graduelle</b> — les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.</li><li><b>Combat enrichi</b> — psychs monocibles ou AoE et Sync Burst égal à 10× la meilleure statistique offensive.</li><li><b>Quêtes quotidiennes</b> — 3 objectifs journaliers pour 200 pièces au total.</li></ol>
   </section>
   <button className="news-update news-daily" onClick={()=>open("quests")}><span className="news-update-art"><Icon name="coin"/><b>200</b></span><span><small>QUÊTES DU JOUR</small><b>3 missions · 2 vœux</b><em>Vague, ennemis et Sync Burst</em></span><i aria-hidden="true">→</i></button>
-  <button className="news-update news-rates" onClick={()=>open("summon")}><span className="news-update-art news-pin-art">{rarePins.map(pin=><span className="news-pin-cell" key={pin.id}><BadgeArt pin={pin}/></span>)}</span><span><small>TAUX D’OBTENTION</small><b>Les hauts rangs sont rares</b><em>Consulte le détail sur chaque portail</em></span><i aria-hidden="true">→</i></button>
+  <button className="news-update news-rates" onClick={()=>open("summon")}><span className="news-update-art news-pin-art">{rarePins.map(pin=><span className="news-pin-cell" key={pin.id}><BadgeArt pin={pin}/></span>)}</span><span><small>TAUX D’OBTENTION</small><b>1er vœu personnage garanti</b><em>Puis garantie au 100e · Les hauts rangs sont plus rares</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-combat" onClick={()=>open("team")}><span className="news-update-art">{["ZERO","SHADOW"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.58}/>)}</span><span><small>SYSTÈME DE COMBAT</small><b>AoE · Cible · Burst ultime</b><em>Prépare tes psychs dans Team</em></span><i aria-hidden="true">→</i></button>
   <button className="news-update news-events" onClick={()=>open("events")}><span className="news-update-art">{["NEKU","AERITH"].map(name=><SpritePreview key={name} fighter={characterRoster.find(f=>f.name===name)!} maximumScale={.75}/>)}</span><span><small>ÉVÉNEMENTS</small><b>Boss niveau 100</b><em>Personnages et badges signature à gagner</em></span><i aria-hidden="true">→</i></button>
   </div>
@@ -1165,7 +1165,7 @@ function RoguelikeLaunch({profile,navigate,start,resume,abandon}:{profile:Profil
  </section>;
 }
 function HubMenu({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen)=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 100e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
 }
 
 function BestiaryMenu(){
@@ -1268,7 +1268,7 @@ function App() {
     setQuantity(count); setPortal(id); setPhase("confirm");
   };
   const pool=portalPool(portal,profile);
-  const guaranteed=profile.wishStep===99;
+  const guaranteed=profile.wishesMade===0||profile.wishStep===99;
   const percent=(v:number)=>v.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{style:"percent",maximumFractionDigits:3});
   const portalName=portal==="shibuya"?"First Week #1":portals[portal];
   const closeDialog=()=>setPhase("ready");
@@ -1280,8 +1280,9 @@ function App() {
       const quote=wishQuote(p,count);
       const next={...p,wishesMade:p.wishesMade+count,freeWishes:p.freeWishes-quote.free,freeWishSpent:p.freeWishSpent+quote.free,freeWishDaySpent:p.freeWishDaySpent+quote.free,pins:[...p.pins],coins:p.coins-quote.cost,owned:[...p.owned],levels:{...p.levels},copies:{...p.copies}};
       for(let i=0;i<count;i++){
+        const firstWishCharacter=p.wishesMade===0&&i===0;
         next.wishStep=(next.wishStep+1)%100;
-        if(next.wishStep!==0 && Math.random()>=characterChance){
+        if(!firstWishCharacter&&next.wishStep!==0 && Math.random()>=characterChance){
           const pin=weightedPinPick();
           if(!next.pins.includes(pin.id)) next.pins.push(pin.id);
           draws.push({pin});
@@ -1374,7 +1375,7 @@ function App() {
     </article>)}</div>
     {phase==="rates" && <WishDialog key="rates" className={rateFighter?"character-sheet-dialog":"portal-rates-dialog"} title={rateFighter?`Fiche · ${rateFighter}`:`Taux · ${portalName}`} close={closeDialog}>
       {rateFighter?<><CharacterDossier fighter={characterRoster.find(f=>f.name===rateFighter)!} profile={profile} base rate={pool.filter(x=>x.name===rateFighter).length/pool.length*(guaranteed?1:characterChance)}/><button onClick={()=>setRateFighter(null)}>Retour aux taux</button></>:<>
-      <p>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge. Chaque 100e vœu garantit un personnage.</p>
+      <p>{profile.wishesMade===0?"Première invocation du compte · personnage garanti.":<>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge.</>} Chaque 100e vœu garantit aussi un personnage.</p>
       <h3>Prochain vœu{guaranteed?" · garanti":""}</h3><p>Touche un personnage pour voir sa fiche.</p>
       <div className="rates-character-list">{portalRoster(portal).map(f=><button key={f.name} onClick={()=>setRateFighter(f.name)} aria-label={`Fiche de ${f.name}`}><HudPortrait fighter={f}/><span><b>{f.name}</b><small>Stats & psych de départ</small></span><strong>{percent(pool.filter(x=>x.name===f.name).length/pool.length*(guaranteed?1:characterChance))}</strong><span aria-hidden="true">›</span></button>)}</div>
       <p>Badges psych · <b>{percent(guaranteed?0:1-characterChance)}</b></p>

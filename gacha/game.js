@@ -2822,7 +2822,7 @@ function LaunchNews({
     maximumScale: .62
   }))), React.createElement("small", null, "Publication le 1er d\xE9cembre 2026 \xB7 Ouvrir les portails ", React.createElement("b", null, "\u2192"))), React.createElement("section", {
     className: "news-copy"
-  }, React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), React.createElement("ol", null, React.createElement("li", null, React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), React.createElement("li", null, React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), React.createElement("li", null, React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), React.createElement("li", null, React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 10\xD7 la meilleure statistique offensive."), React.createElement("li", null, React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), React.createElement("button", {
+  }, React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), React.createElement("ol", null, React.createElement("li", null, React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), React.createElement("li", null, React.createElement("b", null, "Garantie d\xE9butant"), " \u2014 la toute premi\xE8re invocation du compte donne toujours un personnage, m\xEAme dans un multi de 10."), React.createElement("li", null, React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), React.createElement("li", null, React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), React.createElement("li", null, React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 10\xD7 la meilleure statistique offensive."), React.createElement("li", null, React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), React.createElement("button", {
     className: "news-update news-daily",
     onClick: () => open("quests")
   }, React.createElement("span", {
@@ -2841,7 +2841,7 @@ function LaunchNews({
     key: pin.id
   }, React.createElement(BadgeArt, {
     pin: pin
-  })))), React.createElement("span", null, React.createElement("small", null, "TAUX D\u2019OBTENTION"), React.createElement("b", null, "Les hauts rangs sont rares"), React.createElement("em", null, "Consulte le d\xE9tail sur chaque portail")), React.createElement("i", {
+  })))), React.createElement("span", null, React.createElement("small", null, "TAUX D\u2019OBTENTION"), React.createElement("b", null, "1er v\u0153u personnage garanti"), React.createElement("em", null, "Puis garantie au 100e \xB7 Les hauts rangs sont plus rares")), React.createElement("i", {
     "aria-hidden": "true"
   }, "\u2192")), React.createElement("button", {
     className: "news-update news-combat",
@@ -3034,7 +3034,7 @@ function HubMenu({
     "aria-hidden": "true"
   }, "\u203A")))), React.createElement("section", {
     className: "hub-help"
-  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Chaque vague vaincue rapporte 5 pi\xE8ces. Les invocations ont 10 % de chances de donner un personnage et chaque 100e v\u0153u en garantit un. Les taux d\xE9taill\xE9s et les fiches sont accessibles sur chaque portail."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
+  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "La premi\xE8re invocation d\u2019un nouveau compte garantit un personnage. Ensuite, chaque v\u0153u a 10 % de chances d\u2019en donner un et le 100e le garantit."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
 }
 function BestiaryMenu() {
   const [filter, setFilter] = useState("known"),
@@ -3220,7 +3220,7 @@ function App() {
     setPhase("confirm");
   };
   const pool = portalPool(portal, profile);
-  const guaranteed = profile.wishStep === 99;
+  const guaranteed = profile.wishesMade === 0 || profile.wishStep === 99;
   const percent = v => v.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     style: "percent",
     maximumFractionDigits: 3
@@ -3250,8 +3250,9 @@ function App() {
         }
       };
       for (let i = 0; i < count; i++) {
+        const firstWishCharacter = p.wishesMade === 0 && i === 0;
         next.wishStep = (next.wishStep + 1) % 100;
-        if (next.wishStep !== 0 && Math.random() >= characterChance) {
+        if (!firstWishCharacter && next.wishStep !== 0 && Math.random() >= characterChance) {
           const pin = weightedPinPick();
           if (!next.pins.includes(pin.id)) next.pins.push(pin.id);
           draws.push({
@@ -3531,7 +3532,7 @@ function App() {
     rate: pool.filter(x => x.name === rateFighter).length / pool.length * (guaranteed ? 1 : characterChance)
   }), React.createElement("button", {
     onClick: () => setRateFighter(null)
-  }, "Retour aux taux")) : React.createElement(React.Fragment, null, React.createElement("p", null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge. Chaque 100e v\u0153u garantit un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("p", null, "Touche un personnage pour voir sa fiche."), React.createElement("div", {
+  }, "Retour aux taux")) : React.createElement(React.Fragment, null, React.createElement("p", null, profile.wishesMade === 0 ? "Première invocation du compte · personnage garanti." : React.createElement(React.Fragment, null, "V\u0153u ordinaire \xB7 ", percent(characterChance), " personnage, ", percent(1 - characterChance), " badge."), " Chaque 100e v\u0153u garantit aussi un personnage."), React.createElement("h3", null, "Prochain v\u0153u", guaranteed ? " · garanti" : ""), React.createElement("p", null, "Touche un personnage pour voir sa fiche."), React.createElement("div", {
     className: "rates-character-list"
   }, portalRoster(portal).map(f => React.createElement("button", {
     key: f.name,

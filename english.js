@@ -37,7 +37,7 @@ Lance le launcher PC (connecté à Discord) pour publier ta progression.|Open th
 Langue|Language
 Guide du jeu|Game guide
 Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.|Pick 2 teammates and equip up to 3 psychs each. Choose both actions, then start the turn. The portraits at the top show who acts next. Double-tap an enemy to inspect its stats.
-Chaque vague vaincue rapporte 5 pièces. Les invocations ont 10 % de chances de donner un personnage et chaque 100e vœu en garantit un. Les taux détaillés et les fiches sont accessibles sur chaque portail.|Clearing a wave earns 5 coins. Each wish has a 10% character chance, with a guaranteed character every 100th wish. Open a banner’s rates to see its odds and character profiles.
+La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.|A new account’s first wish guarantees a character. After that, every wish has a 10% character chance and the 100th is guaranteed.
 Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.|Partners cannot equip the same psych. Duplicates increase a character’s rank. At 5 duplicates, they reach star rank.
 Préparer le combat|Prepare for battle
 Former ma Team|Build my team
@@ -161,6 +161,12 @@ La mise à jour de la seconde vague est prête. Voici l’ensemble des changemen
 2 nouveaux portails|2 new banners
 Garantie revue|Updated guarantee
 un personnage garanti au 100e vœu, avec 10 % de chance sur chaque autre invocation.|a guaranteed character on the 100th wish, with a 10% chance on every other summon.
+Garantie débutant|Beginner guarantee
+la toute première invocation du compte donne toujours un personnage, même dans un multi de 10.|the account’s very first summon always gives a character, even in a 10-wish pull.
+1er vœu personnage garanti|1st wish guarantees a character
+Puis garantie au 100e · Les hauts rangs sont plus rares|Then guaranteed on the 100th · Higher ranks are rarer
+Première invocation du compte · personnage garanti.|First account summon · guaranteed character.
+Chaque 100e vœu garantit aussi un personnage.|Every 100th wish also guarantees a character.
 Rareté graduelle|Graded rarity
 les badges de rang supérieur deviennent plus rares dans les portails comme sur les ennemis.|higher-rank pins are now rarer from both banners and enemies.
 Combat enrichi|Expanded combat
