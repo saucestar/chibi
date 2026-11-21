@@ -218,6 +218,9 @@
     save(profile) {
       if (!ref || !state.ready || !valid(profile)) return;
       rememberEndedRun(profile,activeUid);
+      // A browser may play before the account has a phone-backed cloud save.
+      // Keep that progress local until a phone creates the authoritative save.
+      if (state.kind === 'browser-local') return;
       queue = [profile];
       localStorage.setItem(pendingKey,JSON.stringify({uid:activeUid,baseRev:revision,client,profile}));
       flush(activeUid, generation);
@@ -270,7 +273,7 @@
       } else if (mobile) {
         announce({ ready: true, kind: 'local', message: 'La progression de ce téléphone sera sauvegardée sur ton compte dès ta prochaine action.' });
       } else {
-        announce({ ready: false, kind: 'waiting', message: 'Ouvre le jeu sur ton téléphone avec ce compte pour importer sa progression. La sauvegarde navigateur ne sera pas importée.' });
+        announce({ ready: true, kind: 'browser-local', message: 'Progression navigateur locale · tu peux jouer maintenant. Dès qu’une sauvegarde téléphone existe, elle reste prioritaire et sera synchronisée ici.' });
       }
       listener = snapshot => {
         if (token !== generation) return;
