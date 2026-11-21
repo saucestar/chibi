@@ -56,14 +56,18 @@
     activeRef.on('value', activeListener, callbacks.error);
     const queue = db().ref('pvpQueue/' + mode);
     queueListener = async snapshot => {
-      const entries = Object.values(snapshot.val() || {}).filter(item => item && item.uid !== who.id && Array.isArray(item.team));
-      if (!entries.length) return callbacks.waiting(entries.length + 1);
-      entries.sort((a, b) => Number(a.joinedAt || 0) - Number(b.joinedAt || 0));
-      const rival = entries[0];
-      // The lower Discord id creates the room, avoiding two competing matches.
-      if (String(who.id).localeCompare(String(rival.uid), undefined, { numeric: true }) < 0)
-        createMatch(mode, entry, rival).catch(callbacks.error);
-      callbacks.waiting(entries.length + 1);
+      const entries = Object.values(snapshot.val() || {}).filter(item => item && item.uid && Array.isArray(item.team));
+      entries.sort((a, b) => Number(a.joinedAt || 0) - Number(b.joinedAt || 0) || String(a.uid).localeCompare(String(b.uid), undefined, { numeric: true }));
+      const mine = entries.findIndex(item => String(item.uid) === String(who.id));
+      if (mine < 0) return callbacks.waiting(entries.length);
+      // Every client sees the same ordered queue and therefore the same pairs:
+      // positions 0/1, 2/3, etc. Both peers may try to create the room, while
+      // pvpPairLocks guarantees that exactly one transaction wins.
+      const pairStart = mine - mine % 2;
+      if (pairStart + 1 >= entries.length) return callbacks.waiting(entries.length);
+      const first = entries[pairStart], second = entries[pairStart + 1];
+      createMatch(mode, first.uid === who.id ? first : second, first.uid === who.id ? second : first).catch(callbacks.error);
+      callbacks.waiting(entries.length);
     };
     queue.on('value', queueListener, callbacks.error);
   }
