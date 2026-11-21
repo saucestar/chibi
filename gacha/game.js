@@ -68,13 +68,7 @@ const characterElements = {
   NOCTIS: ["dark", "steel"],
   PROMPTO: ["electric"],
   IGNIS: ["fire"],
-  GLADIO: ["rock", "fighting"],
-  X: ["steel", "electric"],
-  ZERO: ["steel", "fighting"],
-  SONIC: ["electric"],
-  SHADOW: ["dark"],
-  KNUCKLES: ["fighting", "ground"],
-  TAILS: ["flying", "steel"]
+  GLADIO: ["rock", "fighting"]
 };
 const enemyElements = {
   frog: ["water"],
@@ -134,78 +128,6 @@ function TypeChips({
   }, elementNames[t])));
 }
 const characterRoster = [{
-  name: "X",
-  role: "MAVERICK HUNTER",
-  hp: 124,
-  maxHp: 124,
-  sprite: "./assets/game/x-idle.png",
-  accent: "#4b9dff",
-  frames: 10,
-  frameWidth: 34,
-  frameHeight: 32,
-  portraitCenter: 17,
-  portraitTop: 0
-}, {
-  name: "ZERO",
-  role: "MAVERICK HUNTER",
-  hp: 132,
-  maxHp: 132,
-  sprite: "./assets/game/zero-idle.png",
-  accent: "#ef5d54",
-  frames: 6,
-  frameWidth: 32,
-  frameHeight: 32,
-  portraitCenter: 16,
-  portraitTop: 0
-}, {
-  name: "SONIC",
-  role: "BLUE BLUR",
-  hp: 118,
-  maxHp: 118,
-  sprite: "./assets/game/sonic-idle.png",
-  accent: "#3d8dff",
-  frames: 6,
-  frameWidth: 21,
-  frameHeight: 32,
-  portraitCenter: 11,
-  portraitTop: 0
-}, {
-  name: "SHADOW",
-  role: "ULTIMATE LIFEFORM",
-  hp: 130,
-  maxHp: 130,
-  sprite: "./assets/game/shadow-idle.png",
-  accent: "#e94c65",
-  frames: 6,
-  frameWidth: 40,
-  frameHeight: 48,
-  portraitCenter: 20,
-  portraitTop: 0
-}, {
-  name: "KNUCKLES",
-  role: "MASTER EMERALD",
-  hp: 142,
-  maxHp: 142,
-  sprite: "./assets/game/knuckles-idle.png",
-  accent: "#e34c42",
-  frames: 8,
-  frameWidth: 32,
-  frameHeight: 48,
-  portraitCenter: 16,
-  portraitTop: 0
-}, {
-  name: "TAILS",
-  role: "SKY MECHANIC",
-  hp: 112,
-  maxHp: 112,
-  sprite: "./assets/game/tails-idle.png",
-  accent: "#f3b34e",
-  frames: 8,
-  frameWidth: 40,
-  frameHeight: 48,
-  portraitCenter: 20,
-  portraitTop: 0
-}, {
   name: "NOCTIS",
   role: "LUCIS",
   hp: 130,
@@ -756,13 +678,7 @@ const basePsych = {
   NOCTIS: "armiger",
   PROMPTO: "machinery",
   IGNIS: "elemental-daggers",
-  GLADIO: "shield-of-the-king",
-  X: "x-buster",
-  ZERO: "z-saber",
-  SONIC: "sonic-wind",
-  SHADOW: "chaos-spear",
-  KNUCKLES: "meteor-punch",
-  TAILS: "tornado-flight"
+  GLADIO: "shield-of-the-king"
 };
 const partnerPsychs = [{
   id: "virtuous-contract",
@@ -842,42 +758,6 @@ const partnerPsychs = [{
   psych: "Bouclier royal",
   kind: "physical",
   power: 33
-}, {
-  id: "x-buster",
-  name: "X-Buster",
-  psych: "Tir chargé",
-  kind: "special",
-  power: 30
-}, {
-  id: "z-saber",
-  name: "Z-Saber",
-  psych: "Lame énergétique",
-  kind: "physical",
-  power: 32
-}, {
-  id: "sonic-wind",
-  name: "Sonic Wind",
-  psych: "Vitesse supersonique",
-  kind: "special",
-  power: 29
-}, {
-  id: "chaos-spear",
-  name: "Chaos Spear",
-  psych: "Éclair du chaos",
-  kind: "special",
-  power: 31
-}, {
-  id: "meteor-punch",
-  name: "Meteor Punch",
-  psych: "Frappe de l’émeraude",
-  kind: "physical",
-  power: 33
-}, {
-  id: "tornado-flight",
-  name: "Tornado Flight",
-  psych: "Attaque aérienne",
-  kind: "special",
-  power: 28
 }].map(pin => ({
   ...pin,
   number: "",
@@ -938,13 +818,7 @@ function PinIcon({
     armiger: "✧",
     machinery: "⌁",
     "elemental-daggers": "♨",
-    "shield-of-the-king": "⬟",
-    "x-buster": "◉",
-    "z-saber": "⚔",
-    "sonic-wind": "➤",
-    "chaos-spear": "✦",
-    "meteor-punch": "✹",
-    "tornado-flight": "✈"
+    "shield-of-the-king": "⬟"
   }[pin.id.replace(/^signature-/, "")]);
   return React.createElement("i", {
     "aria-hidden": "true",
@@ -965,8 +839,6 @@ const portals = {
   reality: "From another reality",
   apocalyptic: "Apocalyptic Future",
   destiny: "Destiny Islands",
-  megaMan: "Mega Man X",
-  sonicVerse: "Sonic Battle",
   eosDawn: "Eos · Noctis & Prompto",
   eosDusk: "Eos · Ignis & Gladio"
 };
@@ -989,13 +861,7 @@ const bases = {
   NOCTIS: [32, 25, 20],
   PROMPTO: [20, 34, 22],
   IGNIS: [24, 32, 19],
-  GLADIO: [38, 17, 13],
-  X: [26, 34, 19],
-  ZERO: [35, 24, 20],
-  SONIC: [27, 28, 36],
-  SHADOW: [30, 34, 30],
-  KNUCKLES: [38, 19, 17],
-  TAILS: [20, 32, 29]
+  GLADIO: [38, 17, 13]
 };
 const maxLevel = 99;
 function xpAtLevel(level) {
@@ -1498,7 +1364,7 @@ function wishQuote(p, count) {
 }
 const characterChance = 0.10;
 function portalRoster(id) {
-  const names = id === "partners" ? ["BEAT", "JOSHUA"] : id === "megaMan" ? ["X", "ZERO"] : id === "sonicVerse" ? ["SONIC", "SHADOW", "KNUCKLES", "TAILS"] : id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI"];
+  const names = id === "partners" ? ["BEAT", "JOSHUA"] : id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI"];
   return characterRoster.filter(f => names.includes(f.name));
 }
 function portalPool(id, _profile) {
@@ -3222,12 +3088,12 @@ function App() {
   }) : React.createElement(PortalVideo, {
     src: `./assets/bingo/${id}.mp4`,
     poster: `./assets/bingo/${id}.webp`
-  })), (id === "partners" || id === "megaMan" || id === "sonicVerse" || id === "eosDawn" || id === "eosDusk") && React.createElement("div", {
+  })), (id === "partners" || id === "eosDawn" || id === "eosDusk") && React.createElement("div", {
     className: "portal-duo"
   }, portalRoster(id).map(f => React.createElement(SpritePreview, {
     key: f.name,
     fighter: f,
-    maximumScale: id === "sonicVerse" ? 1.15 : 1.6
+    maximumScale: 1.6
   }))), React.createElement("h3", null, id === "shibuya" ? "First Week #1" : title), React.createElement("button", {
     className: "portal-rates",
     onClick: () => {
@@ -3264,7 +3130,7 @@ function App() {
     className: "wish-free"
   }, wishQuote(profile, n).free, " ", wishQuote(profile, n).free > 1 ? "gratuits" : "gratuit", " inclus")))), React.createElement("p", {
     className: "portal-caption"
-  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id === "megaMan" ? "X et Zero · Les Maverick Hunters sont prêts." : id === "sonicVerse" ? "Sonic, Shadow, Knuckles et Tails · La vitesse rencontre le chaos." : id === "eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id === "eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."))))), phase === "rates" && React.createElement(WishDialog, {
+  }, id === "shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id === "reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id === "apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id === "destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id === "eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id === "eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."))))), phase === "rates" && React.createElement(WishDialog, {
     key: "rates",
     className: rateFighter ? "character-sheet-dialog" : "portal-rates-dialog",
     title: rateFighter ? `Fiche · ${rateFighter}` : `Taux · ${portalName}`,
