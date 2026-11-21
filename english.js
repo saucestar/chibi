@@ -11,6 +11,7 @@ Mon profil|My profile
 Le site|Website
 Déconnexion|Sign out
 Ouvrir le jeu|Open game
+Consulter les nouveautés|View news
 Badge Joueur|Player Pin
 Compte Discord|Discord account
 Aujourd'hui|Today

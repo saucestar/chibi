@@ -1044,6 +1044,11 @@ body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3
 @media(min-width:760px){.monster-grid{grid-template-columns:repeat(4,minmax(0,1fr));}}
 
 .game-hub .hub-header {grid-template-columns:minmax(0,1fr) auto auto auto;}
+.game-hub .hub-news {display:grid;place-items:center;min-width:54px;min-height:38px;padding:7px 10px;border:1px solid #ffd47a;border-radius:13px;color:#fff;background:linear-gradient(155deg,#f47aa9,#c53b78 54%,#7c2455);box-shadow:inset 0 2px 2px #fff8,inset 0 -3px #671840,0 4px 0 #3c1732,0 7px 14px #bd3d7760;cursor:pointer;transform:translateY(-1px);}
+.game-hub .hub-news span {font-size:9px;line-height:1;letter-spacing:.12em;text-shadow:0 1px 2px #31091d;}
+.game-hub .hub-news:hover,.game-hub .hub-news:focus-visible {filter:saturate(1.18) brightness(1.08);transform:translateY(-2px) rotate(-1deg);}
+.game-hub .hub-news:active {transform:translateY(2px);box-shadow:inset 0 2px 3px #5e1744,0 1px 0 #3c1732;}
+@media(max-width:390px){.game-hub .hub-news{min-width:43px;padding-inline:6px}.game-hub .hub-news span{font-size:8px;letter-spacing:.07em}}
 .audio-control {border:1px solid #baaace;border-radius:12px;background:linear-gradient(#fff,#ddd4e9);color:#342944;min-height:34px;min-width:34px;cursor:pointer;}
 .scene-apocalyptic .portal-art,.scene-destiny .portal-art {object-fit:cover;}
 .scene-apocalyptic::before,.scene-destiny::before {display:none;}

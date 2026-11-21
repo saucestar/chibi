@@ -85,7 +85,7 @@
   }
 
   if(nav && !nav.querySelector('a[href="jeu.html"]')){
-    const a = document.createElement('a'); a.href = 'jeu.html'; a.textContent = '🎮 Jeu test';
+    const a = document.createElement('a'); a.href = 'jeu.html'; a.textContent = '🎮 Jouer';
     if(page === 'jeu.html') a.className = 'active';
     nav.appendChild(a);
   }

@@ -1017,12 +1017,12 @@ function gameFullscreen(){
  if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
 }
 const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["menu","Menu","☰"]];
-function GameHub({profile,screen,navigate,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;children:React.ReactNode}) {
+function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;openNews:()=>void;children:React.ReactNode}) {
  useMusic("hub");
  const content=React.useRef<HTMLDivElement>(null);
  useEffect(()=>{content.current?.scrollTo({top:0});},[screen]);
  return <div className="game-hub game-shell">
-  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><SoundToggle/><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
+  <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-news" onClick={openNews} aria-label="Consulter les nouveautés"><span aria-hidden="true">NEWS</span></button><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
   <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
   <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} onClick={()=>navigate(id)}><span aria-hidden="true">{icon}</span><b>{label}</b></button>)}</nav>
  </div>;
@@ -1330,7 +1330,7 @@ function App() {
   if (party && resumeRun) return <Battle key={resumeRun.id} event={event} initialRun={resumeRun} initialTeam={party} loadout={battleLoadout} coins={profile.coins}
     onCheckpoint={(snapshot,gains)=>setProfile(p=>event?eventCheckpoint(p,snapshot,gains):applyRunCheckpoint(p,snapshot,gains))}
     leave={() => { runSignature.current=null;setParty(null);setResumeRun(null);setScreen(event?"events":"roguelike"); setResult([]); }} />;
-  const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate}>{<>{content}{newsOpen&&<LaunchNews navigate={navigate} close={()=>setNewsOpen(false)}/>}</>}</GameHub>;
+  const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate} openNews={()=>setNewsOpen(true)}>{<>{content}{newsOpen&&<LaunchNews navigate={navigate} close={()=>setNewsOpen(false)}/>}</>}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
   if(screen==="roguelike")return hub(<RoguelikeLaunch profile={profile} navigate={navigate} start={startRun} resume={resume} abandon={()=>setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p)}/>);
   if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);

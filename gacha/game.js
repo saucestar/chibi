@@ -2517,6 +2517,7 @@ function GameHub({
   profile,
   screen,
   navigate,
+  openNews,
   children
 }) {
   useMusic("hub");
@@ -2540,7 +2541,13 @@ function GameHub({
     "aria-label": `${profile.coins} pièces`
   }, React.createElement(Icon, {
     name: "coin"
-  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement(SoundToggle, null), React.createElement("button", {
+  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), React.createElement("button", {
+    className: "hub-news",
+    onClick: openNews,
+    "aria-label": "Consulter les nouveaut\xE9s"
+  }, React.createElement("span", {
+    "aria-hidden": "true"
+  }, "NEWS")), React.createElement("button", {
     className: "hub-fullscreen",
     onClick: gameFullscreen,
     "aria-label": "Basculer le plein \xE9cran"
@@ -3375,7 +3382,8 @@ function App() {
   const hub = content => React.createElement(GameHub, {
     profile: profile,
     screen: screen,
-    navigate: navigate
+    navigate: navigate,
+    openNews: () => setNewsOpen(true)
   }, React.createElement(React.Fragment, null, content, newsOpen && React.createElement(LaunchNews, {
     navigate: navigate,
     close: () => setNewsOpen(false)
