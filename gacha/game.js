@@ -2771,8 +2771,9 @@ function GameHub({
     "aria-current": screen === id ? "page" : undefined,
     onClick: () => navigate(id)
   }, /*#__PURE__*/React.createElement("span", {
+    className: "hub-nav-orb",
     "aria-hidden": "true"
-  }, icon), /*#__PURE__*/React.createElement("b", null, label)))));
+  }, /*#__PURE__*/React.createElement("i", null, icon)), /*#__PURE__*/React.createElement("b", null, label)))));
 }
 function CharacterDossier({
   fighter,
@@ -3589,10 +3590,14 @@ function SocialHub({
     key: member.name
   }, /*#__PURE__*/React.createElement("div", {
     className: "social-team-hero"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "social-character-art"
   }, /*#__PURE__*/React.createElement(SpritePreview, {
     fighter: characterRoster.find(f => f.name === member.name),
-    maximumScale: 1.25
-  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, member.name), /*#__PURE__*/React.createElement("small", null, "Niv. ", member.level, " \xB7 Rang ", member.rank === 5 ? "★" : ranks[member.rank || 0]), /*#__PURE__*/React.createElement(TypeChips, {
+    maximumScale: 1.15
+  })), /*#__PURE__*/React.createElement("span", {
+    className: "social-team-copy"
+  }, /*#__PURE__*/React.createElement("b", null, member.name), /*#__PURE__*/React.createElement("small", null, "Niv. ", member.level, " \xB7 Rang ", member.rank === 5 ? "★" : ranks[member.rank || 0]), /*#__PURE__*/React.createElement(TypeChips, {
     elements: characterElements[member.name]
   }))), /*#__PURE__*/React.createElement("div", {
     className: "social-psychs"

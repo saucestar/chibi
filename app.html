@@ -212,7 +212,9 @@ input.in{ width:100%; border:2.5px solid var(--ink); border-radius:8px; padding:
 /* rules overlay + login + toast */
 .ov{ position:fixed; inset:0; z-index:100; background:rgba(10,8,14,.75); display:flex; align-items:center; justify-content:center; padding:16px; }
 .ov[hidden]{ display:none; }
-.ov .pn{ max-width:520px; width:100%; max-height:86vh; overflow-y:auto; transform:none; }
+.ov .pn{ box-sizing:border-box; min-width:0; max-width:520px; width:100%; max-height:86vh; overflow-x:hidden; overflow-y:auto; transform:none; }
+.ov .pn>*{ min-width:0; max-width:100%; box-sizing:border-box; }
+.ov .pn .btn{ width:100%; max-width:100%; white-space:normal; overflow-wrap:anywhere; }
 .ov{ padding:28px 14px calc(14px + var(--safe-b)); }
 .rule{ display:flex; gap:10px; margin-bottom:12px; }
 .rule i{ width:24px; height:24px; flex-shrink:0; border-radius:50%; background:var(--ink); color:var(--ac); display:flex; align-items:center; justify-content:center; font:900 italic 11px 'Montserrat',sans-serif; }
