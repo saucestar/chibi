@@ -2284,8 +2284,14 @@ function PsychEquipment({
   const [draft, setDraft] = useState([]);
   const [page, setPage] = useState(0);
   const [inspected, setInspected] = useState(null);
+  const [sort, setSort] = useState("number");
   const available = availablePsychs(profile, name);
-  const pages = Math.max(1, Math.ceil(available.length / 16));
+  const sorted = [...available].sort((left, right) => {
+    const a = psychs[left],
+      b = psychs[right];
+    return sort === "grade" ? (badgeGradeOrder[pinGrade(a)] ?? 0) - (badgeGradeOrder[pinGrade(b)] ?? 0) || a.name.localeCompare(b.name) : sort === "element" ? elementNames[a.element || badgeElement(a)].localeCompare(elementNames[b.element || badgeElement(b)]) || a.name.localeCompare(b.name) : sort === "power" ? b.power - a.power || a.name.localeCompare(b.name) : (Number.parseInt(a.number) || 9999) - (Number.parseInt(b.number) || 9999) || a.name.localeCompare(b.name);
+  });
+  const pages = Math.max(1, Math.ceil(sorted.length / 16));
   const equipped = profile.loadout[name] || [];
   const inspect = inspected ? psychs[inspected] : null;
   const toggle = id => {
@@ -2329,11 +2335,22 @@ function PsychEquipment({
   }, draft[i] ? /*#__PURE__*/React.createElement(PinIcon, {
     pin: psychs[draft[i]]
   }) : /*#__PURE__*/React.createElement("span", null, "+")))), /*#__PURE__*/React.createElement("div", {
+    className: "badge-sort",
+    "aria-label": "Trier les psychs"
+  }, [["number", "N°"], ["grade", "Classe"], ["element", "Type"], ["power", "Puissance"]].map(([id, label]) => /*#__PURE__*/React.createElement("button", {
+    key: id,
+    "aria-pressed": sort === id,
+    onClick: () => {
+      setSort(id);
+      setPage(0);
+      setInspected(null);
+    }
+  }, label))), /*#__PURE__*/React.createElement("div", {
     className: "badge-slots"
   }, Array.from({
     length: 16
   }, (_, i) => {
-    const id = available[page * 16 + i],
+    const id = sorted[page * 16 + i],
       pin = psychs[id];
     return pin ? /*#__PURE__*/React.createElement("button", {
       key: id,

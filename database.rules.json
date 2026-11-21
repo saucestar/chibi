@@ -379,7 +379,7 @@
         ".read": "auth != null && ($mode === 'casual' || $mode === 'ranked')",
         "$uid": {
           ".write": "auth != null && auth.token.discordId === $uid",
-          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','rating','team','joinedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 64 && newData.child('rating').isNumber() && newData.child('rating').val() >= 100 && newData.child('rating').val() <= 5000 && newData.child('team').numChildren() === 2 && newData.child('joinedAt').isNumber())"
+          ".validate": "!newData.exists() || (newData.hasChildren(['uid','name','rating','team','joinedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length <= 64 && newData.child('rating').isNumber() && newData.child('rating').val() >= 100 && newData.child('rating').val() <= 5000 && newData.child('team').hasChildren(['0','1']) && !newData.child('team').child('2').exists() && newData.child('joinedAt').isNumber())"
         }
       }
     },

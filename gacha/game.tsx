@@ -921,8 +921,10 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
   const [draft,setDraft]=useState<string[]>([]);
   const [page,setPage]=useState(0);
   const [inspected,setInspected]=useState<string|null>(null);
+  const [sort,setSort]=useState<BadgeSort>("number");
   const available=availablePsychs(profile,name);
-  const pages=Math.max(1,Math.ceil(available.length/16));
+  const sorted=[...available].sort((left,right)=>{const a=psychs[left],b=psychs[right];return sort==="grade"?(badgeGradeOrder[pinGrade(a)]??0)-(badgeGradeOrder[pinGrade(b)]??0)||a.name.localeCompare(b.name):sort==="element"?elementNames[a.element||badgeElement(a)].localeCompare(elementNames[b.element||badgeElement(b)])||a.name.localeCompare(b.name):sort==="power"?b.power-a.power||a.name.localeCompare(b.name):(Number.parseInt(a.number)||9999)-(Number.parseInt(b.number)||9999)||a.name.localeCompare(b.name);});
+  const pages=Math.max(1,Math.ceil(sorted.length/16));
   const equipped=profile.loadout[name]||[];
   const inspect=inspected?psychs[inspected]:null;
   const toggle=(id:string)=>{
@@ -940,8 +942,9 @@ function PsychEquipment({name,profile,save}:{name:string;profile:Profile;save:(i
       <div className="psych-equipment-slots">{[0,1,2].map(i=><button key={i} disabled={!draft[i]} aria-label={draft[i]?`Retirer ${psychs[draft[i]].name}`:`Emplacement ${i+1} vide`} onClick={()=>toggle(draft[i])}>
         {draft[i]?<PinIcon pin={psychs[draft[i]]}/>:<span>+</span>}
       </button>)}</div>
+      <div className="badge-sort" aria-label="Trier les psychs">{[["number","N°"],["grade","Classe"],["element","Type"],["power","Puissance"]].map(([id,label])=><button key={id} aria-pressed={sort===id} onClick={()=>{setSort(id as BadgeSort);setPage(0);setInspected(null);}}>{label}</button>)}</div>
       <div className="badge-slots">{Array.from({length:16},(_,i)=>{
-        const id=available[page*16+i],pin=psychs[id];
+        const id=sorted[page*16+i],pin=psychs[id];
         return pin?<button key={id} className="badge-slot" aria-label={`${pin.name} · ${pinTargetLabel(pin)} · ${profile.pinCopies[id]||1} exemplaire(s)${equippedBy(profile,name,id)?` · Équipé par ${equippedBy(profile,name,id)}`:""}`} disabled={Boolean(equippedBy(profile,name,id))} aria-pressed={draft.includes(id)} onClick={()=>toggle(id)}><BadgeArt pin={pin}/><PinTargetBadge pin={pin}/>{(profile.pinCopies[id]||1)>1&&<span className="badge-copy">×{profile.pinCopies[id]}</span>}{equippedBy(profile,name,id)&&<small className="badge-owner">{equippedBy(profile,name,id)}</small>}</button>:<span key={i} className="badge-slot" aria-hidden="true"/>;
       })}</div>
       {inspect && <p className="badge-info"><b>{inspect.name.replace(" (Pin)","")}</b> · {types[inspect.kind]} · {pinTargetLabel(inspect)} · {inspect.cost} EN · <PinRankInfo pin={inspect}/> <TypeChips elements={[inspect.element||badgeElement(inspect)]}/>{equippedBy(profile,name,inspect.id)&&<span> · Équipé par {equippedBy(profile,name,inspect.id)}</span>}</p>}
