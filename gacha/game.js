@@ -288,10 +288,10 @@ const characterRoster = [{
   maxHp: 96,
   sprite: joshuaSprite,
   accent: "#92dcce",
-  frames: 8,
-  frameWidth: 30,
-  frameHeight: 58,
-  portraitCenter: 15,
+  frames: 6,
+  frameWidth: 32,
+  frameHeight: 72,
+  portraitCenter: 16,
   portraitTop: 0
 }];
 const Icon = ({
