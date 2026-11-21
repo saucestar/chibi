@@ -37,6 +37,39 @@ const typeChart:Record<ElementType,[ElementType[],ElementType[],ElementType[]]>=
  fairy:[["fighting","dragon","dark"],["fire","poison","steel"],[]]
 };
 const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"],NOCTIS:["dark","steel"],PROMPTO:["electric"],IGNIS:["fire"],GLADIO:["rock","fighting"],X:["steel","electric"],SONIC:["normal","electric"],ZERO:["steel","fire"],SHADOW:["dark","psychic"],KNUCKLES:["fighting","ground"],TAILS:["flying","electric"],MARLUXIA:["grass","dark"],LEXAEUS:["rock","fighting"],AXEL:["fire","dark"],LARXENE:["electric","dark"]};
+type PassiveKind="physical"|"special"|"burst"|"all";
+type CharacterPassive={name:string;description:string;damageKind?:PassiveKind;damageBonus?:number;damageCondition?:"lowHp"|"partnerAlive";defense?:number;dodge?:number;healing?:number};
+const characterPassives:Record<string,CharacterPassive>={
+ NEKU:{name:"Psych Sync",description:"Ses psychs frappent 10 % plus fort.",damageKind:"special",damageBonus:.10},
+ SHIKI:{name:"Mr. Mew protecteur",description:"Les soins de Shiki rendent 15 % de PV supplémentaires.",healing:.15},
+ BEAT:{name:"Street Brawler",description:"Ses attaques physiques infligent 10 % de dégâts supplémentaires.",damageKind:"physical",damageBonus:.10},
+ JOSHUA:{name:"Contrôle du temps",description:"Sa maîtrise du temps lui donne 12 % de chances d’esquiver une attaque.",dodge:.12},
+ CLOUD:{name:"Bravoure désespérée",description:"Sous la moitié de ses PV, ses attaques physiques gagnent 20 % de puissance.",damageKind:"physical",damageBonus:.20,damageCondition:"lowHp"},
+ AERITH:{name:"Vent guérisseur",description:"Les soins d’Aerith rendent 20 % de PV supplémentaires.",healing:.20},
+ "2B":{name:"Protocole YoRHa",description:"Son blindage réduit de 10 % les dégâts reçus.",defense:.10},
+ A2:{name:"Mode berserk",description:"Sous la moitié de ses PV, ses attaques infligent 20 % de dégâts supplémentaires.",damageKind:"all",damageBonus:.20,damageCondition:"lowHp"},
+ SORA:{name:"Liens du cœur",description:"Tant que son partenaire tient debout, ses attaques gagnent 10 % de puissance.",damageKind:"all",damageBonus:.10,damageCondition:"partnerAlive"},
+ RIKU:{name:"Gardien des ténèbres",description:"Sa résistance aux ténèbres réduit de 12 % les dégâts reçus.",defense:.12},
+ NOCTIS:{name:"Roi éveillé",description:"Son Sync Burst inflige 15 % de dégâts supplémentaires.",damageKind:"burst",damageBonus:.15},
+ PROMPTO:{name:"Tir précis",description:"Ses psychs infligent 12 % de dégâts supplémentaires.",damageKind:"special",damageBonus:.12},
+ IGNIS:{name:"Stratège royal",description:"Sa préparation réduit de 10 % les dégâts qu’il reçoit.",defense:.10},
+ GLADIO:{name:"Bouclier du roi",description:"Réduit de 16 % les dégâts qu’il reçoit.",defense:.16},
+ X:{name:"Tir chargé",description:"Ses psychs infligent 10 % de dégâts supplémentaires.",damageKind:"special",damageBonus:.10},
+ SONIC:{name:"Vitesse supersonique",description:"Sa vitesse lui donne 15 % de chances d’esquiver une attaque.",dodge:.15},
+ ZERO:{name:"Z-Saber",description:"Ses attaques physiques infligent 12 % de dégâts supplémentaires.",damageKind:"physical",damageBonus:.12},
+ SHADOW:{name:"Chaos Control",description:"Le Chaos Control lui donne 12 % de chances d’esquiver une attaque.",dodge:.12},
+ KNUCKLES:{name:"Poings de l’échidné",description:"Ses attaques physiques infligent 15 % de dégâts supplémentaires.",damageKind:"physical",damageBonus:.15},
+ TAILS:{name:"Génie mécanicien",description:"Ses soins rendent 15 % de PV supplémentaires.",healing:.15},
+ MARLUXIA:{name:"Faucheur floral",description:"Ses psychs infligent 12 % de dégâts supplémentaires.",damageKind:"special",damageBonus:.12},
+ LEXAEUS:{name:"Puissance terrestre",description:"Ses attaques physiques infligent 18 % de dégâts supplémentaires.",damageKind:"physical",damageBonus:.18},
+ AXEL:{name:"Rafale de flammes",description:"Ses psychs infligent 12 % de dégâts supplémentaires.",damageKind:"special",damageBonus:.12},
+ LARXENE:{name:"Éclair fulgurant",description:"Ses psychs infligent 10 % de dégâts supplémentaires.",damageKind:"special",damageBonus:.10}
+};
+function passiveDamageMultiplier(name:string,kind:PassiveKind,hp?:number,maxHp?:number,partnerAlive=true):number {const p=characterPassives[name];if(!p?.damageBonus||p.damageKind!==kind&&p.damageKind!=="all")return 1;if(p.damageCondition==="lowHp"&&(hp===undefined||maxHp===undefined||hp/maxHp>.5))return 1;if(p.damageCondition==="partnerAlive"&&!partnerAlive)return 1;return 1+p.damageBonus;}
+function passiveDamageReduction(name:string):number {return characterPassives[name]?.defense||0;}
+function passiveDodgeChance(name:string):number {return characterPassives[name]?.dodge||0;}
+function passiveHealingMultiplier(name:string):number {return 1+(characterPassives[name]?.healing||0);}
+function deterministicChance(chance:number,key:string):boolean {let hash=2166136261;for(let i=0;i<key.length;i++)hash=Math.imul(hash^key.charCodeAt(i),16777619);return (hash>>>0)/4294967296<chance;}
 function stabMultiplier(fighter:Fighter,pin:Pin):number {return ["physical","special"].includes(pin.kind)&&characterElements[fighter.name]?.includes(pin.element||badgeElement(pin))?1.2:1;}
 const enemyElements:Record<EnemyKind,ElementType[]>={frog:["water"],wolf:["dark"],shinigami:["dark","flying"],"jey-pengi":["water","ice"],"electro-pengi":["electric"],"psyche-fox":["psychic"]};
 function effectiveness(attack:ElementType,defense:ElementType[]):number {
@@ -1088,12 +1121,13 @@ function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;sc
 function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;profile:Profile;base?:boolean;rate?:number}) {
  const owned=profile.owned.includes(fighter.name),reference=base||!owned;
  const stats=trained(fighter,reference?0:profile.xp[fighter.name]||0,!reference&&profile.awakened.includes(fighter.name),reference?0:profile.copies[fighter.name]||0);
- const rank=reference?0:profile.levels[fighter.name]||0,pin=psychs[basePsych[fighter.name]];
+ const rank=reference?0:profile.levels[fighter.name]||0,pin=psychs[basePsych[fighter.name]],passive=characterPassives[fighter.name];
  return <article className="character-dossier" style={{"--character-accent":fighter.accent} as React.CSSProperties}>
   <header><small>{fighter.role}</small><h3>{fighter.name}</h3><TypeChips elements={characterElements[fighter.name]}/></header>
   <div className="dossier-art"><span className="dossier-orbit" aria-hidden="true"/><SpritePreview fighter={fighter} maximumScale={2.6}/><RankBadge level={rank}/></div>
   <div className="dossier-stats"><p>{reference?"Stats de base · Niveau 1 · Rang E":`Ta progression · Niveau ${stats.level} · Rang ${rank===5?"étoile":ranks[rank]}`}</p>
    <dl>{[["PV",stats.maxHp],["ATK",stats.atk],["ATK SPE",stats.mag],["SPE",stats.speed]].map(([name,value])=><div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl>
+   <div className="dossier-passive"><span aria-hidden="true">✦</span><div><small>Passif · {passive.name}</small><b>{passive.description}</b></div></div>
    <div className="dossier-psych"><PinIcon pin={pin}/><span><small>Psych de départ</small><b>{pin.name.replace(" (Pin)","")}</b></span></div>
    {rate!==undefined&&<p className="dossier-rate">Prochain vœu · {(rate*100).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{maximumFractionDigits:3})} %</p>}
    {!reference&&<p>{profile.copies[fighter.name]||0} / 5 doublons{profile.awakened.includes(fighter.name)?" · Éveillé":""}</p>}
@@ -1177,11 +1211,12 @@ function resolvePvpRoom(room:PvpRoom):PvpRoom {
   const rival=ids.find(uid=>uid!==step.uid)!,enemyTeam=teams[rival];
   if(plan.kind==="guard"){shields.set(`${step.uid}:${step.index}`,.55);continue;}
   const pin=psychs[plan.pin||""];if(!pin||!fighter.loadout.includes(pin.id))continue;
-  if(pin.kind==="heal"){const amount=scaledPinEffect(pin,fighter.mag*pin.power/50);teams[step.uid]=teams[step.uid].map(member=>member.hp>0?{...member,hp:Math.min(member.maxHp,member.hp+amount)}:member);continue;}
+  if(pin.kind==="heal"){const amount=scaledPinEffect(pin,fighter.mag*pin.power/50*passiveHealingMultiplier(fighter.name));teams[step.uid]=teams[step.uid].map(member=>member.hp>0?{...member,hp:Math.min(member.maxHp,member.hp+amount)}:member);continue;}
   if(pin.kind==="guard"||pin.kind==="support"){teams[step.uid].forEach((member,index)=>member.hp>0&&shields.set(`${step.uid}:${index}`,Math.max(shields.get(`${step.uid}:${index}`)||0,pinShieldReduction(pin))));continue;}
-  const raw=scaledPinEffect(pin,(pin.kind==="physical"?fighter.atk:fighter.mag)*(.7+pin.power/100)*stabMultiplier(fighter as Fighter,pin));
+  const kind:PassiveKind=pin.kind==="physical"?"physical":"special",partnerAlive=teams[step.uid].some((member,index)=>index!==step.index&&member.hp>0);
+  const raw=scaledPinEffect(pin,(pin.kind==="physical"?fighter.atk:fighter.mag)*(.7+pin.power/100)*stabMultiplier(fighter as Fighter,pin)*passiveDamageMultiplier(fighter.name,kind,fighter.hp,fighter.maxHp,partnerAlive));
   const live=enemyTeam.map((member,index)=>({member,index})).filter(item=>item.member.hp>0),targets=(pinTargetMode(pin)==="aoe"?live:[live.find(item=>item.index===plan.target)||live[0]]).filter(Boolean) as {member:PvpFighter;index:number}[];
-  targets.forEach(({member,index})=>{const reduction=1-(shields.get(`${rival}:${index}`)||0),damage=Math.max(1,Math.round(typedDamage(raw,pin.element||badgeElement(pin),characterElements[member.name])*reduction));enemyTeam[index]={...member,hp:Math.max(0,member.hp-damage)};});
+  targets.forEach(({member,index})=>{const reduction=Math.min(.8,(shields.get(`${rival}:${index}`)||0)+passiveDamageReduction(member.name)),evades=deterministicChance(passiveDodgeChance(member.name),`${room.turn}:${step.uid}:${fighter.name}:${member.name}:${pin.id}`),damage=evades?0:Math.max(1,Math.round(typedDamage(raw,pin.element||badgeElement(pin),characterElements[member.name])*(1-reduction)));enemyTeam[index]={...member,hp:Math.max(0,member.hp-damage)};});
  }
  const next={...room,turn:room.turn+1,actions:{},updatedAt:Date.now(),players:{...room.players}};
  ids.forEach(uid=>next.players[uid]={...room.players[uid],team:teams[uid]});
@@ -1714,7 +1749,7 @@ function Battle({ event,initialRun,initialTeam,loadout,coins,rebirths,onCheckpoi
     let xp=0;
     const pause=()=>new Promise(resolve=>setTimeout(resolve,700));
     const publish=()=>{setTeam([...fighters]);setEnemies([...monsters]);setEnergy(en);setGroove(sync);};
-    const healParty=(amount:number)=>{fighters=fighters.map(f=>f.hp>0?{...f,hp:Math.min(f.maxHp,f.hp+amount)}:f);};
+    const healParty=(amount:number,sourceName?:string)=>{const boosted=Math.round(amount*passiveHealingMultiplier(sourceName||""));fighters=fighters.map(f=>f.hp>0?{...f,hp:Math.min(f.maxHp,f.hp+boosted)}:f);};
     const passiveBonus=(pattern:RegExp,base:number)=>Math.max(0,...fighters.filter(f=>f.hp>0).flatMap(f=>(loadout[f.name]||[]).map(id=>psychs[id]).filter(pin=>pattern.test(pin.psych)).map(pin=>base*pinRankMultiplier(pin))));
     const persist=(pending:RunPending|null,gains:RunGains={},nextTurn=turn)=>saveCheckpoint({status:fighters.every(f=>f.hp<=0)?"lost":wave===finalWave&&monsters.every(e=>e.hp<=0)?"complete":"active",wave,turn:nextTurn,team:fighters,enemies:monsters,energy:en,groove:sync,reward:monsters.every(e=>e.hp<=0),earnedXp:earnedXp+xp,loot:[...loot,...drops.map(pin=>pin.name)],awarded:[...awarded.current],pending:fighters.every(f=>f.hp<=0)||monsters.every(e=>e.hp<=0)?null:pending},gains);
     setBusy(true);setQueue(steps);setEnergy(en);
@@ -1730,7 +1765,8 @@ function Battle({ event,initialRun,initialTeam,loadout,coins,rebirths,onCheckpoi
         if(attacker.hp<=0)continue;
         const target=fighters.find(f=>f.name===step.target&&f.hp>0)||fighters.find(f=>f.hp>0)!;
         const attackType=enemyElements[attacker.kind][0],scale=effectiveness(attackType,characterElements[target.name]);
-        const damage=Math.random()<Math.min(.30,(target.speed||0)/200)?0:typedDamage(Math.max(3,Math.round(enemyAttackPower(attacker)*(1-(shields.get(target.name)||0)))),attackType,characterElements[target.name]);
+        const evasion=Math.min(.65,(target.speed||0)/200+passiveDodgeChance(target.name)),reduction=Math.min(.8,(shields.get(target.name)||0)+passiveDamageReduction(target.name));
+        const damage=Math.random()<evasion?0:typedDamage(Math.max(3,Math.round(enemyAttackPower(attacker)*(1-reduction))),attackType,characterElements[target.name]);
         setHitFeedback({side:"ally",target:target.name,label:scale===0?"Sans effet":`${damage} PV · ${affinityText(scale)}`});
         fighters=fighters.map(f=>f.name===target.name?{...f,hp:Math.max(0,f.hp-damage)}:f);
         if(attacker.trait==="vampire"&&damage>0)monsters=monsters.map(e=>e.id===attacker.id?{...e,hp:Math.min(e.maxHp,e.hp+Math.ceil(damage*.15))}:e);
@@ -1747,31 +1783,32 @@ function Battle({ event,initialRun,initialTeam,loadout,coins,rebirths,onCheckpoi
           shields.set(fighter.name,Math.max(shields.get(fighter.name)||0,.55));en=Math.min(3,en+1);setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         }else if(plan.kind==="burst"){
-          const damage=Math.max(fighter.atk||1,fighter.mag||1)*5;
+          const partnerAlive=fighters.some(f=>f.name!==fighter.name&&f.hp>0),damage=Math.round(Math.max(fighter.atk||1,fighter.mag||1)*5*passiveDamageMultiplier(fighter.name,"burst",fighter.hp,fighter.maxHp,partnerAlive));
           sync=0;monsters=monsters.map(e=>e.hp>0?({...e,hp:Math.max(0,e.hp-damage)}):e);setActiveAction("burst");gains.bursts=1;
           setMessage(`${fighter.name} · Sync Burst · ${damage} dégâts sur chaque ennemi !`);
         }else{
           const pin=psychs[plan.pin!];
           if(pin.kind==="heal"){
             const amount=scaledPinEffect(pin,(fighter.mag||1)*pin.power/50*(1+passiveBonus(/^Cure Boost/,.3)));
-            healParty(amount);setActiveAction("heal");setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
+            healParty(amount,fighter.name);setActiveAction("heal");setMessage(`${fighter.name} · ${pin.name} · +${Math.round(amount*passiveHealingMultiplier(fighter.name))} PV au duo`);
           }else if(pin.kind==="guard"||pin.kind==="support"){
             fighters.filter(f=>f.hp>0).forEach(f=>shields.set(f.name,Math.max(shields.get(f.name)||0,pinShieldReduction(pin))));
             if(pin.kind==="support"){
               if(/Turbo|Supply/.test(pin.psych))en=Math.min(3,en+scaledPinEffect(pin,2));
-              else if(/Cure Boost|Subconscious|Life/.test(pin.psych))healParty(scaledPinEffect(pin,(fighter.mag||1)/2));
+              else if(/Cure Boost|Subconscious|Life/.test(pin.psych))healParty(scaledPinEffect(pin,(fighter.mag||1)/2),fighter.name);
               else sync=Math.min(100,sync+scaledPinEffect(pin,18));
             }
             setActiveAction("guard");setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           }else{
             const physical=pin.kind==="physical",stab=stabMultiplier(fighter,pin);
-            const amount=scaledPinEffect(pin,(physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100)*stab);
+            const partnerAlive=fighters.some(f=>f.name!==fighter.name&&f.hp>0),passive=passiveDamageMultiplier(fighter.name,physical?"physical":"special",fighter.hp,fighter.maxHp,partnerAlive);
+            const amount=scaledPinEffect(pin,(physical?fighter.atk||1:fighter.mag||1)*(.7+pin.power/100)*stab*passive);
             const targets=pinTargetMode(pin)==="aoe"?monsters.filter(e=>e.hp>0):[monsters.find(e=>e.id===plan.target&&e.hp>0)||monsters.find(e=>e.hp>0)!];
             const damages=new Map(targets.map(target=>{const base=Math.max(1,Math.round(amount*(1+passiveBonus(/^Resonance/,.15)))+Math.floor(Math.random()*7)-3);return [target.id,enemyDamageTaken(target,typedDamage(base,pin.element!,enemyElements[target.kind]))];}));
             const total=[...damages.values()].reduce((sum,damage)=>sum+damage,0),primary=targets[0],primaryDamage=damages.get(primary.id)||0,scale=effectiveness(pin.element!,enemyElements[primary.kind]);
             setHitFeedback({side:"enemy",target:String(primary.id),label:scale===0?"Sans effet":`${primaryDamage} dégâts · ${affinityText(scale)}`});
             monsters=monsters.map(e=>damages.has(e.id)?{...e,hp:Math.max(0,e.hp-(damages.get(e.id)||0))}:e);
-            if(pin.drain)healParty(Math.ceil(total/4));
+            if(pin.drain)healParty(Math.ceil(total/4),fighter.name);
             if(total)gameSound.effect("hit");
             sync=Math.min(100,sync+18);setSelected(primary.id);setImpact(primary.id);setActiveAction(physical?"shockwave":"pyro");
             setMessage((pinTargetMode(pin)==="aoe"?`${fighter.name} · ${pin.name} · ${total} dégâts répartis sur tous les ennemis`:`${fighter.name} · ${pin.name} → ${primary.name} · ${primaryDamage} dégâts`)+(stab>1?" · STAB ×1,2":""));

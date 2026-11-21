@@ -82,6 +82,47 @@ const characterElements = {
   AXEL: ["fire", "dark"],
   LARXENE: ["electric", "dark"]
 };
+const characterPassives = {
+  NEKU: { name: "Psych Sync", description: "Ses psychs frappent 10 % plus fort.", damageKind: "special", damageBonus: .10 },
+  SHIKI: { name: "Mr. Mew protecteur", description: "Les soins de Shiki rendent 15 % de PV supplémentaires.", healing: .15 },
+  BEAT: { name: "Street Brawler", description: "Ses attaques physiques infligent 10 % de dégâts supplémentaires.", damageKind: "physical", damageBonus: .10 },
+  JOSHUA: { name: "Contrôle du temps", description: "Sa maîtrise du temps lui donne 12 % de chances d’esquiver une attaque.", dodge: .12 },
+  CLOUD: { name: "Bravoure désespérée", description: "Sous la moitié de ses PV, ses attaques physiques gagnent 20 % de puissance.", damageKind: "physical", damageBonus: .20, damageCondition: "lowHp" },
+  AERITH: { name: "Vent guérisseur", description: "Les soins d’Aerith rendent 20 % de PV supplémentaires.", healing: .20 },
+  "2B": { name: "Protocole YoRHa", description: "Son blindage réduit de 10 % les dégâts reçus.", defense: .10 },
+  A2: { name: "Mode berserk", description: "Sous la moitié de ses PV, ses attaques infligent 20 % de dégâts supplémentaires.", damageKind: "all", damageBonus: .20, damageCondition: "lowHp" },
+  SORA: { name: "Liens du cœur", description: "Tant que son partenaire tient debout, ses attaques gagnent 10 % de puissance.", damageKind: "all", damageBonus: .10, damageCondition: "partnerAlive" },
+  RIKU: { name: "Gardien des ténèbres", description: "Sa résistance aux ténèbres réduit de 12 % les dégâts reçus.", defense: .12 },
+  NOCTIS: { name: "Roi éveillé", description: "Son Sync Burst inflige 15 % de dégâts supplémentaires.", damageKind: "burst", damageBonus: .15 },
+  PROMPTO: { name: "Tir précis", description: "Ses psychs infligent 12 % de dégâts supplémentaires.", damageKind: "special", damageBonus: .12 },
+  IGNIS: { name: "Stratège royal", description: "Sa préparation réduit de 10 % les dégâts qu’il reçoit.", defense: .10 },
+  GLADIO: { name: "Bouclier du roi", description: "Réduit de 16 % les dégâts qu’il reçoit.", defense: .16 },
+  X: { name: "Tir chargé", description: "Ses psychs infligent 10 % de dégâts supplémentaires.", damageKind: "special", damageBonus: .10 },
+  SONIC: { name: "Vitesse supersonique", description: "Sa vitesse lui donne 15 % de chances d’esquiver une attaque.", dodge: .15 },
+  ZERO: { name: "Z-Saber", description: "Ses attaques physiques infligent 12 % de dégâts supplémentaires.", damageKind: "physical", damageBonus: .12 },
+  SHADOW: { name: "Chaos Control", description: "Le Chaos Control lui donne 12 % de chances d’esquiver une attaque.", dodge: .12 },
+  KNUCKLES: { name: "Poings de l’échidné", description: "Ses attaques physiques infligent 15 % de dégâts supplémentaires.", damageKind: "physical", damageBonus: .15 },
+  TAILS: { name: "Génie mécanicien", description: "Ses soins rendent 15 % de PV supplémentaires.", healing: .15 },
+  MARLUXIA: { name: "Faucheur floral", description: "Ses psychs infligent 12 % de dégâts supplémentaires.", damageKind: "special", damageBonus: .12 },
+  LEXAEUS: { name: "Puissance terrestre", description: "Ses attaques physiques infligent 18 % de dégâts supplémentaires.", damageKind: "physical", damageBonus: .18 },
+  AXEL: { name: "Rafale de flammes", description: "Ses psychs infligent 12 % de dégâts supplémentaires.", damageKind: "special", damageBonus: .12 },
+  LARXENE: { name: "Éclair fulgurant", description: "Ses psychs infligent 10 % de dégâts supplémentaires.", damageKind: "special", damageBonus: .10 }
+};
+function passiveDamageMultiplier(name, kind, hp, maxHp, partnerAlive = true) {
+  const passive = characterPassives[name];
+  if (!passive?.damageBonus || passive.damageKind !== kind && passive.damageKind !== "all") return 1;
+  if (passive.damageCondition === "lowHp" && (hp === undefined || maxHp === undefined || hp / maxHp > .5)) return 1;
+  if (passive.damageCondition === "partnerAlive" && !partnerAlive) return 1;
+  return 1 + passive.damageBonus;
+}
+function passiveDamageReduction(name) { return characterPassives[name]?.defense || 0; }
+function passiveDodgeChance(name) { return characterPassives[name]?.dodge || 0; }
+function passiveHealingMultiplier(name) { return 1 + (characterPassives[name]?.healing || 0); }
+function deterministicChance(chance, key) {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+  return (hash >>> 0) / 4294967296 < chance;
+}
 function stabMultiplier(fighter, pin) {
   return ["physical", "special"].includes(pin.kind) && characterElements[fighter.name]?.includes(pin.element || badgeElement(pin)) ? 1.2 : 1;
 }
@@ -2785,7 +2826,8 @@ function CharacterDossier({
     reference = base || !owned;
   const stats = trained(fighter, reference ? 0 : profile.xp[fighter.name] || 0, !reference && profile.awakened.includes(fighter.name), reference ? 0 : profile.copies[fighter.name] || 0);
   const rank = reference ? 0 : profile.levels[fighter.name] || 0,
-    pin = psychs[basePsych[fighter.name]];
+    pin = psychs[basePsych[fighter.name]],
+    passive = characterPassives[fighter.name];
   return /*#__PURE__*/React.createElement("article", {
     className: "character-dossier",
     style: {
@@ -2808,6 +2850,10 @@ function CharacterDossier({
   }, /*#__PURE__*/React.createElement("p", null, reference ? "Stats de base · Niveau 1 · Rang E" : `Ta progression · Niveau ${stats.level} · Rang ${rank === 5 ? "étoile" : ranks[rank]}`), /*#__PURE__*/React.createElement("dl", null, [["PV", stats.maxHp], ["ATK", stats.atk], ["ATK SPE", stats.mag], ["SPE", stats.speed]].map(([name, value]) => /*#__PURE__*/React.createElement("div", {
     key: name
   }, /*#__PURE__*/React.createElement("dt", null, name), /*#__PURE__*/React.createElement("dd", null, value)))), /*#__PURE__*/React.createElement("div", {
+    className: "dossier-passive"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "Passif · ", passive.name), /*#__PURE__*/React.createElement("b", null, passive.description))), /*#__PURE__*/React.createElement("div", {
     className: "dossier-psych"
   }, /*#__PURE__*/React.createElement(PinIcon, {
     pin: pin
@@ -3054,7 +3100,7 @@ function resolvePvpRoom(room) {
     const pin = psychs[plan.pin || ""];
     if (!pin || !fighter.loadout.includes(pin.id)) continue;
     if (pin.kind === "heal") {
-      const amount = scaledPinEffect(pin, fighter.mag * pin.power / 50);
+      const amount = scaledPinEffect(pin, fighter.mag * pin.power / 50 * passiveHealingMultiplier(fighter.name));
       teams[step.uid] = teams[step.uid].map(member => member.hp > 0 ? {
         ...member,
         hp: Math.min(member.maxHp, member.hp + amount)
@@ -3065,7 +3111,9 @@ function resolvePvpRoom(room) {
       teams[step.uid].forEach((member, index) => member.hp > 0 && shields.set(`${step.uid}:${index}`, Math.max(shields.get(`${step.uid}:${index}`) || 0, pinShieldReduction(pin))));
       continue;
     }
-    const raw = scaledPinEffect(pin, (pin.kind === "physical" ? fighter.atk : fighter.mag) * (.7 + pin.power / 100) * stabMultiplier(fighter, pin));
+    const kind = pin.kind === "physical" ? "physical" : "special",
+      partnerAlive = teams[step.uid].some((member, index) => index !== step.index && member.hp > 0),
+      raw = scaledPinEffect(pin, (pin.kind === "physical" ? fighter.atk : fighter.mag) * (.7 + pin.power / 100) * stabMultiplier(fighter, pin) * passiveDamageMultiplier(fighter.name, kind, fighter.hp, fighter.maxHp, partnerAlive));
     const live = enemyTeam.map((member, index) => ({
         member,
         index
@@ -3075,8 +3123,9 @@ function resolvePvpRoom(room) {
       member,
       index
     }) => {
-      const reduction = 1 - (shields.get(`${rival}:${index}`) || 0),
-        damage = Math.max(1, Math.round(typedDamage(raw, pin.element || badgeElement(pin), characterElements[member.name]) * reduction));
+      const reduction = Math.min(.8, (shields.get(`${rival}:${index}`) || 0) + passiveDamageReduction(member.name)),
+        evades = deterministicChance(passiveDodgeChance(member.name), `${room.turn}:${step.uid}:${fighter.name}:${member.name}:${pin.id}`),
+        damage = evades ? 0 : Math.max(1, Math.round(typedDamage(raw, pin.element || badgeElement(pin), characterElements[member.name]) * (1 - reduction)));
       enemyTeam[index] = {
         ...member,
         hp: Math.max(0, member.hp - damage)
@@ -4801,10 +4850,11 @@ function Battle({
       setEnergy(en);
       setGroove(sync);
     };
-    const healParty = amount => {
+    const healParty = (amount, sourceName) => {
+      const boosted = Math.round(amount * passiveHealingMultiplier(sourceName || ""));
       fighters = fighters.map(f => f.hp > 0 ? {
         ...f,
-        hp: Math.min(f.maxHp, f.hp + amount)
+        hp: Math.min(f.maxHp, f.hp + boosted)
       } : f);
     };
     const passiveBonus = (pattern, base) => Math.max(0, ...fighters.filter(f => f.hp > 0).flatMap(f => (loadout[f.name] || []).map(id => psychs[id]).filter(pin => pattern.test(pin.psych)).map(pin => base * pinRankMultiplier(pin))));
@@ -4848,7 +4898,9 @@ function Battle({
         const target = fighters.find(f => f.name === step.target && f.hp > 0) || fighters.find(f => f.hp > 0);
         const attackType = enemyElements[attacker.kind][0],
           scale = effectiveness(attackType, characterElements[target.name]);
-        const damage = Math.random() < Math.min(.30, (target.speed || 0) / 200) ? 0 : typedDamage(Math.max(3, Math.round(enemyAttackPower(attacker) * (1 - (shields.get(target.name) || 0)))), attackType, characterElements[target.name]);
+        const evasion = Math.min(.65, (target.speed || 0) / 200 + passiveDodgeChance(target.name)),
+          reduction = Math.min(.8, (shields.get(target.name) || 0) + passiveDamageReduction(target.name)),
+          damage = Math.random() < evasion ? 0 : typedDamage(Math.max(3, Math.round(enemyAttackPower(attacker) * (1 - reduction))), attackType, characterElements[target.name]);
         setHitFeedback({
           side: "ally",
           target: target.name,
@@ -4877,7 +4929,8 @@ function Battle({
           setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         } else if (plan.kind === "burst") {
-          const damage = Math.max(fighter.atk || 1, fighter.mag || 1) * 5;
+          const partnerAlive = fighters.some(f => f.name !== fighter.name && f.hp > 0),
+            damage = Math.round(Math.max(fighter.atk || 1, fighter.mag || 1) * 5 * passiveDamageMultiplier(fighter.name, "burst", fighter.hp, fighter.maxHp, partnerAlive));
           sync = 0;
           monsters = monsters.map(e => e.hp > 0 ? {
             ...e,
@@ -4890,20 +4943,22 @@ function Battle({
           const pin = psychs[plan.pin];
           if (pin.kind === "heal") {
             const amount = scaledPinEffect(pin, (fighter.mag || 1) * pin.power / 50 * (1 + passiveBonus(/^Cure Boost/, .3)));
-            healParty(amount);
+            healParty(amount, fighter.name);
             setActiveAction("heal");
             setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
           } else if (pin.kind === "guard" || pin.kind === "support") {
             fighters.filter(f => f.hp > 0).forEach(f => shields.set(f.name, Math.max(shields.get(f.name) || 0, pinShieldReduction(pin))));
             if (pin.kind === "support") {
-              if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + scaledPinEffect(pin, 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(scaledPinEffect(pin, (fighter.mag || 1) / 2));else sync = Math.min(100, sync + scaledPinEffect(pin, 18));
+              if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + scaledPinEffect(pin, 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(scaledPinEffect(pin, (fighter.mag || 1) / 2), fighter.name);else sync = Math.min(100, sync + scaledPinEffect(pin, 18));
             }
             setActiveAction("guard");
             setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           } else {
             const physical = pin.kind === "physical",
               stab = stabMultiplier(fighter, pin);
-            const amount = scaledPinEffect(pin, (physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100) * stab);
+            const partnerAlive = fighters.some(f => f.name !== fighter.name && f.hp > 0),
+              passive = passiveDamageMultiplier(fighter.name, physical ? "physical" : "special", fighter.hp, fighter.maxHp, partnerAlive),
+              amount = scaledPinEffect(pin, (physical ? fighter.atk || 1 : fighter.mag || 1) * (.7 + pin.power / 100) * stab * passive);
             const targets = pinTargetMode(pin) === "aoe" ? monsters.filter(e => e.hp > 0) : [monsters.find(e => e.id === plan.target && e.hp > 0) || monsters.find(e => e.hp > 0)];
             const damages = new Map(targets.map(target => {
               const base = Math.max(1, Math.round(amount * (1 + passiveBonus(/^Resonance/, .15))) + Math.floor(Math.random() * 7) - 3);
@@ -4922,7 +4977,7 @@ function Battle({
               ...e,
               hp: Math.max(0, e.hp - (damages.get(e.id) || 0))
             } : e);
-            if (pin.drain) healParty(Math.ceil(total / 4));
+            if (pin.drain) healParty(Math.ceil(total / 4), fighter.name);
             if (total) gameSound.effect("hit");
             sync = Math.min(100, sync + 18);
             setSelected(primary.id);
