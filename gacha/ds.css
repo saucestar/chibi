@@ -765,6 +765,9 @@
 .hero-noctis { animation:noctis-idle 2.25s steps(1,end) infinite; }
 .hero-joshua { animation:joshua-idle 1.2s steps(1,end) infinite; }
 .hero-prompto,.hero-ignis,.hero-gladio { animation:eos-idle .8s steps(1,end) infinite; }
+.hero-x { animation:x-idle 2s steps(1,end) infinite; }
+.hero-zero,.hero-shadow,.hero-sonic { animation:six-frame-idle 1.2s steps(1,end) infinite; }
+.hero-knuckles,.hero-tails { animation:eight-frame-idle 1.6s steps(1,end) infinite; }
 @keyframes noctis-idle {
   0%,6.24% {background-position:0 0} 6.25%,12.49% {background-position:6.666667% 0} 12.5%,18.74% {background-position:13.333333% 0} 18.75%,24.99% {background-position:20% 0}
   25%,31.24% {background-position:26.666667% 0} 31.25%,37.49% {background-position:33.333333% 0} 37.5%,43.74% {background-position:40% 0} 43.75%,49.99% {background-position:46.666667% 0}
@@ -772,9 +775,13 @@
   75%,81.24% {background-position:80% 0} 81.25%,87.49% {background-position:86.666667% 0} 87.5%,93.74% {background-position:93.333333% 0} 93.75%,100% {background-position:100% 0}
 }
 @keyframes eos-idle {0%,24.99%{background-position:0 0}25%,49.99%{background-position:33.333333% 0}50%,74.99%{background-position:66.666667% 0}75%,100%{background-position:100% 0}}
+@keyframes x-idle {0%,9.99%{background-position:0 0}10%,19.99%{background-position:-34px 0}20%,29.99%{background-position:-68px 0}30%,39.99%{background-position:-102px 0}40%,49.99%{background-position:-136px 0}50%,59.99%{background-position:-170px 0}60%,69.99%{background-position:-204px 0}70%,79.99%{background-position:-238px 0}80%,89.99%{background-position:-272px 0}90%,100%{background-position:-306px 0}}
+@keyframes six-frame-idle {0%,16.66%{background-position:0 0}16.67%,33.32%{background-position:calc(-1 * var(--idle-frame, 32px)) 0}33.33%,49.99%{background-position:calc(-2 * var(--idle-frame, 32px)) 0}50%,66.66%{background-position:calc(-3 * var(--idle-frame, 32px)) 0}66.67%,83.32%{background-position:calc(-4 * var(--idle-frame, 32px)) 0}83.33%,100%{background-position:calc(-5 * var(--idle-frame, 32px)) 0}}
+@keyframes eight-frame-idle {0%,12.49%{background-position:0 0}12.5%,24.99%{background-position:calc(-1 * var(--idle-frame, 32px)) 0}25%,37.49%{background-position:calc(-2 * var(--idle-frame, 32px)) 0}37.5%,49.99%{background-position:calc(-3 * var(--idle-frame, 32px)) 0}50%,62.49%{background-position:calc(-4 * var(--idle-frame, 32px)) 0}62.5%,74.99%{background-position:calc(-5 * var(--idle-frame, 32px)) 0}75%,87.49%{background-position:calc(-6 * var(--idle-frame, 32px)) 0}87.5%,100%{background-position:calc(-7 * var(--idle-frame, 32px)) 0}}
+.hero-shadow { --idle-frame:40px; }.hero-sonic { --idle-frame:21px; }.hero-tails { --idle-frame:40px; }
 /* Joshua uses fixed pixel offsets: browser scaling cannot interpolate between frames. */
 @keyframes joshua-idle {0%,16.66%{background-position:0 0}16.67%,33.32%{background-position:-32px 0}33.33%,49.99%{background-position:-64px 0}50%,66.66%{background-position:-96px 0}66.67%,83.32%{background-position:-128px 0}83.33%,100%{background-position:-160px 0}}
-@media(prefers-reduced-motion:reduce) { .sprite-frames-20,.hero-noctis,.hero-joshua,.hero-prompto,.hero-ignis,.hero-gladio { animation:none; } }
+@media(prefers-reduced-motion:reduce) { .sprite-frames-20,.hero-noctis,.hero-joshua,.hero-prompto,.hero-ignis,.hero-gladio,.hero-x,.hero-zero,.hero-shadow,.hero-sonic,.hero-knuckles,.hero-tails { animation:none; } }
 
 .save-sync-notice { margin:0; padding:8px 12px; color:#fff4d7; background:#241a3d; font:600 12px/1.4 Segoe UI,sans-serif; }
 body:has(.combat-hud) .save-sync-notice { position:absolute; left:10px; bottom:3px; z-index:12; max-width:60%; border-radius:8px; font-size:9px; }

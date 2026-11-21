@@ -36,7 +36,7 @@ const typeChart:Record<ElementType,[ElementType[],ElementType[],ElementType[]]>=
  steel:[["ice","rock","fairy"],["fire","water","electric","steel"],[]],
  fairy:[["fighting","dragon","dark"],["fire","poison","steel"],[]]
 };
-const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"],NOCTIS:["dark","steel"],PROMPTO:["electric"],IGNIS:["fire"],GLADIO:["rock","fighting"]};
+const characterElements:Record<string,ElementType[]>={NEKU:["psychic"],SHIKI:["normal"],BEAT:["fighting"],JOSHUA:["psychic","flying"],CLOUD:["fighting","steel"],AERITH:["grass","fairy"],"2B":["steel","fighting"],A2:["steel","dark"],SORA:["normal","fairy"],RIKU:["dark","psychic"],NOCTIS:["dark","steel"],PROMPTO:["electric"],IGNIS:["fire"],GLADIO:["rock","fighting"],X:["steel","electric"],ZERO:["steel","fighting"],SONIC:["electric"],SHADOW:["dark"],KNUCKLES:["fighting","ground"],TAILS:["flying","steel"]};
 const enemyElements:Record<EnemyKind,ElementType[]>={frog:["water"],wolf:["dark"],shinigami:["dark","flying"],"jey-pengi":["water","ice"],"electro-pengi":["electric"],"psyche-fox":["psychic"]};
 function effectiveness(attack:ElementType,defense:ElementType[]):number {
  const [strong,weak,immune]=typeChart[attack];
@@ -108,6 +108,12 @@ type Fighter = {
 };
 
 const characterRoster: Fighter[] = [
+  {name:"X",role:"MAVERICK HUNTER",hp:124,maxHp:124,sprite:"./assets/game/x-idle.png",accent:"#4b9dff",frames:10,frameWidth:34,frameHeight:32,portraitCenter:17,portraitTop:0},
+  {name:"ZERO",role:"MAVERICK HUNTER",hp:132,maxHp:132,sprite:"./assets/game/zero-idle.png",accent:"#ef5d54",frames:6,frameWidth:32,frameHeight:32,portraitCenter:16,portraitTop:0},
+  {name:"SONIC",role:"BLUE BLUR",hp:118,maxHp:118,sprite:"./assets/game/sonic-idle.png",accent:"#3d8dff",frames:6,frameWidth:21,frameHeight:32,portraitCenter:11,portraitTop:0},
+  {name:"SHADOW",role:"ULTIMATE LIFEFORM",hp:130,maxHp:130,sprite:"./assets/game/shadow-idle.png",accent:"#e94c65",frames:6,frameWidth:40,frameHeight:48,portraitCenter:20,portraitTop:0},
+  {name:"KNUCKLES",role:"MASTER EMERALD",hp:142,maxHp:142,sprite:"./assets/game/knuckles-idle.png",accent:"#e34c42",frames:8,frameWidth:32,frameHeight:48,portraitCenter:16,portraitTop:0},
+  {name:"TAILS",role:"SKY MECHANIC",hp:112,maxHp:112,sprite:"./assets/game/tails-idle.png",accent:"#f3b34e",frames:8,frameWidth:40,frameHeight:48,portraitCenter:20,portraitTop:0},
   {name:"NOCTIS",role:"LUCIS",hp:130,maxHp:130,sprite:"./assets/game/noctis-idle.png",accent:"#586d9d",frames:16,frameWidth:56,frameHeight:77,portraitCenter:28,portraitTop:5},
   {name:"PROMPTO",role:"CROWNSGUARD",hp:108,maxHp:108,sprite:"./assets/game/prompto-idle.png",accent:"#f5d36b",frames:4,frameWidth:54,frameHeight:76,portraitCenter:27,portraitTop:5},
   {name:"IGNIS",role:"CROWNSGUARD",hp:114,maxHp:114,sprite:"./assets/game/ignis-idle.png",accent:"#b8a56d",frames:4,frameWidth:56,frameHeight:79,portraitCenter:28,portraitTop:6},
@@ -319,7 +325,7 @@ function PinRankInfo({pin}:{pin:Pin}) {
  return <span>{label} · Effets ×{pinRankMultiplier(pin).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span>;
 }
 declare const pinList: Pin[];
-const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn",NOCTIS:"armiger",PROMPTO:"machinery",IGNIS:"elemental-daggers",GLADIO:"shield-of-the-king"};
+const basePsych:Record<string,string> = {NEKU:"pin266", SHIKI:"groove-pawn", BEAT:"sk8-combo", JOSHUA:"joshua-phone",CLOUD:"buster-sword",AERITH:"healing-wind","2B":"virtuous-contract",A2:"type-40-blade",SORA:"kingdom-key",RIKU:"way-to-dawn",NOCTIS:"armiger",PROMPTO:"machinery",IGNIS:"elemental-daggers",GLADIO:"shield-of-the-king",X:"x-buster",ZERO:"z-saber",SONIC:"sonic-wind",SHADOW:"chaos-spear",KNUCKLES:"meteor-punch",TAILS:"tornado-flight"};
 const partnerPsychs:Pin[] = [
   {id:"virtuous-contract",name:"Virtuous Contract",psych:"Lame YoRHa",kind:"physical",power:28},
   {id:"type-40-blade",name:"Type-40 Blade",psych:"Lame YoRHa",kind:"physical",power:31},
@@ -336,6 +342,12 @@ const partnerPsychs:Pin[] = [
   {id:"machinery",name:"Machinery",psych:"Tir de précision",kind:"special",power:27},
   {id:"elemental-daggers",name:"Elemental Daggers",psych:"Lames élémentaires",kind:"special",power:29},
   {id:"shield-of-the-king",name:"Shield of the King",psych:"Bouclier royal",kind:"physical",power:33},
+  {id:"x-buster",name:"X-Buster",psych:"Tir chargé",kind:"special",power:30},
+  {id:"z-saber",name:"Z-Saber",psych:"Lame énergétique",kind:"physical",power:32},
+  {id:"sonic-wind",name:"Sonic Wind",psych:"Vitesse supersonique",kind:"special",power:29},
+  {id:"chaos-spear",name:"Chaos Spear",psych:"Éclair du chaos",kind:"special",power:31},
+  {id:"meteor-punch",name:"Meteor Punch",psych:"Frappe de l’émeraude",kind:"physical",power:33},
+  {id:"tornado-flight",name:"Tornado Flight",psych:"Attaque aérienne",kind:"special",power:28},
 ].map(pin=>({...pin,number:"",row:-1,col:0,drain:false,cost:1}));
 const psychs: Record<string, Pin> = Object.fromEntries([...pinList,...partnerPsychs].map(pin => [pin.id,{...pin,element:badgeElement(pin)}]));
 const signaturePins:Record<string,Pin>=Object.fromEntries(characterRoster.map(hero=>{
@@ -347,13 +359,13 @@ const collectionPins=[...pinList,...Object.values(signaturePins)];
 type Psych = string;
 const types = { physical:"ATK", special:"ATK SPE", heal:"Soin", guard:"Protection", support:"Soutien" };
 function PinIcon({ pin }: {pin:Pin}) {
-  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾",armiger:"✧",machinery:"⌁","elemental-daggers":"♨","shield-of-the-king":"⬟"}[pin.id.replace(/^signature-/,"")]}</i>;
+  if(pin.row<0) return <i aria-hidden="true" style={{display:"grid",placeItems:"center",width:28,height:28,borderRadius:"50%",background:"var(--indigo)",color:"white",fontStyle:"normal"}}>{{"groove-pawn":"♟","sk8-combo":"★","joshua-phone":"☎","buster-sword":"⚔","healing-wind":"✿","virtuous-contract":"⚔","type-40-blade":"⚔","kingdom-key":"✦","way-to-dawn":"☾",armiger:"✧",machinery:"⌁","elemental-daggers":"♨","shield-of-the-king":"⬟","x-buster":"◉","z-saber":"⚔","sonic-wind":"➤","chaos-spear":"✦","meteor-punch":"✹","tornado-flight":"✈"}[pin.id.replace(/^signature-/,"")]}</i>;
   return <i aria-hidden="true" style={{display:"inline-block",width:28,height:28,flex:"none",imageRendering:"pixelated",backgroundImage:`url(./assets/pins/row-${pin.row}.webp)`,backgroundPosition:`-${pin.col*28}px 0`}}/>;
 }
-const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands",eosDawn:"Eos · Noctis & Prompto",eosDusk:"Eos · Ignis & Gladio" };
+const portals = { shibuya:"Shibuya", partners:"Partenaires",reality:"From another reality",apocalyptic:"Apocalyptic Future",destiny:"Destiny Islands",megaMan:"Mega Man X",sonicVerse:"Sonic Battle",eosDawn:"Eos · Noctis & Prompto",eosDusk:"Eos · Ignis & Gladio" };
 const portalReleaseAt:Record<string,number>={eosDawn:Date.parse("2026-11-25T00:00:00+01:00"),eosDusk:Date.parse("2026-11-25T00:00:00+01:00")};
 const portalAvailable=(id:string)=>!portalReleaseAt[id]||Date.now()>=portalReleaseAt[id];
-const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18],"2B":[32,24,21],A2:[35,21,19],SORA:[29,29,20],RIKU:[27,32,21],NOCTIS:[32,25,20],PROMPTO:[20,34,22],IGNIS:[24,32,19],GLADIO:[38,17,13] };
+const bases = { NEKU:[24,32,14], SHIKI:[22,26,20], BEAT:[34,18,12], JOSHUA:[19,36,16],CLOUD:[36,21,15],AERITH:[16,38,18],"2B":[32,24,21],A2:[35,21,19],SORA:[29,29,20],RIKU:[27,32,21],NOCTIS:[32,25,20],PROMPTO:[20,34,22],IGNIS:[24,32,19],GLADIO:[38,17,13],X:[26,34,19],ZERO:[35,24,20],SONIC:[27,28,36],SHADOW:[30,34,30],KNUCKLES:[38,19,17],TAILS:[20,32,29] };
 const maxLevel=99;
 function xpAtLevel(level:number) {
   const n=level-1;
@@ -582,7 +594,7 @@ function wishQuote(p:Profile,count:number) {
 
 const characterChance = 0.10;
 function portalRoster(id:string):Fighter[] {
-  const names=id==="partners"?["BEAT","JOSHUA"]:id==="eosDawn"?["NOCTIS","PROMPTO"]:id==="eosDusk"?["IGNIS","GLADIO"]:id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI"];
+  const names=id==="partners"?["BEAT","JOSHUA"]:id==="megaMan"?["X","ZERO"]:id==="sonicVerse"?["SONIC","SHADOW","KNUCKLES","TAILS"]:id==="eosDawn"?["NOCTIS","PROMPTO"]:id==="eosDusk"?["IGNIS","GLADIO"]:id==="apocalyptic"?["2B","A2"]:id==="destiny"?["SORA","RIKU"]:id==="reality"?["CLOUD","AERITH"]:id==="shibuya"?["NEKU","SHIKI"]:["NEKU","SHIKI"];
   return characterRoster.filter(f=>names.includes(f.name));
 }
 function portalPool(id:string, _profile?:Profile) {
@@ -1281,7 +1293,7 @@ function App() {
         {(id==="apocalyptic"||id==="destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches
           ? <img className="portal-art" src={`./assets/bingo/${id}.webp`} alt=""/>
           : <PortalVideo src={`./assets/bingo/${id}.mp4`} poster={`./assets/bingo/${id}.webp`}/>)}
-        {(id==="partners"||id==="eosDawn"||id==="eosDusk") && <div className="portal-duo">{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1.6}/>)}</div>}
+        {(id==="partners"||id==="megaMan"||id==="sonicVerse"||id==="eosDawn"||id==="eosDusk") && <div className="portal-duo">{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={id==="sonicVerse"?1.15:1.6}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setRateFighter(null);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
         <div className="bingo-machine">
@@ -1293,7 +1305,7 @@ function App() {
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} {wishQuote(profile,n).free>1?"gratuits":"gratuit"} inclus</small>}
         </div>)}</div>
-        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."}</p>
+        <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="megaMan" ? "X et Zero · Les Maverick Hunters sont prêts." : id==="sonicVerse" ? "Sonic, Shadow, Knuckles et Tails · La vitesse rencontre le chaos." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : "Beat et Joshua · Les partenaires de la Reapers’ Game."}</p>
       </div>
 
     </article>)}</div>
