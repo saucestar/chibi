@@ -3240,6 +3240,7 @@ function PvpLobby({
   const service = window.ChibiPvp,
     team = pvpTeam(profile, mode),
     ready = team.length === 2 && team.every(f => f.loadout.length > 0) && team.some(f => f.loadout.some(offensive));
+  const failure = error => /permission.denied|permission_denied/i.test(String(error?.code || error?.message || error)) ? "Le serveur PVP attend la publication des nouvelles règles Firebase." : String(error?.message || error || "Matchmaking indisponible.");
   useEffect(() => {
     if (service?.ready()) {
       service.rating(window.ChibiGameSync.accountId).then(setRating).catch(() => {});
@@ -3261,14 +3262,14 @@ function PvpLobby({
           setSearching(false);
         },
         waiting: count => setMessage(`${count} joueur${count > 1 ? "s" : ""} dans la file…`),
-        error: () => {
+        error: error => {
           setSearching(false);
-          setMessage("Matchmaking indisponible. Vérifie la connexion Firebase.");
+          setMessage(failure(error));
         }
       });
     } catch (error) {
       setSearching(false);
-      setMessage(String(error.message || error));
+      setMessage(failure(error));
     }
   };
   const cancel = async () => {
