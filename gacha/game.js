@@ -3154,54 +3154,153 @@ function PvpBattle({
     await service.closeMatch();
     close();
   };
-  return /*#__PURE__*/React.createElement("section", {
-    className: "pvp-panel pvp-arena"
-  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, room.mode === "ranked" ? "RANKED PVP" : "CASUAL PVP"), /*#__PURE__*/React.createElement("h1", null, mine.name, " VS ", enemy.name)), /*#__PURE__*/React.createElement("span", null, "Tour ", room.turn)), /*#__PURE__*/React.createElement("div", {
-    className: "pvp-teams"
+  const order = [...mine.team.map((fighter, index) => ({
+    side: "ally",
+    fighter,
+    index
+  })), ...enemy.team.map((fighter, index) => ({
+    side: "enemy",
+    fighter,
+    index
+  }))].filter(entry => entry.fighter.hp > 0).sort((a, b) => b.fighter.speed - a.fighter.speed || a.side.localeCompare(b.side));
+  const status = submitted ? "Actions envoyées · attente de l’adversaire" : ready ? "Actions prêtes" : "Choisis une action par personnage";
+  return /*#__PURE__*/React.createElement("main", {
+    className: "game-shell combat-hud pvp-combat"
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "topbar"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "pvp-team mine"
-  }, /*#__PURE__*/React.createElement("h2", null, "Ton duo"), mine.team.map((fighter, index) => /*#__PURE__*/React.createElement("article", {
-    className: fighter.hp <= 0 ? "down" : "",
-    key: index
+    className: "brand-lockup"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "brand-mark"
+  }, "VS"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("strong", null, room.mode === "ranked" ? "RANKED PVP" : "CASUAL PVP"), /*#__PURE__*/React.createElement("span", null, "REAPERS\u2019 NETWORK"))), /*#__PURE__*/React.createElement("div", {
+    className: "run-stats"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "currency"
+  }, "TOUR ", String(room.turn).padStart(2, "0")), /*#__PURE__*/React.createElement("button", {
+    className: "currency",
+    onClick: leave
+  }, "Abandonner"), /*#__PURE__*/React.createElement(SoundToggle, null))), /*#__PURE__*/React.createElement("section", {
+    className: "game-grid"
+  }, /*#__PURE__*/React.createElement("aside", {
+    className: "squad-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-label"
+  }, /*#__PURE__*/React.createElement("span", null, "PLAYER SQUAD"), /*#__PURE__*/React.createElement("b", null, "02 / 02")), mine.team.map((fighter, index) => {
+    const base = characterRoster.find(f => f.name === fighter.name);
+    return /*#__PURE__*/React.createElement("article", {
+      className: `fighter-card ${fighter.hp <= 0 ? "down" : ""}`,
+      key: index
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "portrait",
+      style: {
+        "--accent": base.accent
+      }
+    }, /*#__PURE__*/React.createElement(HudPortrait, {
+      fighter: base
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "fighter-info"
+    }, /*#__PURE__*/React.createElement("small", null, mine.name), /*#__PURE__*/React.createElement("h2", null, fighter.name), /*#__PURE__*/React.createElement(TypeChips, {
+      elements: characterElements[fighter.name]
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "health-readout"
+    }, /*#__PURE__*/React.createElement("span", null, "HP"), /*#__PURE__*/React.createElement("b", null, fighter.hp), /*#__PURE__*/React.createElement("em", null, "/ ", fighter.maxHp)), /*#__PURE__*/React.createElement("div", {
+      className: "bar"
+    }, /*#__PURE__*/React.createElement("i", {
+      style: {
+        width: `${100 * fighter.hp / fighter.maxHp}%`
+      }
+    }))));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "groove-card pvp-state-card"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, room.mode === "ranked" ? "RANKED" : "CASUAL"), /*#__PURE__*/React.createElement("b", null, submitted ? "SYNC" : "LIVE")), /*#__PURE__*/React.createElement("small", null, status)), /*#__PURE__*/React.createElement("div", {
+    className: "energy-card"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("span", null, "\xC9NERGIE"), /*#__PURE__*/React.createElement("b", null, 3 - reserved, " / 3 EN")), /*#__PURE__*/React.createElement("div", {
+    className: "energy-pips"
+  }, [0, 1, 2].map(pip => /*#__PURE__*/React.createElement("i", {
+    key: pip,
+    className: pip < 3 - reserved ? "full" : ""
+  }))))), /*#__PURE__*/React.createElement("section", {
+    className: "battle-column"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "battle-heading"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "ONLINE MATCH"), /*#__PURE__*/React.createElement("h1", null, mine.name, " ", /*#__PURE__*/React.createElement("small", {
+    className: "tier-label"
+  }, "VS ", enemy.name))), /*#__PURE__*/React.createElement("div", {
+    className: "threat threat-high"
+  }, /*#__PURE__*/React.createElement("span", null, "TOUR"), /*#__PURE__*/React.createElement("b", null, room.turn))), /*#__PURE__*/React.createElement("nav", {
+    className: "turn-order",
+    "aria-label": `Ordre du tour ${room.turn}`
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "hud-turn"
+  }, "Tour ", room.turn), /*#__PURE__*/React.createElement("ol", null, order.map((entry, index) => /*#__PURE__*/React.createElement("li", {
+    key: `${entry.side}-${entry.index}`,
+    className: entry.side
+  }, /*#__PURE__*/React.createElement("button", {
+    "aria-label": `${index + 1}. ${entry.fighter.name} · SPE ${entry.fighter.speed}`
+  }, /*#__PURE__*/React.createElement(HudPortrait, {
+    fighter: characterRoster.find(f => f.name === entry.fighter.name)
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "turn-number"
+  }, index + 1)))))), /*#__PURE__*/React.createElement("div", {
+    className: "arena pvp-battlefield",
+    style: {
+      backgroundImage: `linear-gradient(180deg,rgba(15,20,21,.04),rgba(9,12,13,.42)),url(${battleBackground})`
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "turn-badge"
+  }, "PVP \xB7 TURN ", String(room.turn).padStart(2, "0")), /*#__PURE__*/React.createElement("div", {
+    className: "enemy-line enemies-count-2"
+  }, enemy.team.map((fighter, index) => {
+    const base = characterRoster.find(f => f.name === fighter.name);
+    return /*#__PURE__*/React.createElement("div", {
+      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? "defeated" : ""}`,
+      key: index
+    }, /*#__PURE__*/React.createElement(Sprite, {
+      fighter: base,
+      combat: true
+    }), /*#__PURE__*/React.createElement("span", {
+      className: "enemy-hp"
+    }, /*#__PURE__*/React.createElement("i", {
+      style: {
+        width: `${100 * fighter.hp / fighter.maxHp}%`
+      }
+    })), /*#__PURE__*/React.createElement("small", null, fighter.name));
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "player-line"
+  }, mine.team.map((fighter, index) => {
+    const base = characterRoster.find(f => f.name === fighter.name);
+    return /*#__PURE__*/React.createElement("div", {
+      className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""}`,
+      key: index
+    }, /*#__PURE__*/React.createElement(Sprite, {
+      fighter: base,
+      combat: true
+    }), /*#__PURE__*/React.createElement("span", null, fighter.name));
+  })), /*#__PURE__*/React.createElement("p", {
+    className: "combat-status",
+    role: "status"
+  }, error || status)), /*#__PURE__*/React.createElement("section", {
+    className: `round-planner ${choosing !== null ? "choosing-action" : ""}`,
+    "aria-label": "Pr\xE9parer les actions PVP"
+  }, choosing !== null ? /*#__PURE__*/React.createElement("div", {
+    className: "inline-action-menu"
+  }, targeting ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, psychs[targeting.pin].name), " \xB7 Choisir la cible"), /*#__PURE__*/React.createElement("div", {
+    className: "target-menu"
+  }, enemy.team.map((fighter, index) => /*#__PURE__*/React.createElement("button", {
+    disabled: fighter.hp <= 0,
+    key: index,
+    onClick: () => choosePlan(targeting.index, {
+      kind: "psych",
+      pin: targeting.pin,
+      target: index
+    })
   }, /*#__PURE__*/React.createElement(HudPortrait, {
     fighter: characterRoster.find(f => f.name === fighter.name)
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("small", null, fighter.hp, " / ", fighter.maxHp, " PV"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", {
-    style: {
-      width: `${100 * fighter.hp / fighter.maxHp}%`
-    }
-  }))), room.status === "active" && !submitted && fighter.hp > 0 && /*#__PURE__*/React.createElement("button", {
-    onClick: () => setChoosing(index)
-  }, plans[index] ? planName(plans[index]) : "Action")))), /*#__PURE__*/React.createElement("div", {
-    className: "pvp-versus"
-  }, "VS"), /*#__PURE__*/React.createElement("div", {
-    className: "pvp-team enemy"
-  }, /*#__PURE__*/React.createElement("h2", null, enemy.name), enemy.team.map((fighter, index) => /*#__PURE__*/React.createElement("article", {
-    className: fighter.hp <= 0 ? "down" : "",
-    key: index
-  }, /*#__PURE__*/React.createElement(HudPortrait, {
-    fighter: characterRoster.find(f => f.name === fighter.name)
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("small", null, fighter.hp, " / ", fighter.maxHp, " PV"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("i", {
-    style: {
-      width: `${100 * fighter.hp / fighter.maxHp}%`
-    }
-  }))))))), room.status === "active" ? /*#__PURE__*/React.createElement("div", {
-    className: "pvp-controls"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "pvp-energy"
-  }, /*#__PURE__*/React.createElement("b", null, 3 - reserved, " / 3 EN"), /*#__PURE__*/React.createElement("span", null, submitted ? "Actions envoyées · attente de l’adversaire" : ready ? "Actions prêtes" : "Choisis une action par personnage")), !submitted && /*#__PURE__*/React.createElement("button", {
-    disabled: !ready,
-    onClick: () => service.submit(matchId, room.turn, plans).catch(() => setError("Envoi impossible."))
-  }, "Valider le tour"), /*#__PURE__*/React.createElement("button", {
-    className: "danger",
-    onClick: leave
-  }, "Abandonner")) : /*#__PURE__*/React.createElement("div", {
-    className: "pvp-result"
-  }, /*#__PURE__*/React.createElement("h2", null, room.winner == null ? "Égalité" : room.winner === uid ? "VICTOIRE" : "DÉFAITE"), room.mode === "ranked" && /*#__PURE__*/React.createElement("p", null, rating ? `Classement : ${rating.rating} Elo` : "Mise à jour du classement…"), /*#__PURE__*/React.createElement("button", {
-    onClick: leave
-  }, "Retour au PVP")), choosing !== null && /*#__PURE__*/React.createElement(WishDialog, {
-    title: `Action · ${mine.team[choosing].name}`,
-    close: () => setChoosing(null)
-  }, /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("span", null, fighter.hp, " / ", fighter.maxHp, " PV"), /*#__PURE__*/React.createElement(TypeChips, {
+    elements: characterElements[fighter.name]
+  })))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setTargeting(null)
+  }, "Retour aux actions")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "psych-action-menu"
   }, mine.team[choosing].loadout.map(id => {
     const pin = psychs[id],
@@ -3220,31 +3319,56 @@ function PvpBattle({
       })
     }, /*#__PURE__*/React.createElement(PinIcon, {
       pin: pin
-    }), /*#__PURE__*/React.createElement("b", null, pin.name), /*#__PURE__*/React.createElement("span", null, pinTargetLabel(pin), " \xB7 ", pin.cost, " EN"));
+    }), /*#__PURE__*/React.createElement("b", null, pin.name), /*#__PURE__*/React.createElement("span", null, elementNames[pin.element || badgeElement(pin)], " \xB7 ", pinTargetLabel(pin), " \xB7 ", pin.cost, " EN"));
   }), /*#__PURE__*/React.createElement("button", {
     onClick: () => choosePlan(choosing, {
       kind: "guard"
     })
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "guard"
-  }), /*#__PURE__*/React.createElement("b", null, "D\xE9fense"), /*#__PURE__*/React.createElement("span", null, "0 EN")))), targeting && /*#__PURE__*/React.createElement(WishDialog, {
-    title: "Choisir la cible",
-    close: () => setTargeting(null)
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "pvp-targets"
-  }, enemy.team.map((fighter, index) => /*#__PURE__*/React.createElement("button", {
-    disabled: fighter.hp <= 0,
+  }), /*#__PURE__*/React.createElement("b", null, "D\xE9fense"), /*#__PURE__*/React.createElement("span", null, "0 EN \xB7 Protection"))), /*#__PURE__*/React.createElement("button", {
+    onClick: () => setChoosing(null)
+  }, "Annuler"))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "planned-actions"
+  }, mine.team.map((fighter, index) => /*#__PURE__*/React.createElement("button", {
     key: index,
-    onClick: () => choosePlan(targeting.index, {
-      kind: "psych",
-      pin: targeting.pin,
-      target: index
-    })
-  }, /*#__PURE__*/React.createElement(HudPortrait, {
-    fighter: characterRoster.find(f => f.name === fighter.name)
-  }), /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("small", null, fighter.hp, " PV"))))), error && /*#__PURE__*/React.createElement("p", {
-    role: "alert"
-  }, error));
+    disabled: submitted || fighter.hp <= 0,
+    onClick: () => setChoosing(index)
+  }, /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("span", null, fighter.hp <= 0 ? "K.O." : plans[index] ? planName(plans[index]) : "Choisir une action"), /*#__PURE__*/React.createElement("small", null, plans[index]?.kind === "psych" ? `${psychs[plans[index].pin || ""].cost} EN · Modifier` : plans[index] ? "0 EN · Modifier" : "Choisir")))), /*#__PURE__*/React.createElement("button", {
+    className: "resolve-round",
+    disabled: submitted || !ready,
+    onClick: () => service.submit(matchId, room.turn, plans).catch(() => setError("Envoi impossible."))
+  }, submitted ? "En attente de l’adversaire…" : "Valider le tour")))), /*#__PURE__*/React.createElement("aside", {
+    className: "route-panel pvp-opponent-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "section-label"
+  }, /*#__PURE__*/React.createElement("span", null, "OPPONENT"), /*#__PURE__*/React.createElement("b", null, enemy.name)), enemy.team.map((fighter, index) => {
+    const base = characterRoster.find(f => f.name === fighter.name);
+    return /*#__PURE__*/React.createElement("article", {
+      className: `fighter-card ${fighter.hp <= 0 ? "down" : ""}`,
+      key: index
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "portrait"
+    }, /*#__PURE__*/React.createElement(HudPortrait, {
+      fighter: base
+    })), /*#__PURE__*/React.createElement("div", {
+      className: "fighter-info"
+    }, /*#__PURE__*/React.createElement("small", null, "ADVERSAIRE"), /*#__PURE__*/React.createElement("h2", null, fighter.name), /*#__PURE__*/React.createElement("div", {
+      className: "health-readout"
+    }, /*#__PURE__*/React.createElement("span", null, "HP"), /*#__PURE__*/React.createElement("b", null, fighter.hp), /*#__PURE__*/React.createElement("em", null, "/ ", fighter.maxHp)), /*#__PURE__*/React.createElement("div", {
+      className: "bar"
+    }, /*#__PURE__*/React.createElement("i", {
+      style: {
+        width: `${100 * fighter.hp / fighter.maxHp}%`
+      }
+    }))));
+  }))), room.status === "finished" && /*#__PURE__*/React.createElement("div", {
+    className: "overlay"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "modal reward-modal"
+  }, /*#__PURE__*/React.createElement("small", null, "PVP MATCH COMPLETE"), /*#__PURE__*/React.createElement("h2", null, room.winner == null ? "ÉGALITÉ" : room.winner === uid ? "VICTOIRE" : "DÉFAITE"), room.mode === "ranked" && /*#__PURE__*/React.createElement("p", null, rating ? `Classement : ${rating.rating} Elo` : "Mise à jour du classement…"), /*#__PURE__*/React.createElement("button", {
+    onClick: leave
+  }, "Retour au PVP"))));
 }
 function PvpLobby({
   profile
