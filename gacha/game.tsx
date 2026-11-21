@@ -125,6 +125,9 @@ const characterRoster: Fighter[] = [
   { name: "SHIKI", role: "THREAD USER", hp: 108, maxHp: 108, sprite: shikiSprite, accent: "#ff70ae", frames: 3, frameWidth: 80, frameHeight: 116, attackSprite: shikiAttackSprite, attackFrames: 7 },
   { name: "JOSHUA", role: "ANGEL USER", hp: 96, maxHp: 96, sprite: joshuaSprite, accent: "#92dcce", frames: 6, frameWidth: 32, frameHeight: 72, portraitCenter:16, portraitTop:0 },
 ];
+// Eos is scheduled for a later reveal: retain its data and portals, but do not expose it yet.
+const hiddenCollectionAndEventCharacters = new Set(["NOCTIS","PROMPTO","IGNIS","GLADIO"]);
+const visibleCollectionRoster = () => characterRoster.filter(f=>!hiddenCollectionAndEventCharacters.has(f.name));
 
 
 const Icon = ({ name }: { name: "bolt" | "target" | "heart" | "guard" | "coin" | "star" }) => {
@@ -977,10 +980,10 @@ function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;pro
  </article>;
 }
 function CharacterCollection({profile,awaken}:{profile:Profile;awaken:(name:string)=>void}) {
- const [onlyOwned,setOnlyOwned]=useState(false),[selected,setSelected]=useState<Fighter|null>(null);
- return <section className="hub-panel character-collection"><h1>Personnages</h1><p>{profile.owned.length} / {characterRoster.length} débloqués</p>
+ const [onlyOwned,setOnlyOwned]=useState(false),[selected,setSelected]=useState<Fighter|null>(null),roster=visibleCollectionRoster(),ownedCount=roster.filter(f=>profile.owned.includes(f.name)).length;
+ return <section className="hub-panel character-collection"><h1>Personnages</h1><p>{ownedCount} / {roster.length} débloqués</p>
   <div className="hub-tabs"><button aria-pressed={!onlyOwned} onClick={()=>setOnlyOwned(false)}>Tous</button><button aria-pressed={onlyOwned} onClick={()=>setOnlyOwned(true)}>Débloqués</button></div>
-  <div className="character-grid">{characterRoster.filter(f=>!onlyOwned||profile.owned.includes(f.name)).map(f=>{const owned=profile.owned.includes(f.name);return <button key={f.name} className={owned?"":"not-owned"} onClick={()=>setSelected(f)} aria-label={`Fiche de ${f.name}${owned?"":" · Non obtenu"}`}><HudPortrait fighter={f}/><b>{f.name}</b><small>{owned?`Niv. ${experience(profile.xp[f.name]||0).level} · ${ranks[profile.levels[f.name]||0]}`:"Non obtenu"}</small></button>;})}</div>
+  <div className="character-grid">{roster.filter(f=>!onlyOwned||profile.owned.includes(f.name)).map(f=>{const owned=profile.owned.includes(f.name);return <button key={f.name} className={owned?"":"not-owned"} onClick={()=>setSelected(f)} aria-label={`Fiche de ${f.name}${owned?"":" · Non obtenu"}`}><HudPortrait fighter={f}/><b>{f.name}</b><small>{owned?`Niv. ${experience(profile.xp[f.name]||0).level} · ${ranks[profile.levels[f.name]||0]}`:"Non obtenu"}</small></button>;})}</div>
   {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/>{profile.copies[selected.name]===5&&!profile.awakened.includes(selected.name)&&<button onClick={()=>awaken(selected.name)}>Éveiller · +20 PV</button>}<button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
  </section>;
 }
@@ -1033,7 +1036,7 @@ function EventHall({profile,start,navigate,abandon}:{profile:Profile;start:(name
  {active&&<div className="event-resume"><button onClick={()=>start(active.boss)}>Reprendre · {active.boss} · {active.run.wave}/3</button><button onClick={()=>setConfirm(true)}>Abandonner</button></div>}
  {confirm&&<WishDialog title="Abandonner cet événement ?" close={()=>setConfirm(false)}><button onClick={()=>setConfirm(false)}>Annuler</button><button onClick={()=>{abandon();setConfirm(false);}}>Confirmer</button></WishDialog>}
  {!ready&&!active&&<button onClick={()=>navigate("team")}>Préparer le duo</button>}
- <div className="event-rail" ref={rail} aria-label="Événements">{characterRoster.map(hero=><article key={hero.name}>
+ <div className="event-rail" ref={rail} aria-label="Événements">{visibleCollectionRoster().map(hero=><article key={hero.name}>
  <div className="event-preview"><SpritePreview fighter={hero} maximumScale={2.4}/></div><h2>{hero.name}</h2><TypeChips elements={characterElements[hero.name]}/>
  <p><b>5 %</b> · {signaturePins[hero.name].name}<br/><b>1 %</b> · {hero.name}</p>
  <button disabled={active?active.boss!==hero.name:!ready} onClick={()=>start(hero.name)}>{active?.boss===hero.name?"Reprendre":"Défier"}</button>

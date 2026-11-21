@@ -294,6 +294,8 @@ const characterRoster = [{
   portraitCenter: 16,
   portraitTop: 0
 }];
+const hiddenCollectionAndEventCharacters = new Set(["NOCTIS", "PROMPTO", "IGNIS", "GLADIO"]);
+const visibleCollectionRoster = () => characterRoster.filter(f => !hiddenCollectionAndEventCharacters.has(f.name));
 const Icon = ({
   name
 }) => {
@@ -2269,10 +2271,12 @@ function CharacterCollection({
   awaken
 }) {
   const [onlyOwned, setOnlyOwned] = useState(false),
-    [selected, setSelected] = useState(null);
+    [selected, setSelected] = useState(null),
+    roster = visibleCollectionRoster(),
+    ownedCount = roster.filter(f => profile.owned.includes(f.name)).length;
   return React.createElement("section", {
     className: "hub-panel character-collection"
-  }, React.createElement("h1", null, "Personnages"), React.createElement("p", null, profile.owned.length, " / ", characterRoster.length, " d\xE9bloqu\xE9s"), React.createElement("div", {
+  }, React.createElement("h1", null, "Personnages"), React.createElement("p", null, ownedCount, " / ", roster.length, " d\xE9bloqu\xE9s"), React.createElement("div", {
     className: "hub-tabs"
   }, React.createElement("button", {
     "aria-pressed": !onlyOwned,
@@ -2282,7 +2286,7 @@ function CharacterCollection({
     onClick: () => setOnlyOwned(true)
   }, "D\xE9bloqu\xE9s")), React.createElement("div", {
     className: "character-grid"
-  }, characterRoster.filter(f => !onlyOwned || profile.owned.includes(f.name)).map(f => {
+  }, roster.filter(f => !onlyOwned || profile.owned.includes(f.name)).map(f => {
     const owned = profile.owned.includes(f.name);
     return React.createElement("button", {
       key: f.name,
@@ -2439,7 +2443,7 @@ function EventHall({
     className: "event-rail",
     ref: rail,
     "aria-label": "\xC9v\xE9nements"
-  }, characterRoster.map(hero => React.createElement("article", {
+  }, visibleCollectionRoster().map(hero => React.createElement("article", {
     key: hero.name
   }, React.createElement("div", {
     className: "event-preview"
