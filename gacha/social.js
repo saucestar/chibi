@@ -4,12 +4,14 @@
   const db = () => window.firebase && firebase.database();
   const identity = () => window.ChibiGameSync && window.ChibiGameSync.identity;
   const clean = value => JSON.parse(JSON.stringify(value));
+  let presenceTimer = null;
   function ready() { return Boolean(db() && firebase.auth().currentUser && identity()); }
   function mine() { const who = identity(); if (!who) throw Error('Connecte-toi à Discord pour utiliser Social.'); return who; }
   async function publish(profile) {
     const who = mine();
-    const value = clean({ ...profile, uid: who.id, name: who.name, updatedAt: firebase.database.ServerValue.TIMESTAMP });
+    const value = clean({ ...profile, uid: who.id, name: who.name, updatedAt: firebase.database.ServerValue.TIMESTAMP, onlineAt: firebase.database.ServerValue.TIMESTAMP });
     await db().ref('socialProfiles/' + who.id).set(value);
+    if (!presenceTimer) presenceTimer = setInterval(() => db()?.ref('socialProfiles/' + who.id + '/onlineAt').set(firebase.database.ServerValue.TIMESTAMP).catch(() => {}), 60000);
   }
   async function state() {
     const who = mine();
@@ -18,7 +20,8 @@
       db().ref('friendRequests/' + who.id).get(), db().ref('pvpInvites/' + who.id).get()
     ]);
     const others = Object.values(profiles.val() || {}).filter(item => item && String(item.uid) !== String(who.id));
-    return { profiles: others, friends: Object.values(friends.val() || {}), requests: Object.values(requests.val() || {}), invites: Object.values(invites.val() || {}) };
+    const now = Date.now();
+    return { profiles: others.map(item => ({ ...item, online: Number(item.onlineAt || item.updatedAt || 0) > now - 180000 })), friends: Object.values(friends.val() || {}), requests: Object.values(requests.val() || {}), invites: Object.values(invites.val() || {}) };
   }
   function watch(update, error) {
     const who = identity(); if (!who || !db()) return () => {};

@@ -3663,6 +3663,73 @@ function ClanPanel() {
         h("section", { className: "clan-directory" }, h("header", null, h("h3", null, "Recrutement"), h("small", null, factions.length, " clans disponibles")), factions.length ? factions.map(item => h("article", { key: item.id }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, "♜"), h("div", null, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membre(s) · Raids ouverts")), h("button", { type: "button", onClick: () => join(item) }, "Rejoindre"))) : h("p", null, "Aucun clan pour le moment. Crée le premier."))),
     notice && h("p", { className: "clan-notice", role: "status" }, notice));
 }
+// The social home deliberately does not subscribe to chat while it mounts: some
+// browsers initialise WebCrypto lazily.  Every network action below is user
+// initiated and errors remain inside the panel instead of taking down the game.
+function MessengerChatPanel({ friends = [] }) {
+  const h = React.createElement;
+  const service = window.ChibiSocial;
+  const [view, setView] = useState("chats"), [groups, setGroups] = useState([]), [active, setActive] = useState(null), [messages, setMessages] = useState([]), [draft, setDraft] = useState(""), [groupName, setGroupName] = useState(""), [selected, setSelected] = useState([]), [notice, setNotice] = useState("");
+  const people = Array.isArray(friends) ? friends.filter(person => person?.uid != null) : [];
+  const loadGroups = async () => {
+    if (!service?.chatGroups) return setNotice("Le service Chat n’est pas disponible. Recharge le jeu.");
+    try { const list = await service.chatGroups(); setGroups(Array.isArray(list) ? list.filter(group => group?.id) : []); setNotice(""); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const open = async group => {
+    setActive(group); setMessages([]); setView("chats");
+    try { const list = await service.readChat(group.id); setMessages(Array.isArray(list) ? list : []); setNotice(""); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const create = async (members = selected, name = groupName) => {
+    if (!members.length) return setNotice("Choisis au moins un ami.");
+    try {
+      const id = await service.createChatGroup((name || "Discussion").trim(), members.map(String));
+      setGroupName(""); setSelected([]); await loadGroups();
+      const list = await service.chatGroups(); const group = Array.isArray(list) && list.find(item => item?.id === id);
+      if (group) await open(group);
+    } catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const send = async event => {
+    event.preventDefault(); if (!active || !draft.trim()) return;
+    const text = draft; setDraft("");
+    try { await service.sendChat(active.id, text); await open(active); }
+    catch (error) { setDraft(text); setNotice(String(error?.message || error)); }
+  };
+  const direct = friend => create([String(friend.uid)], friend.name || "Discussion");
+  const tab = (id, label) => h("button", { type: "button", "aria-pressed": view === id, onClick: () => setView(id) }, label);
+  return h("section", { className: "social-chat messenger-chat" },
+    h("header", null, h("div", null, h("h2", null, "Messages"), h("p", null, "Conversations privées avec tes amis.")), h("div", { className: "chat-toolbar" }, h("button", { type: "button", onClick: loadGroups }, "Actualiser"), h("button", { type: "button", onClick: () => setView("new") }, "Nouveau message"))),
+    h("nav", { className: "chat-tabs", "aria-label": "Messagerie" }, tab("chats", `Discussions (${groups.length})`), tab("contacts", `Amis (${people.length})`), tab("new", "Nouveau groupe")),
+    view === "contacts" && h("section", { className: "chat-contact-list" }, people.length ? people.map(friend => h("article", { key: friend.uid, className: "chat-contact" }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, (friend.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, friend.name || "Joueur"), h("small", null, "Ami · Message chiffré")), h("button", { type: "button", onClick: () => direct(friend) }, "Écrire"))) : h("p", { className: "chat-empty" }, "Ajoute un ami dans Social pour lui envoyer un message.")),
+    view === "new" && h("section", { className: "chat-create chat-new" }, h("h3", null, "Nouveau groupe"), h("p", null, "Choisis tes amis. Chaque membre doit ouvrir Chat au moins une fois."), h("input", { value: groupName, maxLength: 48, placeholder: "Nom du groupe", onChange: event => setGroupName(event.target.value) }), h("div", { className: "chat-select-friends" }, people.map(friend => h("label", { key: friend.uid }, h("input", { type: "checkbox", checked: selected.includes(String(friend.uid)), onChange: event => setSelected(old => event.target.checked ? [...old, String(friend.uid)] : old.filter(uid => uid !== String(friend.uid))) }), friend.name || "Joueur"))), h("button", { type: "button", disabled: !selected.length, onClick: () => create() }, `Créer · ${selected.length + 1} membres`)),
+    view === "chats" && h("div", { className: "chat-layout" }, h("aside", { className: "chat-groups" }, h("b", null, "Discussions"), groups.length ? groups.map(group => h("button", { key: group.id, type: "button", "aria-pressed": active?.id === group.id, onClick: () => open(group) }, group.name || "Discussion", h("small", null, Object.keys(group.members || {}).length, " membres"))) : h("p", { className: "chat-empty" }, "Appuie sur Actualiser pour charger tes discussions.")), h("div", { className: "chat-main" }, active ? h(React.Fragment, null, h("div", { className: "chat-message-list", "aria-live": "polite" }, messages.length ? messages.map(message => h("article", { key: message.id, className: String(message.sender) === String(window.ChibiGameSync?.accountId) ? "mine" : "" }, h("b", null, message.senderName || "Joueur"), h("p", null, message.text || ""))) : h("p", { className: "chat-empty" }, "Aucun message. Lance la conversation.")), h("form", { className: "chat-composer", onSubmit: send }, h("textarea", { value: draft, maxLength: 2000, placeholder: "Écrire un message…", onChange: event => setDraft(event.target.value) }), h("button", { disabled: !draft.trim() }, "Envoyer"))) : h("div", { className: "chat-empty" }, h("b", null, "Bienvenue dans Messages"), h("p", null, "Ouvre une discussion ou démarre un message avec un ami.")))),
+    notice && h("p", { className: "clan-notice", role: "status" }, notice));
+}
+function ClashClanPanel() {
+  const h = React.createElement, service = window.ChibiSocial;
+  const [faction, setFaction] = useState(null), [factions, setFactions] = useState([]), [name, setName] = useState(""), [tab, setTab] = useState("home"), [notice, setNotice] = useState("");
+  const refresh = async () => {
+    if (!service?.myFaction) return setNotice("Le service Factions n’est pas disponible. Recharge le jeu.");
+    try { const [mine, list] = await Promise.all([service.myFaction(), service.factionList()]); setFaction(mine || null); setFactions(Array.isArray(list) ? list.filter(item => item?.id) : []); setNotice(""); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  useEffect(() => { refresh(); }, []);
+  const create = async event => { event.preventDefault(); try { await service.createFaction(name.trim()); setName(""); await refresh(); setTab("home"); } catch (error) { setNotice(String(error?.message || error)); } };
+  const join = async item => { try { await service.joinFaction(item); await refresh(); setTab("home"); } catch (error) { setNotice(String(error?.message || error)); } };
+  const leave = async () => { if (!window.confirm("Quitter cette faction ?")) return; try { await service.leaveFaction(); await refresh(); setTab("join"); } catch (error) { setNotice(String(error?.message || error)); } };
+  const members = Object.values(faction?.members || {}), mine = String(window.ChibiGameSync?.accountId || "");
+  const nav = (id, label) => h("button", { type: "button", "aria-pressed": tab === id, onClick: () => setTab(id) }, label);
+  return h("section", { className: "clan-panel clash-clan" },
+    h("header", { className: "clan-hero" }, h("span", { className: "clan-crest", "aria-hidden": "true" }, "♜"), h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h2", null, faction ? faction.name : "Factions"), h("p", null, faction ? `${members.length} membre${members.length > 1 ? "s" : ""} · raids à 3 débloqués` : "Crée ou rejoins une faction pour participer aux Raids.")), h("button", { type: "button", onClick: refresh }, "↻")),
+    h("nav", { className: "clan-tabs", "aria-label": "Factions" }, faction ? [nav("home", "Accueil"), nav("members", `Membres (${members.length})`), nav("recruit", "Recrutement")] : [nav("create", "Créer"), nav("join", `Rejoindre (${factions.length})`)]),
+    faction && tab === "home" && h("section", { className: "clan-home" }, h("div", { className: "clan-stats" }, h("article", null, h("small", null, "MEMBRES"), h("b", null, `${members.length} / ∞`)), h("article", null, h("small", null, "MODE"), h("b", null, "Raid · 3 joueurs")), h("article", null, h("small", null, "RÔLE"), h("b", null, String(faction.leader) === mine ? "Chef" : "Membre"))), h("div", { className: "clan-actions" }, h("button", { type: "button", onClick: () => setNotice("Ouvre Raid depuis l’accueil pour créer ou rejoindre une salle avec ta faction.") }, "Voir les Raids"), h("button", { type: "button", className: "quiet", onClick: leave }, String(faction.leader) === mine ? "Chef · transfert requis" : "Quitter la faction"))),
+    faction && tab === "members" && h("section", { className: "clan-members" }, h("header", null, h("h3", null, "Membres"), h("small", null, "Escouade de raid")), members.map(member => h("article", { key: member.uid }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, (member.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, member.name || "Membre"), h("small", null, String(member.uid) === String(faction.leader) ? "Chef de faction" : "Membre")), String(member.uid) === String(faction.leader) && h("em", null, "CHEF")))),
+    faction && tab === "recruit" && h("section", { className: "clan-recruitment" }, h("h3", null, "Recruter des joueurs"), h("p", null, "Partage le nom de ta faction avec tes amis : ils pourront la retrouver dans Rejoindre."), h("div", { className: "clan-share" }, h("b", null, faction.name), h("button", { type: "button", onClick: async () => { try { await navigator.clipboard?.writeText(faction.name); setNotice("Nom de faction copié."); } catch { setNotice("Copie le nom de faction manuellement."); } } }, "Copier"))),
+    !faction && tab === "create" && h("form", { className: "clan-create", onSubmit: create }, h("h3", null, "Créer une faction"), h("p", null, "Fonde ton clan, recrute tes amis et ouvre des Raids coopératifs."), h("input", { value: name, maxLength: 32, placeholder: "Nom de la faction", onChange: event => setName(event.target.value) }), h("button", { disabled: name.trim().length < 3 }, "Créer ma faction")),
+    !faction && tab === "join" && h("section", { className: "clan-directory" }, h("header", null, h("h3", null, "Recrutement"), h("small", null, factions.length, " factions disponibles")), factions.length ? factions.map(item => h("article", { key: item.id }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, "♜"), h("div", null, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membre(s) · Raids ouverts")), h("button", { type: "button", onClick: () => join(item) }, "Rejoindre"))) : h("p", { className: "chat-empty" }, "Aucune faction pour le moment. Crée la première.")),
+    notice && h("p", { className: "clan-notice", role: "status" }, notice));
+}
 function SocialHub({
   profile
 }) {
@@ -3722,7 +3789,7 @@ function SocialHub({
   }, /*#__PURE__*/React.createElement("button", {
     className: "social-player-main",
     onClick: () => setSelected(profileById(player.uid) || player)
-  }, player.team?.[0] ? /*#__PURE__*/React.createElement(HudPortrait, {
+  }, /*#__PURE__*/React.createElement("i", { className: player.online ? "presence-dot online" : "presence-dot", "aria-label": player.online ? "En ligne" : "Hors ligne" }), player.team?.[0] ? /*#__PURE__*/React.createElement(HudPortrait, {
     fighter: characterRoster.find(f => f.name === player.team[0].name)
   }) : /*#__PURE__*/React.createElement("span", {
     className: "social-avatar"
@@ -3747,9 +3814,9 @@ function SocialHub({
     key: id,
     "aria-pressed": tab === id,
     onClick: () => setTab(id)
-  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(SafeChatPanel, {
+  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(MessengerChatPanel, {
     friends: friends.map(item => profileById(item.uid) || item)
-  })), tab === "factions" && /*#__PURE__*/React.createElement(ClanPanel, null), message && /*#__PURE__*/React.createElement("p", {
+  })), tab === "factions" && /*#__PURE__*/React.createElement(ClashClanPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
   }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
