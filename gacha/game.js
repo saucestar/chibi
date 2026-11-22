@@ -3600,6 +3600,39 @@ function ChatPanel({ friends = [] }) {
   const enable = async () => { try { const permission = await requestChatNotificationPermission(); setNotifications(permission === "granted"); if (permission !== "granted") setNotice("Autorise les notifications dans les réglages du navigateur."); else { await service.enableChatPush("BGk76ZiXSpYgtoNqx-LmvxxaQEiE9p4AtqqP10O2OLmBWFB0Pa7jMrSuFp38EWlmfXAPLXNuX57AJt4Q31mOV7E"); setNotice("Notifications push activées sur cet appareil."); } } catch (error) { setNotice(String(error?.message || "Impossible d’activer les notifications.")); } };
   return h("section", { className: "social-chat" }, h("header", null, h("div", null, h("h2", null, "Messages chiffrés"), h("p", null, "Les messages sont chiffrés sur ton appareil.")), h("button", { onClick: enable }, notifications ? "Notifications actives" : "Activer les notifications")), h("div", { className: "chat-layout" }, h("aside", { className: "chat-groups" }, h("b", null, "Discussions"), groups.map(group => h("button", { key: group.id, "aria-pressed": active?.id === group.id, onClick: () => setActive(group) }, group.name, h("small", null, Object.keys(group.members || {}).length, " membres")))), h("div", { className: "chat-main" }, active ? h(React.Fragment, null, h("div", { className: "chat-message-list", "aria-live": "polite" }, messages.map(item => h("article", { key: item.id, className: String(item.sender) === String(window.ChibiGameSync?.accountId) ? "mine" : "" }, h("b", null, String(item.sender) === String(window.ChibiGameSync?.accountId) ? "Toi" : item.senderName), h("p", null, item.text), h("time", null, item.createdAt ? new Date(item.createdAt).toLocaleString() : "À l’instant")))), h("form", { onSubmit: send }, h("textarea", { value: draft, maxLength: 2000, placeholder: "Écrire un message…", onChange: event => setDraft(event.target.value) }), h("button", { disabled: !draft.trim() }, "Envoyer"))) : h("p", null, "Crée une discussion avec un ami pour commencer."))), h("details", { className: "chat-create" }, h("summary", null, "Créer un groupe chiffré"), h("input", { value: groupName, maxLength: 48, placeholder: "Nom du groupe", onChange: event => setGroupName(event.target.value) }), h("div", null, friends.map(player => h("label", { key: player.uid }, h("input", { type: "checkbox", checked: selected.includes(String(player.uid)), onChange: event => setSelected(old => event.target.checked ? [...old, String(player.uid)] : old.filter(id => id !== String(player.uid))) }), player.name))), h("button", { disabled: !selected.length, onClick: create }, "Créer · ", selected.length + 1, " membres"), h("small", null, "Les amis doivent ouvrir Chat une première fois pour publier leur clé publique.")), notice && h("p", { role: "status" }, notice));
 }
+function SafeChatPanel({ friends = [] }) {
+  const h = React.createElement;
+  const [groups, setGroups] = useState([]), [active, setActive] = useState(null), [messages, setMessages] = useState([]), [notice, setNotice] = useState(""), [draft, setDraft] = useState(""), [groupName, setGroupName] = useState(""), [selected, setSelected] = useState([]);
+  const service = window.ChibiSocial;
+  const safeFriends = Array.isArray(friends) ? friends.filter(friend => friend && friend.uid != null) : [];
+  const refresh = async () => {
+    if (!service?.chatGroups) return setNotice("Le service Chat n’est pas chargé. Recharge le jeu.");
+    try { const list = await service.chatGroups(); setGroups(Array.isArray(list) ? list.filter(group => group && group.id) : []); setNotice(""); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const open = async group => {
+    setActive(group); setMessages([]);
+    try { const list = await service.readChat(group.id); setMessages(Array.isArray(list) ? list : []); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const create = async () => {
+    try { const id = await service.createChatGroup(groupName, selected); setGroupName(""); setSelected([]); await refresh(); const list = await service.chatGroups(); const group = Array.isArray(list) && list.find(item => item?.id === id); if (group) await open(group); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const send = async event => {
+    event.preventDefault(); if (!active || !draft.trim()) return;
+    const text = draft; setDraft("");
+    try { await service.sendChat(active.id, text); await open(active); }
+    catch (error) { setDraft(text); setNotice(String(error?.message || error)); }
+  };
+  return h("section", { className: "social-chat" },
+    h("header", null, h("div", null, h("h2", null, "Messages chiffrés"), h("p", null, "Charge une discussion ou crée un groupe avec tes amis.")), h("button", { type: "button", onClick: refresh }, "Actualiser")),
+    h("div", { className: "chat-layout" },
+      h("aside", { className: "chat-groups" }, h("b", null, "Discussions"), groups.length ? groups.map(group => h("button", { key: group.id, type: "button", "aria-pressed": active?.id === group.id, onClick: () => open(group) }, group.name || "Discussion", h("small", null, Object.keys(group.members || {}).length, " membres"))) : h("small", null, "Aucune discussion chargée.")),
+      h("div", { className: "chat-main" }, active ? h(React.Fragment, null, h("div", { className: "chat-message-list", "aria-live": "polite" }, messages.map(message => h("article", { key: message.id, className: String(message.sender) === String(window.ChibiGameSync?.accountId) ? "mine" : "" }, h("b", null, message.senderName || "Joueur"), h("p", null, message.text || "")))), h("form", { onSubmit: send }, h("textarea", { value: draft, maxLength: 2000, placeholder: "Écrire un message…", onChange: event => setDraft(event.target.value) }), h("button", { disabled: !draft.trim() }, "Envoyer"))) : h("p", null, "Sélectionne ou crée une discussion."))),
+    h("details", { className: "chat-create" }, h("summary", null, "Créer un groupe chiffré"), h("input", { value: groupName, maxLength: 48, placeholder: "Nom du groupe", onChange: event => setGroupName(event.target.value) }), h("div", null, safeFriends.map(friend => h("label", { key: friend.uid }, h("input", { type: "checkbox", checked: selected.includes(String(friend.uid)), onChange: event => setSelected(old => event.target.checked ? [...old, String(friend.uid)] : old.filter(id => id !== String(friend.uid))) }), friend.name || "Joueur"))), h("button", { type: "button", disabled: !selected.length, onClick: create }, "Créer le groupe")),
+    notice && h("p", { role: "status" }, notice));
+}
 function FactionPanel() {
   const h = React.createElement, service = window.ChibiSocial;
   const [faction, setFaction] = useState(null), [factions, setFactions] = useState([]), [name, setName] = useState(""), [notice, setNotice] = useState("");
@@ -3692,7 +3725,7 @@ function SocialHub({
     key: id,
     "aria-pressed": tab === id,
     onClick: () => setTab(id)
-  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(ChatPanel, {
+  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(SafeChatPanel, {
     friends: friends.map(item => profileById(item.uid) || item)
   })), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
