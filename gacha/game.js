@@ -2808,7 +2808,7 @@ function gameFullscreen() {
   }
   if (document.fullscreenElement) document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(() => {});
 }
-const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["collection", "Collection", "▦"], ["social", "Social", "◎"], ["menu", "Menu", "☰"]];
+const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["leaderboard", "Classement", "♛"], ["social", "Social", "◎"], ["menu", "Menu", "☰"]];
 function GameHub({
   profile,
   screen,
@@ -3555,6 +3555,23 @@ function PvpLobby({
     onClick: cancel
   }, "Annuler la recherche"));
 }
+function Leaderboard({ profile }) {
+  const h = React.createElement;
+  const [players, setPlayers] = useState([]), [notice, setNotice] = useState("");
+  const load = async () => {
+    try {
+      const remote = window.ChibiSocial?.ready() ? await window.ChibiSocial.state() : { profiles: [] };
+      const mine = { ...socialProfile(profile), uid: String(window.ChibiGameSync?.accountId || "local"), name: window.ChibiGameSync?.identity?.name || "Toi" };
+      const pool = [...(Array.isArray(remote.profiles) ? remote.profiles : []), mine]
+        .filter(player => Number(player.bestFloor || 0) > 0 || Number(player.wishesMade || 0) > 0)
+        .filter((player, index, list) => list.findIndex(item => String(item.uid) === String(player.uid)) === index)
+        .sort((a, b) => Number(b.bestFloor || 0) - Number(a.bestFloor || 0) || Number(b.rebirths || 0) - Number(a.rebirths || 0) || Number(b.owned?.length || 0) - Number(a.owned?.length || 0));
+      setPlayers(pool); setNotice("");
+    } catch (error) { setNotice(String(error?.message || "Classement indisponible.")); }
+  };
+  useEffect(() => { load(); }, []);
+  return h("section", { className: "hub-panel leaderboard-panel" }, h("header", null, h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h1", null, "Classement"), h("p", null, "Les joueurs ayant invoqué ou participé au Roguelike.")), h("button", { type: "button", onClick: load }, "Actualiser")), h("div", { className: "leaderboard-list" }, players.length ? players.map((player, index) => h("article", { key: player.uid }, h("b", { className: "leaderboard-place" }, `#${index + 1}`), h("span", { className: "leaderboard-avatar", "aria-hidden": "true" }, (player.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, player.name || "Joueur"), h("small", null, `${player.owned?.length || 0} personnages · Rebirth ${player.rebirths || 0}`)), h("strong", null, "Étage ", player.bestFloor || 0))) : h("p", null, "Aucun joueur classé pour le moment.")), notice && h("p", { role: "status" }, notice));
+}
 function socialProfile(profile) {
   const member = name => ({
     name,
@@ -3566,6 +3583,7 @@ function socialProfile(profile) {
   return {
     bestFloor: profile.bestFloor,
     rebirths: profile.rebirths,
+    wishesMade: profile.wishesMade,
     team: profile.equipped.filter(Boolean).map(member),
     owned: profile.owned.map(member)
   };
@@ -4053,8 +4071,8 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("span", null, "\u25C7"), /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes"), /*#__PURE__*/React.createElement("small", null, rewards ? `${rewards} récompense${rewards > 1 ? "s" : ""}` : "Ta progression")), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("summon")
   }, /*#__PURE__*/React.createElement("span", null, "\u2726"), /*#__PURE__*/React.createElement("b", null, "Invocations"), /*#__PURE__*/React.createElement("small", null, profile.freeWishes, " v\u0153ux gratuits")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("collection")
-  }, /*#__PURE__*/React.createElement("span", null, "\u25A6"), /*#__PURE__*/React.createElement("b", null, "Collection"), /*#__PURE__*/React.createElement("small", null, profile.owned.length, " personnages"))));
+    onClick: () => navigate("leaderboard")
+  }, /*#__PURE__*/React.createElement("span", null, "♛"), /*#__PURE__*/React.createElement("b", null, "Classement"), /*#__PURE__*/React.createElement("small", null, "Records des joueurs"))));
 }
 function TeamWorkspace({ profile, awaken, builder }) {
   const [tab, setTab] = useState("team");
@@ -4180,7 +4198,7 @@ function HubMenu({
     className: "hub-panel"
   }, /*#__PURE__*/React.createElement("h1", null, "Menu"), /*#__PURE__*/React.createElement("div", {
     className: "hub-menu-links"
-  }, [["social", "Social", "Amis, profils et défis Casual"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"], ["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => /*#__PURE__*/React.createElement("button", {
+  }, [["leaderboard", "Classement", "Records des joueurs et progression Roguelike"], ["social", "Social", "Amis, profils et défis Casual"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"], ["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
   }, /*#__PURE__*/React.createElement("b", null, title), /*#__PURE__*/React.createElement("small", null, desc), /*#__PURE__*/React.createElement("span", {
@@ -4274,7 +4292,7 @@ function App() {
   useEffect(() => {
     const receive = event => {
       if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
-      if (["home", "team", "summon", "collection", "social", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+      if (["home", "team", "summon", "leaderboard", "social", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
     };
     window.addEventListener("message", receive);
     if (window.parent !== window) window.parent.postMessage({
@@ -4610,14 +4628,9 @@ function App() {
     key: window.ChibiGameSync?.accountId || "local",
     profile: profile
   }));
-  if (screen === "collection") return hub(/*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(CharacterCollection, {
-    profile: profile,
-    awaken: awaken
-  }), /*#__PURE__*/React.createElement(BadgeCatalogue, {
-    embedded: true,
-    owned: profile.pins,
-    copies: profile.pinCopies
-  })));
+  if (screen === "leaderboard" || screen === "collection") return hub(/*#__PURE__*/React.createElement(Leaderboard, {
+    profile: profile
+  }));
   if (screen === "summon") return hub(/*#__PURE__*/React.createElement("main", {
     className: "game-shell party-lobby"
   }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h1", null, "Invocations"), /*#__PURE__*/React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", visibleCollectionRoster().length, " personnages disponibles \xB7 Garantie dans ", 100 - profile.wishStep, " ", profile.wishStep === 99 ? "vœu" : "vœux"), historyFull(profile) && /*#__PURE__*/React.createElement("p", {
@@ -4627,8 +4640,8 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("journal")
   }, "Historique des v\u0153ux"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("collection")
-  }, "Collection"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("team")
+  }, "Personnages"), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("quests")
   }, "Qu\xEAtes")), /*#__PURE__*/React.createElement("p", {
     className: "daily-wishes"
