@@ -129,6 +129,7 @@
     const group = (await db().ref('chatGroups/' + groupId).get()).val(); if (!group?.members?.[who.id]) throw Error('Tu ne fais pas partie de ce groupe.');
     const key = await unlockGroupKey(groupId, group.packets[who.id]), iv = crypto.getRandomValues(new Uint8Array(12)), ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(content)), ref = db().ref('chatMessages/' + groupId).push();
     await ref.set({ sender: String(who.id), senderName: String(who.name).slice(0, 64), iv: b64(iv), ciphertext: b64(ciphertext), createdAt: firebase.database.ServerValue.TIMESTAMP });
+    notifyChatRecipients(groupId, ref.key);
   }
   function watchChat(groupId, update, error) {
     const ref = db().ref('chatMessages/' + groupId).orderByChild('createdAt').limitToLast(100);
@@ -147,7 +148,7 @@
         const stop = watchChat(group.id, messages => {
           if (initialized) messages.forEach(message => {
             if (!known.has(message.id) && String(message.sender) !== String(who.id)) {
-              const options = { body: message.text, tag: 'twewy-chat-' + group.id + '-' + message.id, icon: new URL('../icons/player-badge.webp', location.href).href, data: { groupId: group.id } };
+              const options = { body: 'Un message chiffré t’attend dans le chat.', tag: 'twewy-chat-' + group.id + '-' + message.id, icon: new URL('../icons/player-pin.webp', location.href).href, data: { groupId: group.id } };
               const show = () => { try { new Notification(group.name, options); } catch {} };
               if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(reg => reg?.showNotification ? reg.showNotification(group.name, options) : show()).catch(show); else show();
             }
@@ -179,5 +180,75 @@
     if (membership.leader === String(who.id)) throw Error('Le chef doit transférer sa faction avant de la quitter.');
     const updates = {}; updates['factions/' + membership.id + '/members/' + who.id] = null; updates['factionMembership/' + who.id] = null; await db().ref().update(updates);
   }
-  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite, identityKeys, createChatGroup, chatGroups, readChat, sendChat, watchChat, startChatNotifications, factionList, myFaction, createFaction, joinFaction, leaveFaction };
+  async function raidRooms() {
+    const faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour ouvrir les Raids.');
+    const raw = (await db().ref('raidRooms/' + faction.id).get()).val() || {};
+    return Object.entries(raw).filter(([, room]) => room && room.meta).map(([id, room]) => ({ ...room, id })).sort((a, b) => (b.meta.createdAt || 0) - (a.meta.createdAt || 0));
+  }
+  async function createRaidRoom(boss, team) {
+    const who = mine(), faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour ouvrir les Raids.');
+    if (!Array.isArray(team) || team.length !== 2 || team.some(f => !Array.isArray(f.loadout) || !f.loadout.length)) throw Error('Prépare un duo avec ses psychs dans Team.');
+    const id = 'raid-' + crypto.randomUUID(), meta = { id, bossId: String(boss.id), bossName: String(boss.name).slice(0, 80), bossHp: Math.max(18000, Math.min(70000, Math.round(Number(boss.hp) * 8))), bossAttack: Math.max(120, Math.round(Number(boss.attack) * 5)), bossElements: Array.isArray(boss.elements) ? boss.elements : ['normal'], bossSpeed: Math.max(1, Number(boss.speed) || 1), createdBy: String(who.id), createdAt: firebase.database.ServerValue.TIMESTAMP };
+    await db().ref('raidRooms/' + faction.id + '/' + id + '/meta').set(meta);
+    try { await joinRaidRoom(id, team); } catch (error) { await db().ref('raidRooms/' + faction.id + '/' + id + '/meta').remove().catch(() => {}); throw error; }
+    return id;
+  }
+  async function joinRaidRoom(roomId, team) {
+    const who = mine(), faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour rejoindre les Raids.');
+    const path = 'raidRooms/' + faction.id + '/' + roomId, roomRef = db().ref(path), room = (await roomRef.get()).val();
+    if (!room?.meta) throw Error('Cette salle de Raid n’existe plus.');
+    if (!Array.isArray(team) || team.length !== 2 || team.some(f => !Array.isArray(f.loadout) || !f.loadout.length)) throw Error('Prépare un duo avec ses psychs dans Team.');
+    if (Object.values(room.slots || {}).includes(String(who.id))) {
+      if (!room.players?.[who.id]) await roomRef.child('players/' + who.id).set(clean({ uid: String(who.id), name: String(who.name).slice(0, 64), team }));
+      return roomId;
+    }
+    for (let slot = 0; slot < 3; slot++) {
+      const claim = await roomRef.child('slots/' + slot).transaction(current => current == null ? String(who.id) : undefined, undefined, false);
+      if (!claim.committed) continue;
+      const snapshot = clean({ uid: String(who.id), name: String(who.name).slice(0, 64), team });
+      await roomRef.child('players/' + who.id).set(snapshot);
+      return roomId;
+    }
+    throw Error('Cette salle est complète.');
+  }
+  async function watchRaidRoom(roomId, update, error) {
+    const who = mine(), faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour rejoindre les Raids.');
+    const ref = db().ref('raidRooms/' + faction.id + '/' + roomId), listener = snapshot => update(snapshot.val());
+    ref.on('value', listener, error); return () => ref.off('value', listener);
+  }
+  async function watchRaidRooms(update, error) {
+    const who = mine(), faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour ouvrir les Raids.');
+    const ref = db().ref('raidRooms/' + faction.id), listener = snapshot => update(Object.entries(snapshot.val() || {}).filter(([, room]) => room && room.meta).map(([id, room]) => ({ ...room, id })).sort((a, b) => (b.meta.createdAt || 0) - (a.meta.createdAt || 0)));
+    ref.on('value', listener, error); return () => ref.off('value', listener);
+  }
+  async function submitRaidAction(roomId, turn, plans) {
+    const who = mine(), faction = await myFaction(); if (!faction) throw Error('Tu dois être dans une faction pour participer aux Raids.');
+    await db().ref('raidRooms/' + faction.id + '/' + roomId + '/actions/' + turn + '/' + who.id).set({ plans, at: firebase.database.ServerValue.TIMESTAMP });
+  }
+  async function forfeitRaid(roomId) {
+    const who = mine(), faction = await myFaction(); if (!faction) return;
+    await db().ref('raidRooms/' + faction.id + '/' + roomId + '/forfeits/' + who.id).set(true);
+  }
+  async function registerPushEndpoint(subscription) {
+    const who = mine();
+    if (!subscription || typeof subscription.endpoint !== 'string' || !subscription.keys?.p256dh || !subscription.keys?.auth) throw Error('Abonnement push invalide.');
+    const key = btoa(unescape(encodeURIComponent(subscription.endpoint))).replace(/[.#$\[\]/]/g, '_').slice(-120);
+    await db().ref('chatPushEndpoints/' + who.id + '/' + key).set({ endpoint: subscription.endpoint, keys: subscription.keys, updatedAt: firebase.database.ServerValue.TIMESTAMP });
+  }
+  async function enableChatPush(publicKey) {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw Error('Les notifications push ne sont pas prises en charge par ce navigateur.');
+    const registration = await navigator.serviceWorker.ready;
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: decodePushKey(publicKey) });
+    await registerPushEndpoint(subscription.toJSON());
+    return subscription;
+  }
+  function decodePushKey(value) { const s = String(value).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
+  async function removePushEndpoint(key) { const who = mine(); await db().ref('chatPushEndpoints/' + who.id + '/' + key).remove(); }
+  async function notifyChatRecipients(groupId, messageId) {
+    const who = mine(), token = await firebase.auth().currentUser.getIdToken();
+    const workerUrl = window.ChibiAuth?.workerUrl || 'https://chibi-auth.lucasdele77220.workers.dev';
+    try { await fetch(workerUrl + '/chat/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ groupId: String(groupId), messageId: String(messageId) }) }); } catch (_) {}
+  }
+  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite, identityKeys, createChatGroup, chatGroups, readChat, sendChat, watchChat, startChatNotifications, factionList, myFaction, createFaction, joinFaction, leaveFaction, raidRooms, watchRaidRooms, createRaidRoom, joinRaidRoom, watchRaidRoom, submitRaidAction, forfeitRaid, registerPushEndpoint, enableChatPush, removePushEndpoint, notifyChatRecipients };
 })();

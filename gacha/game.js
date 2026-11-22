@@ -1182,6 +1182,40 @@ const bases = {
   LARXENE: [24, 40, 30]
 };
 const maxLevel = 99;
+// Server-managed edits are applied before React mounts; internal IDs remain stable for saves.
+const applyAdminGameConfig = config => {
+  if (!config || typeof config !== "object") return;
+  for (const [id, edit] of Object.entries(config.characters || {})) {
+    const fighter = characterRoster.find(item => item.name === id);
+    if (!fighter || !edit || typeof edit !== "object") continue;
+    if (typeof edit.displayName === "string") fighter.displayName = edit.displayName.slice(0, 48);
+    for (const key of ["maxHp", "hp"]) if (Number.isFinite(edit[key])) fighter[key] = Math.max(1, Math.min(100000, Math.round(edit[key])));
+    if (Array.isArray(edit.elements)) characterElements[id] = edit.elements.filter(type => Object.hasOwn(elementNames, type)).slice(0, 2);
+    if (Array.isArray(edit.bases)) bases[id] = edit.bases.map(value => Math.max(1, Math.min(100000, Math.round(Number(value) || 1))));
+    if (edit.passive && characterPassives[id]) {
+      if (typeof edit.passive.name === "string") characterPassives[id].name = edit.passive.name.slice(0, 64);
+      if (typeof edit.passive.description === "string") characterPassives[id].description = edit.passive.description.slice(0, 240);
+      for (const key of ["damageBonus", "healing", "defense", "dodge"]) if (Number.isFinite(edit.passive[key])) characterPassives[id][key] = Math.max(0, Math.min(2, edit.passive[key]));
+    }
+  }
+  for (const [id, edit] of Object.entries(config.badges || {})) {
+    const pin = psychs[id];
+    if (!pin || !edit || typeof edit !== "object") continue;
+    if (typeof edit.displayName === "string") pin.name = edit.displayName.slice(0, 64);
+    if (Number.isFinite(edit.power)) pin.power = Math.max(0, Math.min(100000, Math.round(edit.power)));
+    if (Number.isFinite(edit.cost)) pin.cost = Math.max(0, Math.min(3, Math.round(edit.cost)));
+    if (["normal","fire","water","electric","grass","ice","fighting","poison","ground","flying","psychic","bug","rock","ghost","dragon","dark","steel","fairy"].includes(edit.element)) pin.element = edit.element;
+    if (["single","duo","aoe"].includes(edit.target)) pin.target = edit.target;
+  }
+  for (const [id, edit] of Object.entries(config.enemies || {})) {
+    const enemy = ffbeBestiary.find(item => item.id === id);
+    if (!enemy || !edit || typeof edit !== "object") continue;
+    if (typeof edit.displayName === "string") enemy.name = edit.displayName.slice(0, 80);
+    for (const key of ["hp", "attack", "level"]) if (Number.isFinite(edit[key])) enemy[key] = Math.max(1, Math.min(100000000, Math.round(edit[key])));
+  }
+};
+applyAdminGameConfig(window.ChibiAdminGameConfig);
+const characterLabel = name => characterRoster.find(item => item.name === name)?.displayName || name;
 function xpAtLevel(level) {
   const n = level - 1;
   return 100 * n + 35 * n * (n - 1) / 2 + 5 * n * (n - 1) * (2 * n - 1) / 6;
@@ -2833,7 +2867,7 @@ function CharacterDossier({
     style: {
       "--character-accent": fighter.accent
     }
-  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, fighter.role), /*#__PURE__*/React.createElement("h3", null, fighter.name), /*#__PURE__*/React.createElement(TypeChips, {
+  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, fighter.role), /*#__PURE__*/React.createElement("h3", null, characterLabel(fighter.name)), /*#__PURE__*/React.createElement(TypeChips, {
     elements: characterElements[fighter.name]
   })), /*#__PURE__*/React.createElement("div", {
     className: "dossier-art"
@@ -2892,7 +2926,7 @@ function CharacterCollection({
       "aria-label": `Fiche de ${f.name}${owned ? "" : " · Non obtenu"}`
     }, /*#__PURE__*/React.createElement(HudPortrait, {
       fighter: f
-    }), /*#__PURE__*/React.createElement("b", null, f.name), /*#__PURE__*/React.createElement("small", null, owned ? `Niv. ${experience(profile.xp[f.name] || 0).level} · ${ranks[profile.levels[f.name] || 0]}` : "Non obtenu"));
+    }), /*#__PURE__*/React.createElement("b", null, characterLabel(f.name)), /*#__PURE__*/React.createElement("small", null, owned ? `Niv. ${experience(profile.xp[f.name] || 0).level} · ${ranks[profile.levels[f.name] || 0]}` : "Non obtenu"));
   })), selected && /*#__PURE__*/React.createElement(WishDialog, {
     className: "character-sheet-dialog",
     title: `Fiche · ${selected.name}`,
@@ -3054,9 +3088,9 @@ function EventHall({
   }, /*#__PURE__*/React.createElement(SpritePreview, {
     fighter: hero,
     maximumScale: 2.4
-  })), /*#__PURE__*/React.createElement("h2", null, hero.name), /*#__PURE__*/React.createElement(TypeChips, {
+  })), /*#__PURE__*/React.createElement("h2", null, characterLabel(hero.name)), /*#__PURE__*/React.createElement(TypeChips, {
     elements: characterElements[hero.name]
-  }), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "5 %"), " \xB7 ", signaturePins[hero.name].name, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, "1 %"), " \xB7 ", hero.name), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, "5 %"), " \xB7 ", signaturePins[hero.name].name, /*#__PURE__*/React.createElement("br", null), /*#__PURE__*/React.createElement("b", null, "1 %"), " \xB7 ", characterLabel(hero.name)), /*#__PURE__*/React.createElement("button", {
     disabled: active ? active.boss !== hero.name : !ready,
     onClick: () => start(hero.name)
   }, active?.boss === hero.name ? "Reprendre" : "Défier")))));
@@ -3406,7 +3440,7 @@ function PvpBattle({
       fighter: base
     })), /*#__PURE__*/React.createElement("div", {
       className: "fighter-info"
-    }, /*#__PURE__*/React.createElement("small", null, "ADVERSAIRE"), /*#__PURE__*/React.createElement("h2", null, fighter.name), /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement("small", null, "ADVERSAIRE"), /*#__PURE__*/React.createElement("h2", null, characterLabel(fighter.name)), /*#__PURE__*/React.createElement("div", {
       className: "health-readout"
     }, /*#__PURE__*/React.createElement("span", null, "HP"), /*#__PURE__*/React.createElement("b", null, fighter.hp), /*#__PURE__*/React.createElement("em", null, "/ ", fighter.maxHp)), /*#__PURE__*/React.createElement("div", {
       className: "bar"
@@ -3539,7 +3573,7 @@ function ChatPanel({ friends }) {
   useEffect(() => { if (notifications) service.startChatNotifications().catch(() => {}); }, [notifications]);
   const create = async () => { try { const id = await service.createChatGroup(groupName, selected), items = await service.chatGroups(); setGroups(items); setActive(items.find(item => item.id === id)); setGroupName(""); setSelected([]); if (typeof Notification !== "undefined" && Notification.permission === "granted") await service.startChatNotifications(); } catch (error) { setNotice(String(error?.message || error)); } };
   const send = async event => { event.preventDefault(); if (!active || !draft.trim()) return; const text = draft; setDraft(""); try { await service.sendChat(active.id, text); } catch (error) { setDraft(text); setNotice(String(error?.message || error)); } };
-  const enable = async () => { try { const permission = await requestChatNotificationPermission(); setNotifications(permission === "granted"); if (permission !== "granted") setNotice("Autorise les notifications dans les réglages du navigateur."); else setNotice("Notifications activées sur cet appareil, même en quittant l’onglet Chat."); } catch (error) { setNotice(String(error?.message || "Impossible d’activer les notifications.")); } };
+  const enable = async () => { try { const permission = await requestChatNotificationPermission(); setNotifications(permission === "granted"); if (permission !== "granted") setNotice("Autorise les notifications dans les réglages du navigateur."); else { await service.enableChatPush("BGk76ZiXSpYgtoNqx-LmvxxaQEiE9p4AtqqP10O2OLmBWFB0Pa7jMrSuFp38EWlmfXAPLXNuX57AJt4Q31mOV7E"); setNotice("Notifications push activées sur cet appareil."); } } catch (error) { setNotice(String(error?.message || "Impossible d’activer les notifications.")); } };
   return h("section", { className: "social-chat" }, h("header", null, h("div", null, h("h2", null, "Messages chiffrés"), h("p", null, "Les messages sont chiffrés sur ton appareil.")), h("button", { onClick: enable }, notifications ? "Notifications actives" : "Activer les notifications")), h("div", { className: "chat-layout" }, h("aside", { className: "chat-groups" }, h("b", null, "Discussions"), groups.map(group => h("button", { key: group.id, "aria-pressed": active?.id === group.id, onClick: () => setActive(group) }, group.name, h("small", null, Object.keys(group.members || {}).length, " membres")))), h("div", { className: "chat-main" }, active ? h(React.Fragment, null, h("div", { className: "chat-message-list", "aria-live": "polite" }, messages.map(item => h("article", { key: item.id, className: String(item.sender) === String(window.ChibiGameSync?.accountId) ? "mine" : "" }, h("b", null, String(item.sender) === String(window.ChibiGameSync?.accountId) ? "Toi" : item.senderName), h("p", null, item.text), h("time", null, item.createdAt ? new Date(item.createdAt).toLocaleString() : "À l’instant")))), h("form", { onSubmit: send }, h("textarea", { value: draft, maxLength: 2000, placeholder: "Écrire un message…", onChange: event => setDraft(event.target.value) }), h("button", { disabled: !draft.trim() }, "Envoyer"))) : h("p", null, "Crée une discussion avec un ami pour commencer."))), h("details", { className: "chat-create" }, h("summary", null, "Créer un groupe chiffré"), h("input", { value: groupName, maxLength: 48, placeholder: "Nom du groupe", onChange: event => setGroupName(event.target.value) }), h("div", null, friends.map(player => h("label", { key: player.uid }, h("input", { type: "checkbox", checked: selected.includes(String(player.uid)), onChange: event => setSelected(old => event.target.checked ? [...old, String(player.uid)] : old.filter(id => id !== String(player.uid))) }), player.name))), h("button", { disabled: !selected.length, onClick: create }, "Créer · ", selected.length + 1, " membres"), h("small", null, "Les amis doivent ouvrir Chat une première fois pour publier leur clé publique.")), notice && h("p", { role: "status" }, notice));
 }
 function FactionPanel() {
@@ -3871,7 +3905,7 @@ function AwakeningPanel({
       key: fighter.name
     }, /*#__PURE__*/React.createElement(HudPortrait, {
       fighter: fighter
-    }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("small", null, awakened ? "Éveillé · bonus actif" : `${copies} / 5 doublons`), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, characterLabel(fighter.name)), /*#__PURE__*/React.createElement("small", null, awakened ? "Éveillé · bonus actif" : `${copies} / 5 doublons`), /*#__PURE__*/React.createElement("div", {
       className: "awakening-ranks",
       "aria-label": `${fighter.name} : ${copies} doublons`
     }, ranks.map((_, rank) => /*#__PURE__*/React.createElement("span", {
@@ -5484,4 +5518,5 @@ function SaveBoundary() {
     role: "status"
   }, status.message), /*#__PURE__*/React.createElement(App, null));
 }
+window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary };
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));

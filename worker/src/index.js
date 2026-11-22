@@ -46,6 +46,32 @@ export default {
         return json(await spotify(String(b.ref || '')), 200, cors);
       } catch (e) { return json({ error: String(e && e.message || e).slice(0, 200) }, 502, cors); }
     }
+    if (request.method === 'POST' && url.pathname === '/chat/notify') {
+      const who = await verifyIdToken(env, (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''));
+      if (!who) return json({ error: 'connecte-toi' }, 401, cors);
+      if (!env.VAPID_PRIVATE_JWK || !env.VAPID_PUBLIC_KEY || !env.FIREBASE_DATABASE_URL) return json({ error: 'notifications push non configurées' }, 503, cors);
+      try {
+        const body = await request.json(), groupId = String(body.groupId || ''), messageId = String(body.messageId || '');
+        if (!/^chat-[0-9a-f-]{20,60}$/i.test(groupId) || !/^[A-Za-z0-9_-]{8,40}$/.test(messageId)) return json({ error: 'message invalide' }, 400, cors);
+        const token = await firebaseAccessToken(env), read = path => firebaseRead(env, token, path);
+        const [group, message] = await Promise.all([read('chatGroups/' + groupId), read('chatMessages/' + groupId + '/' + messageId)]);
+        const sender = String(who.discordId || who.user_id || '');
+        if (!group?.members?.[sender] || String(message?.sender || '') !== sender) return json({ error: 'message inaccessible' }, 403, cors);
+        let sent = 0, stale = [];
+        for (const uid of Object.keys(group.members)) {
+          if (uid === sender) continue;
+          const endpoints = await read('chatPushEndpoints/' + uid) || {};
+          for (const [key, sub] of Object.entries(endpoints)) {
+            if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) continue;
+            const result = await sendWebPush(env, sub, { title: 'Nouveau message', body: 'Un message chiffré t’attend dans le chat.', data: { groupId } });
+            if (result.status === 404 || result.status === 410) stale.push('chatPushEndpoints/' + uid + '/' + key);
+            else if (result.ok) sent++;
+          }
+        }
+        if (stale.length) await firebaseDelete(env, token, stale);
+        return json({ sent }, 200, cors);
+      } catch (e) { return json({ error: String(e && e.message || e).slice(0, 180) }, 502, cors); }
+    }
     if (request.method !== 'POST' || url.pathname !== '/session') return json({ error: 'introuvable' }, 404, cors);
 
     let body;
@@ -96,6 +122,48 @@ async function verifyIdToken(env, token) {
     const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64urlDecode(parts[2]), utf8(parts[0] + '.' + parts[1]));
     return ok ? p : null;
   } catch { return null; }
+}
+
+let accessTokenCache = { token: '', expires: 0 };
+async function firebaseAccessToken(env) {
+  if (accessTokenCache.token && accessTokenCache.expires > Date.now() + 60000) return accessTokenCache.token;
+  const now = Math.floor(Date.now() / 1000), header = { alg: 'RS256', typ: 'JWT' }, payload = { iss: env.FIREBASE_CLIENT_EMAIL, sub: env.FIREBASE_CLIENT_EMAIL, aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600, scope: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email' };
+  const data = b64url(utf8(JSON.stringify(header))) + '.' + b64url(utf8(JSON.stringify(payload))), key = await signingKey(env.FIREBASE_PRIVATE_KEY), signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, utf8(data));
+  const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: data + '.' + b64url(new Uint8Array(signature)) }) });
+  const result = await response.json(); if (!response.ok || !result.access_token) throw Error('Firebase service authorization failed');
+  accessTokenCache = { token: result.access_token, expires: Date.now() + (Number(result.expires_in) || 3600) * 1000 }; return result.access_token;
+}
+async function firebaseRead(env, token, path) {
+  const base = String(env.FIREBASE_DATABASE_URL).replace(/\/$/, ''), response = await fetch(base + '/' + path + '.json?access_token=' + encodeURIComponent(token));
+  if (!response.ok) throw Error('Firebase read failed'); return response.json();
+}
+async function firebaseDelete(env, token, paths) {
+  const base = String(env.FIREBASE_DATABASE_URL).replace(/\/$/, ''), updates = Object.fromEntries(paths.map(path => [path, null]));
+  await fetch(base + '/.json?access_token=' + encodeURIComponent(token), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+}
+function fromB64url(text) { const s = String(text).replace(/-/g, '+').replace(/_/g, '/'); return Uint8Array.from(atob(s + '='.repeat((4 - s.length % 4) % 4)), c => c.charCodeAt(0)); }
+async function hkdfExtract(salt, ikm) { const key = await crypto.subtle.importKey('raw', salt, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); return new Uint8Array(await crypto.subtle.sign('HMAC', key, ikm)); }
+async function hkdfExpand(prk, info, length) {
+  const key = await crypto.subtle.importKey('raw', prk, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']); let previous = new Uint8Array(), out = new Uint8Array(), counter = 1;
+  while (out.length < length) { const block = new Uint8Array(previous.length + info.length + 1); block.set(previous); block.set(info, previous.length); block[block.length - 1] = counter++; previous = new Uint8Array(await crypto.subtle.sign('HMAC', key, block)); const next = new Uint8Array(out.length + previous.length); next.set(out); next.set(previous, out.length); out = next; }
+  return out.slice(0, length);
+}
+async function sendWebPush(env, subscription, payload) {
+  const endpoint = new URL(subscription.endpoint), clientPublic = fromB64url(subscription.keys.p256dh), auth = fromB64url(subscription.keys.auth), salt = crypto.getRandomValues(new Uint8Array(16));
+  const pair = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']), serverRaw = new Uint8Array(await crypto.subtle.exportKey('raw', pair.publicKey));
+  const clientKey = await crypto.subtle.importKey('raw', clientPublic, { name: 'ECDH', namedCurve: 'P-256' }, false, []), secret = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: clientKey }, pair.privateKey, 256));
+  const authPrk = await hkdfExtract(auth, secret), context = new Uint8Array(14 + clientPublic.length + serverRaw.length); context.set(utf8('WebPush: info\0')); context.set(clientPublic, 14); context.set(serverRaw, 14 + clientPublic.length);
+  const inputKey = await hkdfExpand(authPrk, context, 32), prk = await hkdfExtract(salt, inputKey), cek = await hkdfExpand(prk, utf8('Content-Encoding: aes128gcm\0'), 16), nonce = await hkdfExpand(prk, utf8('Content-Encoding: nonce\0'), 12);
+  const content = new Uint8Array(utf8(JSON.stringify(payload)).length + 1); content.set(utf8(JSON.stringify(payload))); content[content.length - 1] = 2;
+  const aes = await crypto.subtle.importKey('raw', cek, { name: 'AES-GCM' }, false, ['encrypt']), encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, aes, content));
+  const body = new Uint8Array(salt.length + 4 + 1 + serverRaw.length + encrypted.length); let offset = 0; body.set(salt, offset); offset += salt.length; body.set([0,0,16,0], offset); offset += 4; body[offset++] = serverRaw.length; body.set(serverRaw, offset); offset += serverRaw.length; body.set(encrypted, offset);
+  const vapid = await vapidAuthorization(env, endpoint.origin), response = await fetch(endpoint.href, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'Content-Encoding': 'aes128gcm', 'TTL': '86400', 'Urgency': 'normal', 'Authorization': 'vapid t=' + vapid.token + ', k=' + env.VAPID_PUBLIC_KEY }, body });
+  return response;
+}
+async function vapidAuthorization(env, audience) {
+  const jwk = JSON.parse(env.VAPID_PRIVATE_JWK), now = Math.floor(Date.now() / 1000), data = b64url(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' }))) + '.' + b64url(utf8(JSON.stringify({ aud: audience, exp: now + 43200, sub: 'mailto:' + (env.VAPID_CONTACT || 'support@example.com') })));
+  const key = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']), sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(data));
+  return { token: data + '.' + b64url(new Uint8Array(sig)) };
 }
 
 function b64urlDecode(s) {

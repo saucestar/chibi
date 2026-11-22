@@ -9,7 +9,11 @@ GUILD_ID = "REMPLACE_PAR_ID_DU_SERVEUR"
 ADMIN_IDS = "REMPLACE_PAR_TON_ID_DISCORD"
 # pages allowed to call the worker from a browser
 ALLOWED_ORIGINS = "https://saucestar.github.io"
+FIREBASE_DATABASE_URL = "https://chibi-be98b-default-rtdb.europe-west1.firebasedatabase.app"
+VAPID_PUBLIC_KEY = "BGk76ZiXSpYgtoNqx-LmvxxaQEiE9p4AtqqP10O2OLmBWFB0Pa7jMrSuFp38EWlmfXAPLXNuX57AJt4Q31mOV7E"
+VAPID_CONTACT = "mailto:contact@example.com"
 
 # Secrets (never in this file), set them with:
 #   npx wrangler secret put FIREBASE_CLIENT_EMAIL
 #   npx wrangler secret put FIREBASE_PRIVATE_KEY
+#   npx wrangler secret put VAPID_PRIVATE_JWK
