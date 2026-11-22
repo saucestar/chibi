@@ -40,10 +40,19 @@
         } else if (category === 'badges') config.badges[selected] = { ...config.badges[selected], displayName: values.displayName.slice(0,64), power: Number(values.power), cost: Number(values.cost), element: values.element, target: values.target };
         else config.enemies[selected] = { ...config.enemies[selected], displayName: values.displayName.slice(0,80), hp: Number(values.hp), attack: Number(values.attack), level: Number(values.level) };
         try {
+          const user = firebase.auth().currentUser;
+          if (!user) throw Error('Session Firebase expirée. Reconnecte-toi puis réessaie.');
+          const token = await user.getIdTokenResult(true);
+          if (token.claims.admin !== true) throw Error('Ton compte n’a plus le rôle administrateur. Reconnecte-toi avec le compte admin.');
           config.updatedAt = Date.now(); await firebase.database().ref('gameConfig/v1').set(config);
           window.ChibiAdminGameConfig = config; const status = panel.querySelector('.admin-status'); status.textContent = 'Enregistré. Rechargement du jeu…';
           setTimeout(() => location.reload(), 700);
-        } catch (error) { panel.querySelector('.admin-status').textContent = 'Échec Firebase : ' + String(error?.message || error); }
+        } catch (error) {
+          const message = String(error?.message || error);
+          panel.querySelector('.admin-status').textContent = /permission.denied|permission_denied/i.test(message)
+            ? 'Firebase refuse l’écriture. Publie à nouveau database.rules.json : gameConfig/v1 doit autoriser auth.token.admin === true.'
+            : 'Échec Firebase : ' + message;
+        }
       };
     };
     shade.appendChild(panel); document.body.appendChild(shade); render();

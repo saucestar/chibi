@@ -3565,11 +3565,23 @@ function requestChatNotificationPermission() {
     window.parent.postMessage({ type: "chibi:notification-permission-request", requestId }, location.protocol === "file:" ? "*" : location.origin);
   });
 }
-function ChatPanel({ friends }) {
+class ChatPanelBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error) { console.error('Échec d’affichage du chat chiffré', error); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return React.createElement('section', { className: 'social-chat', role: 'alert' },
+      React.createElement('h2', null, 'Le chat n’a pas pu s’ouvrir'),
+      React.createElement('p', null, String(this.state.error?.message || this.state.error)),
+      React.createElement('button', { onClick: () => this.setState({ error: null }) }, 'Réessayer'));
+  }
+}
+function ChatPanel({ friends = [] }) {
   const h = React.createElement, service = window.ChibiSocial;
   const [groups, setGroups] = useState([]), [active, setActive] = useState(null), [messages, setMessages] = useState([]), [draft, setDraft] = useState(""), [groupName, setGroupName] = useState(""), [selected, setSelected] = useState([]), [notice, setNotice] = useState(""), [notifications, setNotifications] = useState(typeof Notification !== "undefined" && Notification.permission === "granted");
-  useEffect(() => { let live = true; service.chatGroups().then(items => { if (live) { setGroups(items); if (items.length) setActive(items[0]); } }).catch(error => setNotice(String(error?.message || error))); return () => { live = false; }; }, []);
-  useEffect(() => { if (!active) return; setMessages([]); return service.watchChat(active.id, setMessages, error => setNotice(String(error?.message || error))); }, [active?.id]);
+  useEffect(() => { let live = true; if (!service) { setNotice('Le service Social ne s’est pas chargé. Recharge le jeu.'); return () => { live = false; }; } service.chatGroups().then(items => { if (live) { const list = Array.isArray(items) ? items : []; setGroups(list); if (list.length) setActive(list[0]); } }).catch(error => { if (live) setNotice(String(error?.message || error)); }); return () => { live = false; }; }, []);
+  useEffect(() => { if (!active || !service) return; setMessages([]); try { return service.watchChat(active.id, setMessages, error => setNotice(String(error?.message || error))); } catch (error) { setNotice(String(error?.message || error)); } }, [active?.id]);
   useEffect(() => { if (notifications) service.startChatNotifications().catch(() => {}); }, [notifications]);
   const create = async () => { try { const id = await service.createChatGroup(groupName, selected), items = await service.chatGroups(); setGroups(items); setActive(items.find(item => item.id === id)); setGroupName(""); setSelected([]); if (typeof Notification !== "undefined" && Notification.permission === "granted") await service.startChatNotifications(); } catch (error) { setNotice(String(error?.message || error)); } };
   const send = async event => { event.preventDefault(); if (!active || !draft.trim()) return; const text = draft; setDraft(""); try { await service.sendChat(active.id, text); } catch (error) { setDraft(text); setNotice(String(error?.message || error)); } };
@@ -3664,9 +3676,9 @@ function SocialHub({
     key: id,
     "aria-pressed": tab === id,
     onClick: () => setTab(id)
-  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanel, {
+  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(ChatPanel, {
     friends: data.friends.map(item => profileById(item.uid) || item)
-  }), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
+  })), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
   }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
