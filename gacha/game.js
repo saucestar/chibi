@@ -2891,7 +2891,7 @@ function CharacterDossier({
     className: "dossier-psych"
   }, /*#__PURE__*/React.createElement(PinIcon, {
     pin: pin
-  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "Psych de d\xE9part"), /*#__PURE__*/React.createElement("b", null, pin.name.replace(" (Pin)", "")))), rate !== undefined && /*#__PURE__*/React.createElement("p", {
+  }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("small", null, "Psych de d\xE9part"), /*#__PURE__*/React.createElement("b", null, pin.name.replace(" (Pin)", "")))), profile.owned.includes(fighter.name) && (profile.loadout[fighter.name] || []).length > 0 && /*#__PURE__*/React.createElement("div", { className: "dossier-equipped" }, /*#__PURE__*/React.createElement("small", null, "Psychs équipés"), (profile.loadout[fighter.name] || []).map(id => { const equipped = psychs[id]; return equipped ? /*#__PURE__*/React.createElement("span", { key: id }, /*#__PURE__*/React.createElement(PinIcon, { pin: equipped }), equipped.name.replace(" (Pin)", ""), " · ", pinTargetLabel(equipped)) : null; })), rate !== undefined && /*#__PURE__*/React.createElement("p", {
     className: "dossier-rate"
   }, "Prochain v\u0153u \xB7 ", (rate * 100).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     maximumFractionDigits: 3
@@ -3660,11 +3660,13 @@ function SocialHub({
     className: "social-panel hub-panel"
   }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Social"), /*#__PURE__*/React.createElement("p", null, "Ajoute des amis, inspecte leurs \xE9quipes et lance un combat Casual directement.")), /*#__PURE__*/React.createElement("div", {
     className: "social-tabs"
-  }, [["players", "Joueurs", data.profiles.length], ["friends", "Amis", data.friends.length], ["requests", "Demandes", data.requests.length], ["invites", "Défis", data.invites.length]].map(([id, label, count]) => /*#__PURE__*/React.createElement("button", {
+  }, [["players", "Joueurs", data.profiles.length], ["friends", "Amis", data.friends.length], ["requests", "Demandes", data.requests.length], ["invites", "Défis", data.invites.length], ["chat", "Chat", "✉"], ["factions", "Factions", "⚑"]].map(([id, label, count]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     "aria-pressed": tab === id,
     onClick: () => setTab(id)
-  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), message && /*#__PURE__*/React.createElement("p", {
+  }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanel, {
+    friends: data.friends.map(item => profileById(item.uid) || item)
+  }), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
   }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
@@ -3888,6 +3890,14 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("span", null, "\u2726"), /*#__PURE__*/React.createElement("b", null, "Invocations"), /*#__PURE__*/React.createElement("small", null, profile.freeWishes, " v\u0153ux gratuits")), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("collection")
   }, /*#__PURE__*/React.createElement("span", null, "\u25A6"), /*#__PURE__*/React.createElement("b", null, "Collection"), /*#__PURE__*/React.createElement("small", null, profile.owned.length, " personnages"))));
+}
+function TeamWorkspace({ profile, awaken, builder }) {
+  const [tab, setTab] = useState("team");
+  const tabs = [["characters", "Personnages"], ["awakening", "Éveil"], ["team", "Team"]];
+  return /*#__PURE__*/React.createElement("section", { className: "team-workspace hub-panel" },
+    /*#__PURE__*/React.createElement("header", { className: "team-workspace-heading" }, /*#__PURE__*/React.createElement("small", null, "REAPERS’ NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Équipe"), /*#__PURE__*/React.createElement("p", null, "Consulte tes personnages, prépare leur éveil et compose ton duo.")),
+    /*#__PURE__*/React.createElement("nav", { className: "team-workspace-tabs", "aria-label": "Sections de la Team" }, tabs.map(([id, label]) => /*#__PURE__*/React.createElement("button", { key: id, type: "button", "aria-pressed": tab === id, onClick: () => setTab(id) }, label))),
+    tab === "characters" ? /*#__PURE__*/React.createElement(CharacterCollection, { profile: profile, awaken: awaken }) : tab === "awakening" ? /*#__PURE__*/React.createElement(AwakeningPanel, { profile: profile, awaken: awaken }) : builder);
 }
 function AwakeningPanel({
   profile,
@@ -4597,9 +4607,9 @@ function App() {
   }, phase === "crank" ? "Appuie sur la manivelle." : phase === "spin" ? "La manivelle tourne…" : "La capsule tombe…"))), saveError && /*#__PURE__*/React.createElement("p", {
     role: "alert"
   }, "Sauvegarde locale indisponible."))));
-  return hub(/*#__PURE__*/React.createElement("main", {
+  const teamBuilder = /*#__PURE__*/React.createElement("main", {
     className: "game-shell party-lobby"
-  }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h1", null, "Team"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h1", null, "Duo actif"), /*#__PURE__*/React.createElement("p", null, "Choisis deux personnages puis équipe leurs psychs."), /*#__PURE__*/React.createElement("div", {
     className: "team-slots"
   }, profile.equipped.map((name, index) => {
     const fighter = characterRoster.find(f => f.name === name);
@@ -4650,12 +4660,10 @@ function App() {
         [name]: ids
       }
     }))
-  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && /*#__PURE__*/React.createElement("p", null, "\xC9quipe au moins un psych offensif."), /*#__PURE__*/React.createElement(AwakeningPanel, {
-    profile: profile,
-    awaken: awaken
-  }), saveError && /*#__PURE__*/React.createElement("p", {
+  })), fighters.length === 2 && !fighters.some(name => profile.loadout[name]?.some(offensive)) && /*#__PURE__*/React.createElement("p", null, "\xC9quipe au moins un psych offensif."), saveError && /*#__PURE__*/React.createElement("p", {
     role: "alert"
-  }, "La sauvegarde locale est indisponible dans ce navigateur."))));
+  }, "La sauvegarde locale est indisponible dans ce navigateur.")));
+  return hub(/*#__PURE__*/React.createElement(TeamWorkspace, { profile: profile, awaken: awaken, builder: teamBuilder }));
 }
 function HudPortrait({
   fighter,
@@ -5519,4 +5527,5 @@ function SaveBoundary() {
   }, status.message), /*#__PURE__*/React.createElement(App, null));
 }
 window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary };
+window.ChibiRaidSprites = { loadPage: ffbePage, enemies: enemyCatalog };
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
