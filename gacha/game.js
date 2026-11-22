@@ -1541,6 +1541,7 @@ function newRun(profile) {
     earnedXp: 0,
     loot: [],
     awarded: [],
+    ctbTimeline: {},
     pending: null
   };
 }
@@ -1562,6 +1563,7 @@ function rollbackRunToTierSix(run) {
     earnedXp: 0,
     loot: [],
     awarded: [],
+    ctbTimeline: {},
     pending: null
   };
 }
@@ -4876,21 +4878,25 @@ function HudPortrait({
     "aria-hidden": "true"
   });
 }
-function turnOrder(team, enemies, turn) {
+const ctbDelay = plan => plan?.kind === "guard" ? .55 : plan?.kind === "burst" ? 1.7 : plan?.kind === "psych" ? 1 + Math.min(.45, (psychs[plan.pin]?.cost || 0) * .12) : 1;
+function turnOrder(team, enemies, turn, choices = {}, timeline = {}) {
   const living = team.filter(f => f.hp > 0);
   return [...living.map(f => ({
     key: f.name,
     side: "ally",
     name: f.name,
-    speed: f.speed || 0
+    speed: f.speed || 0,
+    guard: choices[f.name]?.kind === "guard",
+    at: choices[f.name]?.kind === "guard" ? -1 : Number(timeline[f.name] || 0) + Math.round(10000 / Math.max(1, f.speed || 1))
   })), ...enemies.filter(e => e.hp > 0).map((e, i) => ({
     key: `enemy-${e.id}`,
     side: "enemy",
     name: e.name,
     id: e.id,
     speed: e.speed,
+    at: Number(timeline[`enemy-${e.id}`] || 0) + Math.round(10000 / Math.max(1, e.speed || 1)),
     target: (e.trait === "hunter" ? [...living].sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0] : living[(turn - 1 + i) % living.length])?.name
-  }))].sort((a, b) => b.speed - a.speed || (a.side === b.side ? 0 : a.side === "ally" ? -1 : 1));
+  }))].sort((a, b) => (a.guard === b.guard ? a.at - b.at : a.guard ? -1 : 1) || (a.side === b.side ? 0 : a.side === "ally" ? -1 : 1));
 }
 const planCost = plan => plan?.kind === "psych" ? psychs[plan.pin]?.cost || 0 : 0;
 const planName = plan => !plan ? "Choisir une action" : plan.kind === "guard" ? "Défense" : plan.kind === "burst" ? "Sync Burst" : psychs[plan.pin].name;
@@ -4957,6 +4963,7 @@ function Battle({
   const [energy, setEnergy] = useState(initialRun.energy);
   const [groove, setGroove] = useState(initialRun.groove);
   const [turn, setTurn] = useState(initialRun.turn);
+  const [ctbTimeline, setCtbTimeline] = useState(initialRun.ctbTimeline && typeof initialRun.ctbTimeline === "object" ? initialRun.ctbTimeline : {});
   const [message, setMessage] = useState("Choisis 1 action par personnage, puis lance le tour.");
   const [busy, setBusy] = useState(false);
   const [hitFeedback, setHitFeedback] = useState(null);
@@ -5005,7 +5012,7 @@ function Battle({
     generation.current++;
   }, []);
   const livingTeam = team.filter(f => f.hp > 0);
-  const order = busy ? queue : turnOrder(team, enemies, turn);
+  const order = busy ? queue : turnOrder(team, enemies, turn, plans, ctbTimeline);
   const reserved = livingTeam.reduce((sum, f) => sum + planCost(plans[f.name]), 0);
   const ready = livingTeam.length > 0 && livingTeam.every(f => plans[f.name]) && reserved <= energy;
   const choosing = team.find(f => f.name === chooser);
@@ -5048,7 +5055,7 @@ function Battle({
     if (running.current || busy || reward || !recovery && !ready) return;
     running.current = true;
     const token = generation.current;
-    const steps = recovery?.steps || turnOrder(team, enemies, turn);
+    const steps = recovery?.steps || turnOrder(team, enemies, turn, recovery?.choices || plans, ctbTimeline);
     const choices = recovery?.choices || {
       ...plans
     };
@@ -5059,7 +5066,8 @@ function Battle({
         ...e
       })),
       en = recovery ? energy : energy - reserved,
-      sync = groove;
+      sync = groove,
+      timeline = { ...ctbTimeline };
     const shields = new Map(recovery?.shields || []);
     const performed = new Set(recovery?.performed || []);
     const drops = [];
@@ -5070,6 +5078,7 @@ function Battle({
       setEnemies([...monsters]);
       setEnergy(en);
       setGroove(sync);
+      setCtbTimeline({ ...timeline });
     };
     const healParty = (amount, sourceName) => {
       const boosted = Math.round(amount * passiveHealingMultiplier(sourceName || ""));
@@ -5092,6 +5101,7 @@ function Battle({
       loot: [...loot, ...drops.map(pin => pin.name)],
       awarded: [...awarded.current],
       pending: fighters.every(f => f.hp <= 0) || monsters.every(e => e.hp <= 0) ? null : pending
+      ,ctbTimeline: timeline
     }, gains);
     setBusy(true);
     setQueue(steps);
@@ -5137,11 +5147,13 @@ function Battle({
         } : e);
         sync = Math.min(100, sync + 12);
         if (damage) gameSound.effect("hit");
+        timeline[step.key] = Math.round((timeline[step.key] || 0) + 10000 / Math.max(1, attacker.speed || 1));
         setMessage(damage ? `${attacker.name} attaque ${target.name} · −${damage} PV` : `${target.name} esquive ${attacker.name}.`);
       } else {
         const fighter = fighters.find(f => f.name === step.name);
         const plan = choices[step.name];
         if (fighter.hp <= 0) continue;
+        timeline[step.key] = Math.round((timeline[step.key] || 0) + 10000 / Math.max(1, fighter.speed || 1) * ctbDelay(plan));
         performed.add(fighter.name);
         setActor(fighter.name);
         if (plan.kind === "guard") {
@@ -5270,6 +5282,7 @@ function Battle({
     if (wave >= finalWave || busy || !reward) return;
     const next = wave + 1,
       heal = difficultyAt(next).tier > difficultyAt(wave).tier;
+    const nextTimeline = {};
     const nextTeam = team.map(f => ({
         ...f,
         hp: heal ? f.maxHp : f.hp
@@ -5287,6 +5300,7 @@ function Battle({
       earnedXp: 0,
       loot: [],
       awarded: [],
+      ctbTimeline: nextTimeline,
       pending: null
     });
     setTeam(nextTeam);
@@ -5302,6 +5316,7 @@ function Battle({
     clearedWave.current = false;
     setWave(next);
     setTurn(1);
+    setCtbTimeline(nextTimeline);
     setEnemies(nextEnemies);
     setSelected(next * 10);
     setReward(false);
@@ -5398,13 +5413,13 @@ function Battle({
     className: `threat threat-${threat.toLowerCase()}`
   }, /*#__PURE__*/React.createElement("span", null, "THREAT"), /*#__PURE__*/React.createElement("b", null, threat))), /*#__PURE__*/React.createElement("nav", {
     className: "turn-order",
-    "aria-label": `Ordre du tour ${turn}, selon la SPE`
+    "aria-label": `Timeline CTB ${turn}, selon la vitesse et le délai de chaque action`
   }, /*#__PURE__*/React.createElement("span", {
     className: "hud-turn"
-  }, "Tour ", turn), /*#__PURE__*/React.createElement("ol", null, order.map((entry, index) => {
+  }, "CTB ", turn), /*#__PURE__*/React.createElement("ol", null, order.map((entry, index) => {
     const fighter = team.find(f => f.name === entry.name),
       enemy = enemies.find(e => e.id === entry.id);
-    const description = `${index + 1}. ${entry.name} · SPE ${entry.speed} · ${entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])}`;
+    const description = `${index + 1}. ${entry.name} · SPE ${entry.speed} · ${entry.guard ? "Défense prioritaire · " : ""}délai ${Math.max(0, entry.at)} · ${entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])}`;
     return /*#__PURE__*/React.createElement("li", {
       key: entry.key,
       className: `${entry.side} ${busy && index === queueIndex ? "playing" : ""} ${busy && index < queueIndex ? "played" : ""}`,
@@ -5547,7 +5562,7 @@ function Battle({
     key: node
   }, /*#__PURE__*/React.createElement("span", null, node < wave ? "✓" : String(node).padStart(2, "0")), /*#__PURE__*/React.createElement("p", null, isBossWave(node) ? "BOSS SIGNAL" : node === wave ? "CURRENT WAVE" : "NOISE WAVE")))), /*#__PURE__*/React.createElement("div", {
     className: "tip-card"
-  }, /*#__PURE__*/React.createElement("small", null, "REAPER TIP"), /*#__PURE__*/React.createElement("p", null, "Pr\xE9pare les actions du duo et leurs cibles. La SPE d\xE9termine l\u2019ordre. \xC0 100% de Groove, choisis Sync Burst dans les actions."), /*#__PURE__*/React.createElement("a", {
+  }, /*#__PURE__*/React.createElement("small", null, "REAPER TIP"), /*#__PURE__*/React.createElement("p", null, "Timeline CTB : Défense passe en priorité. La SPE et le délai de l’action déterminent les prochains passages. À 100% de Groove, choisis Sync Burst dans les actions."), /*#__PURE__*/React.createElement("a", {
     href: "https://twewy.fandom.com/wiki/TWEWY/Pin_List",
     target: "_blank",
     rel: "noreferrer"
@@ -5556,7 +5571,7 @@ function Battle({
     close: () => setOrderDetail(null)
   }, (() => {
     const entry = order.find(e => e.key === orderDetail);
-    return entry ? /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, entry.name), " \xB7 SPE ", entry.speed, /*#__PURE__*/React.createElement("br", null), entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])) : /*#__PURE__*/React.createElement("p", null, "Cette action est termin\xE9e.");
+    return entry ? /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, entry.name), " \xB7 SPE ", entry.speed, /*#__PURE__*/React.createElement("br", null), entry.guard ? "Défense prioritaire · " : "", "Délai CTB ", Math.max(0, entry.at), /*#__PURE__*/React.createElement("br", null), entry.side === "enemy" ? `Attaque → ${entry.target}` : planName(plans[entry.name])) : /*#__PURE__*/React.createElement("p", null, "Cette action est termin\xE9e.");
   })(), /*#__PURE__*/React.createElement("button", {
     className: "fullscreen-button",
     onClick: () => setOrderDetail(null)
