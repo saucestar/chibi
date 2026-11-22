@@ -3577,6 +3577,18 @@ class ChatPanelBoundary extends React.Component {
       React.createElement('button', { onClick: () => this.setState({ error: null }) }, 'Réessayer'));
   }
 }
+class SocialHubBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error) { console.error('Échec de rendu Social', error); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return React.createElement('section', { className: 'social-panel hub-panel', role: 'alert' },
+      React.createElement('h1', null, 'Social a rencontré une erreur'),
+      React.createElement('p', null, String(this.state.error?.message || this.state.error)),
+      React.createElement('button', { onClick: () => this.setState({ error: null }) }, 'Réessayer'));
+  }
+}
 function ChatPanel({ friends = [] }) {
   const h = React.createElement, service = window.ChibiSocial;
   const [groups, setGroups] = useState([]), [active, setActive] = useState(null), [messages, setMessages] = useState([]), [draft, setDraft] = useState(""), [groupName, setGroupName] = useState(""), [selected, setSelected] = useState([]), [notice, setNotice] = useState(""), [notifications, setNotifications] = useState(typeof Notification !== "undefined" && Notification.permission === "granted");
@@ -3633,8 +3645,12 @@ function SocialHub({
   if (!service?.ready()) return /*#__PURE__*/React.createElement("section", {
     className: "social-panel hub-panel"
   }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Social"), /*#__PURE__*/React.createElement("p", null, "Connecte-toi \xE0 Discord pour retrouver les autres joueurs, ajouter des amis et lancer des d\xE9fis Casual.")));
-  const profileById = uid => data.profiles.find(item => String(item.uid) === String(uid));
-  const friendIds = new Set(data.friends.map(item => String(item.uid)));
+  const profiles = Array.isArray(data.profiles) ? data.profiles.filter(item => item && typeof item === "object") : [];
+  const friends = Array.isArray(data.friends) ? data.friends.filter(item => item && typeof item === "object") : [];
+  const requests = Array.isArray(data.requests) ? data.requests.filter(item => item && typeof item === "object") : [];
+  const invites = Array.isArray(data.invites) ? data.invites.filter(item => item && typeof item === "object") : [];
+  const profileById = uid => profiles.find(item => item.uid != null && String(item.uid) === String(uid));
+  const friendIds = new Set(friends.filter(item => item.uid != null).map(item => String(item.uid)));
   const challenge = async player => {
     setMessage("");
     if (!canFight) return setMessage("Prépare un duo complet avec un psych offensif dans Team.");
@@ -3667,17 +3683,17 @@ function SocialHub({
     disabled: friendIds.has(String(player.uid)) || sent.includes(String(player.uid)),
     onClick: () => service.request(player.uid, player.name).then(() => setSent(old => [...old, String(player.uid)])).catch(error => setMessage(fail(error)))
   }, friendIds.has(String(player.uid)) ? "Ami" : sent.includes(String(player.uid)) ? "Envoyée" : "Ajouter")));
-  const shown = tab === "players" ? data.profiles : tab === "friends" ? data.friends : [];
+  const shown = tab === "players" ? profiles : tab === "friends" ? friends : [];
   return /*#__PURE__*/React.createElement("section", {
     className: "social-panel hub-panel"
   }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS\u2019 NETWORK"), /*#__PURE__*/React.createElement("h1", null, "Social"), /*#__PURE__*/React.createElement("p", null, "Ajoute des amis, inspecte leurs \xE9quipes et lance un combat Casual directement.")), /*#__PURE__*/React.createElement("div", {
     className: "social-tabs"
-  }, [["players", "Joueurs", data.profiles.length], ["friends", "Amis", data.friends.length], ["requests", "Demandes", data.requests.length], ["invites", "Défis", data.invites.length], ["chat", "Chat", "✉"], ["factions", "Factions", "⚑"]].map(([id, label, count]) => /*#__PURE__*/React.createElement("button", {
+  }, [["players", "Joueurs", profiles.length], ["friends", "Amis", friends.length], ["requests", "Demandes", requests.length], ["invites", "Défis", invites.length], ["chat", "Chat", "✉"], ["factions", "Factions", "⚑"]].map(([id, label, count]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     "aria-pressed": tab === id,
     onClick: () => setTab(id)
   }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(ChatPanel, {
-    friends: data.friends.map(item => profileById(item.uid) || item)
+    friends: friends.map(item => profileById(item.uid) || item)
   })), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
@@ -3685,7 +3701,7 @@ function SocialHub({
     className: "social-list"
   }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry, tab === "friends")) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement("div", {
     className: "social-list"
-  }, data.requests.length ? data.requests.map(player => /*#__PURE__*/React.createElement("article", {
+  }, requests.length ? requests.map(player => /*#__PURE__*/React.createElement("article", {
     className: "social-request",
     key: player.uid
   }, /*#__PURE__*/React.createElement("b", null, player.name), /*#__PURE__*/React.createElement("span", null, "veut devenir ton ami."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
@@ -3695,7 +3711,7 @@ function SocialHub({
     onClick: () => service.declineRequest(player.uid).catch(error => setMessage(fail(error)))
   }, "Refuser")))) : /*#__PURE__*/React.createElement("p", null, "Aucune demande d\u2019ami en attente.")), tab === "invites" && /*#__PURE__*/React.createElement("div", {
     className: "social-list"
-  }, data.invites.length ? data.invites.map(invitation => /*#__PURE__*/React.createElement("article", {
+  }, invites.length ? invites.map(invitation => /*#__PURE__*/React.createElement("article", {
     className: "social-request social-challenge",
     key: invitation.uid
   }, /*#__PURE__*/React.createElement("b", null, invitation.name), /*#__PURE__*/React.createElement("span", null, "te d\xE9fie en Casual \xB7 Niv. 50 \xB7 Rang \xE9toile."), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("button", {
@@ -4430,9 +4446,9 @@ function App() {
   if (screen === "pvp") return hub(/*#__PURE__*/React.createElement(PvpLobby, {
     profile: profile
   }));
-  if (screen === "social") return hub(/*#__PURE__*/React.createElement(SocialHub, {
+  if (screen === "social") return hub(/*#__PURE__*/React.createElement(SocialHubBoundary, null, /*#__PURE__*/React.createElement(SocialHub, {
     profile: profile
-  }));
+  })));
   if (screen === "settings") return hub(/*#__PURE__*/React.createElement(AudioSettings, {
     back: () => navigate("menu")
   }));
