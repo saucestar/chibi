@@ -3641,6 +3641,28 @@ function FactionPanel() {
   const create = async event => { event.preventDefault(); try { await service.createFaction(name); setName(""); await refresh(); } catch (error) { setNotice(String(error?.message || error)); } };
   return h("section", { className: "faction-panel" }, h("header", null, h("small", null, "REAPERS’ NETWORK"), h("h2", null, "Factions"), h("p", null, "Une faction est requise pour participer aux raids à trois.")), faction ? h("article", { className: "faction-card" }, h("h3", null, faction.name), h("p", null, Object.keys(faction.members || {}).length, " membres"), h("div", null, Object.values(faction.members || {}).map(member => h("span", { key: member.uid }, member.name)))) : h(React.Fragment, null, h("form", { onSubmit: create }, h("input", { value: name, maxLength: 32, placeholder: "Nom de la faction", onChange: event => setName(event.target.value) }), h("button", { disabled: name.trim().length < 3 }, "Créer une faction")), h("h3", null, "Rejoindre une faction"), h("div", { className: "faction-list" }, factions.map(item => h("article", { key: item.id }, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membres"), h("button", { onClick: () => service.joinFaction(item).then(refresh).catch(error => setNotice(String(error?.message || error))) }, "Rejoindre"))))), notice && h("p", { role: "status" }, notice));
 }
+function ClanPanel() {
+  const h = React.createElement, service = window.ChibiSocial;
+  const [faction, setFaction] = useState(null), [factions, setFactions] = useState([]), [name, setName] = useState(""), [notice, setNotice] = useState("");
+  const refresh = async () => {
+    if (!service?.myFaction) return setNotice("Le service Factions n’est pas chargé. Recharge le jeu.");
+    try { const [mine, list] = await Promise.all([service.myFaction(), service.factionList()]); setFaction(mine || null); setFactions(Array.isArray(list) ? list.filter(item => item?.id) : []); setNotice(""); }
+    catch (error) { setNotice(String(error?.message || error)); }
+  };
+  const create = async event => { event.preventDefault(); try { await service.createFaction(name); setName(""); await refresh(); } catch (error) { setNotice(String(error?.message || error)); } };
+  const join = async item => { try { await service.joinFaction(item); await refresh(); } catch (error) { setNotice(String(error?.message || error)); } };
+  const members = Object.values(faction?.members || {});
+  return h("section", { className: "clan-panel" },
+    h("header", { className: "clan-hero" }, h("span", { className: "clan-crest", "aria-hidden": "true" }, "♜"), h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h2", null, faction ? faction.name : "Trouve ton clan"), h("p", null, faction ? `${members.length} membre${members.length > 1 ? "s" : ""} · Raids coopératifs débloqués` : "Rejoins une faction pour ouvrir des Raids à trois.")), h("button", { type: "button", onClick: refresh }, "↻")),
+    faction ? h(React.Fragment, null,
+      h("div", { className: "clan-stats" }, h("article", null, h("small", null, "MEMBRES"), h("b", null, members.length, " / ∞")), h("article", null, h("small", null, "MODE"), h("b", null, "Raid · 3 joueurs")), h("article", null, h("small", null, "STATUT"), h("b", null, "Actif"))),
+      h("section", { className: "clan-members" }, h("header", null, h("h3", null, "Membres"), h("small", null, "Escouade de raid")), members.map(member => h("article", { key: member.uid }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, (member.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, member.name || "Membre"), h("small", null, String(member.uid) === String(faction.leader) ? "Chef de faction" : "Membre")), String(member.uid) === String(faction.leader) && h("em", null, "CHEF")))),
+      h("p", { className: "clan-tip" }, "Rendez-vous dans Raid pour choisir un boss, créer une salle et combattre à trois."))
+      : h(React.Fragment, null,
+        h("form", { className: "clan-create", onSubmit: create }, h("h3", null, "Créer un clan"), h("p", null, "Choisis un nom et invite tes amis à former une escouade."), h("input", { value: name, maxLength: 32, placeholder: "Nom de la faction", onChange: event => setName(event.target.value) }), h("button", { disabled: name.trim().length < 3 }, "Créer mon clan")),
+        h("section", { className: "clan-directory" }, h("header", null, h("h3", null, "Recrutement"), h("small", null, factions.length, " clans disponibles")), factions.length ? factions.map(item => h("article", { key: item.id }, h("span", { className: "clan-member-avatar", "aria-hidden": "true" }, "♜"), h("div", null, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membre(s) · Raids ouverts")), h("button", { type: "button", onClick: () => join(item) }, "Rejoindre"))) : h("p", null, "Aucun clan pour le moment. Crée le premier."))),
+    notice && h("p", { className: "clan-notice", role: "status" }, notice));
+}
 function SocialHub({
   profile
 }) {
@@ -3727,7 +3749,7 @@ function SocialHub({
     onClick: () => setTab(id)
   }, /*#__PURE__*/React.createElement("b", null, label), /*#__PURE__*/React.createElement("span", null, count)))), tab === "chat" && /*#__PURE__*/React.createElement(ChatPanelBoundary, null, /*#__PURE__*/React.createElement(SafeChatPanel, {
     friends: friends.map(item => profileById(item.uid) || item)
-  })), tab === "factions" && /*#__PURE__*/React.createElement(FactionPanel, null), message && /*#__PURE__*/React.createElement("p", {
+  })), tab === "factions" && /*#__PURE__*/React.createElement(ClanPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
   }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
