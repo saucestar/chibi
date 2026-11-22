@@ -1238,8 +1238,11 @@ function legacyExperience(wins) {
   const level = Math.min(maxLevel, 1 + Math.floor(count / 3));
   return level === maxLevel ? xpAtLevel(maxLevel) : xpAtLevel(level) + Math.floor(count % 3 / 3 * (xpAtLevel(level + 1) - xpAtLevel(level)));
 }
-function gainExperience(f, amount) {
-  const progress = experience((f.xp || 0) + amount);
+function rebirthXpMultiplier(rebirths = 0) {
+  return 1 + Math.min(20, Math.max(0, Number(rebirths) || 0)) * .15;
+}
+function gainExperience(f, amount, rebirths = 0) {
+  const progress = experience((f.xp || 0) + Math.round(amount * rebirthXpMultiplier(rebirths)));
   const oldLevel = (f.level || 1) - 1,
     newLevel = progress.level - 1;
   const scale = 1.2 ** (f.battleRank || 0),
@@ -1385,7 +1388,8 @@ function makeWishEvent(p, next, id, count, free, cost, draws) {
     } : {
       name: draw.name,
       rank: draw.rank,
-      copies: draw.copies
+      copies: draw.copies,
+      compensation: draw.compensation || 0
     }))
   };
 }
@@ -1445,7 +1449,7 @@ function WishHistory({
       key: i
     }, pin ? /*#__PURE__*/React.createElement(PinIcon, {
       pin: pin
-    }) : /*#__PURE__*/React.createElement("span", null, "\u2605"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, pin?.name || draw.name || "Récompense"), /*#__PURE__*/React.createElement("small", null, pin ? "Badge" : `Personnage · Rang ${draw.rank === 5 ? "étoile" : ranks[draw.rank]} · ${draw.copies} doublon(s)`)));
+    }) : /*#__PURE__*/React.createElement("span", null, "\u2605"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, pin?.name || draw.name || "Récompense"), /*#__PURE__*/React.createElement("small", null, pin ? "Badge" : draw.compensation ? `Rang étoile · +${draw.compensation} pièces` : `Personnage · Rang ${draw.rank === 5 ? "étoile" : ranks[draw.rank]} · ${draw.copies} doublon(s)`)));
   })), /*#__PURE__*/React.createElement("button", {
     onClick: () => setSelected(null)
   }, "Retour \xE0 l\u2019historique")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", null, profile.wishesMade, " invocations comptabilis\xE9es \xB7 ", profile.freeWishSpent, " v\u0153ux gratuits consomm\xE9s"), profile.wishHistoryBaseline > 0 && /*#__PURE__*/React.createElement("p", null, profile.wishHistoryBaseline, " invocations ant\xE9rieures : total connu, d\xE9tails non enregistr\xE9s \xE0 l\u2019\xE9poque."), error && /*#__PURE__*/React.createElement("p", {
@@ -1682,6 +1686,12 @@ function loadProfile() {
   try {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
     const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
+    // Older builds could keep values past ★. Convert every excess once, then
+    // cap the stored count so the inventory and rank stay unambiguous.
+    const legacyDuplicateCoins = saved.duplicateRefundVersion === 1 ? 0 : owned.reduce((sum, name) => {
+      const raw = Math.max(0, Math.floor(Number(saved.copies?.[name]) || 0));
+      return sum + Math.max(0, raw - 5) * 1000;
+    }, 0);
     const equipped = [0, 1].map(i => {
       const name = saved.equipped?.[i];
       return owned.includes(name) && (i === 0 || name !== saved.equipped[0]) ? name : "";
@@ -1714,6 +1724,7 @@ function loadProfile() {
       freeWishVersion: saved.freeWishVersion === 1 ? 1 : 0,
       freeWishSpent: Number.isSafeInteger(saved.freeWishSpent) && saved.freeWishSpent >= 0 ? saved.freeWishSpent : 0,
       freeWishDaySpent: Number.isSafeInteger(saved.freeWishDaySpent) && saved.freeWishDaySpent >= 0 ? saved.freeWishDaySpent : 0,
+      duplicateRefundVersion: 1,
       pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
       starterNekuGranted: saved.starterNekuGranted === true,
       starterWishesGranted: saved.starterWishesGranted === true,
@@ -1738,7 +1749,7 @@ function loadProfile() {
       },
       awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
       loadout: saved.loadout || {},
-      coins: saved.coins + (legacyRebirthUnlock ? 5000 : 0)
+      coins: saved.coins + (legacyRebirthUnlock ? 5000 : 0) + legacyDuplicateCoins
     })));
   } catch {}
   return accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
@@ -2316,7 +2327,9 @@ function RewardReveal({
     key: index,
     className: "reward-sun",
     "aria-live": "polite"
-  }, /*#__PURE__*/React.createElement("h3", null, pin ? pin.name.replace(" (Pin)", "") : fighter?.name), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("h3", null, pin ? pin.name.replace(" (Pin)", "") : fighter?.name), draw.compensation && /*#__PURE__*/React.createElement("p", {
+    className: "reward-compensation"
+  }, "Rang étoile atteint · +", draw.compensation, " pièces"), /*#__PURE__*/React.createElement("div", {
     className: "reward-object"
   }, pin ? /*#__PURE__*/React.createElement(PinIcon, {
     pin: pin
@@ -4098,7 +4111,7 @@ function RoguelikeLaunch({
     className: "hub-panel roguelike-launch"
   }, /*#__PURE__*/React.createElement("h1", null, "Roguelike"), /*#__PURE__*/React.createElement("p", null, "Choisis ton duo et ses psychs dans Team, puis tente l\u2019ascension de 100 \xE9tages."), /*#__PURE__*/React.createElement("p", {
     className: "run-status"
-  }, "Rebirth ", profile.rebirths, " \xB7 Bonus de raret\xE9 \xD7", (1 + Math.min(8, profile.rebirths) * .5).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("div", {
+  }, "Rebirth ", profile.rebirths, " \xB7 Bonus de raret\xE9 \xD7", (1 + Math.min(8, profile.rebirths) * .5).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR"), " · XP ×", rebirthXpMultiplier(profile.rebirths).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("div", {
     className: "roguelike-party"
   }, fighters.map(name => {
     const fighter = characterRoster.find(f => f.name === name);
@@ -4405,6 +4418,12 @@ function App() {
           continue;
         }
         const name = pick(portalPool(id, next)).name;
+        if (next.owned.includes(name) && (next.copies[name] || 0) >= 5) {
+          next.coins += 1000;
+          next.copies[name] = 5;
+          draws.push({ name, rank: 5, copies: 5, compensation: 1000 });
+          continue;
+        }
         if (next.owned.includes(name)) next.copies[name] = Math.min(5, (next.copies[name] || 0) + 1);else {
           next.owned.push(name);
           next.copies[name] = 0;
@@ -5226,7 +5245,7 @@ function Battle({
         if (earned) {
           xp += earned;
           gains.xp = earned;
-          fighters = fighters.map(f => gainExperience(f, earned));
+          fighters = fighters.map(f => gainExperience(f, earned, rebirths));
         }
         const found = event ? [] : defeated.filter(() => Math.random() < Math.min(.75, .25 + rebirths * .10)).map(() => weightedPinPick(rebirths));
         if (found.length) {
