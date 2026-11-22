@@ -88,6 +88,11 @@ main{ max-width:1180px; margin:0 auto; padding:22px 12px 10px; }
 .page.on{ display:grid; grid-template-columns:minmax(0,1fr); gap:30px; animation:pg .25s ease; }
 .game-page.on{ display:block; height:calc(100vh - 190px); height:calc(100dvh - 190px); min-height:520px; margin-top:-10px; }
 .game-frame{ display:block; width:100%; height:100%; border:3px solid var(--ink); border-radius:12px; background:#111516; }
+body.game-open { overflow:hidden !important; padding:0 !important; }
+body.game-open>.hd,body.game-open>.tabs { display:none !important; }
+body.game-open>main { position:fixed !important; inset:0 !important; width:100% !important; height:100dvh !important; max-width:none !important; padding:0 !important; margin:0 !important; z-index:1000; }
+body.game-open .game-page.on[data-page="game"] { height:100% !important; margin:0 !important; min-height:0 !important; }
+body.game-open .game-page[data-page="game"] .game-frame { border:0; border-radius:0; }
 @media (min-width:900px){ .page.on{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; } .page .wide{ grid-column:1 / -1; } }
 @keyframes pg{ from{ opacity:0; transform:translateY(8px); } }
 .pn{ position:relative; background:var(--paper); border:3px solid var(--ink); border-radius:14px; box-shadow:6px 6px 0 var(--ink); padding:30px 14px 14px; min-width:0; }
@@ -557,11 +562,12 @@ window.addEventListener("hashchange", () => show(location.hash.slice(1)));
 let gameDestination='home';
 function sendGameDestination(){const frame=document.querySelector('.game-page[data-page="game"] iframe');frame?.contentWindow?.postMessage({type:'chibi:game-navigate',screen:gameDestination},location.protocol==='file:'?'*':location.origin);}
 document.querySelector('.game-page[data-page="game"] iframe')?.addEventListener('load',sendGameDestination);
-window.addEventListener('message',event=>{const frame=document.querySelector('.game-page[data-page="game"] iframe');if(event.source===frame?.contentWindow&&event.data?.type==='chibi:game-ready'&&(event.origin===location.origin||(location.protocol==='file:'&&event.origin==='null')))sendGameDestination();});
+window.addEventListener('message',event=>{const frame=document.querySelector('.game-page[data-page="game"] iframe');const trusted=event.source===frame?.contentWindow&&(event.origin===location.origin||(location.protocol==='file:'&&event.origin==='null'));if(!trusted)return;if(event.data?.type==='chibi:game-ready'){sendGameDestination();return;}if(event.data?.type==='chibi:notification-permission-request'){const requestId=String(event.data.requestId||'');const reply=permission=>frame.contentWindow?.postMessage({type:'chibi:notification-permission-result',requestId,permission},location.protocol==='file:'?'*':location.origin);if(typeof Notification==='undefined'){reply('denied');return;}Notification.requestPermission().then(reply).catch(()=>reply('denied'));}});
 function show(p){
   const gameRequest=p==='gacha'?'summon':p==='game'?'home':null;
   if(p==='gacha')p='game';
   if(!PAGE_NAMES[p]) p = 'home';
+  document.body.classList.toggle('game-open',p==='game');
   if(p!=='board-mobile')stopMobileBoard();
   document.querySelectorAll('#tabs button[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p || (b.dataset.p==='board' && p.startsWith('board-'))));
   $('pinBtn').classList.toggle('on', p === 'game' || p === 'gacha');
@@ -958,6 +964,7 @@ init();
  const notify=()=>frame?.contentWindow?.postMessage({type:'chibi:fullscreen-state',active:document.body.classList.contains('game-fullscreen')},'*');
  const exit=()=>{document.body.classList.remove('game-fullscreen');if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});notify();};
  window.addEventListener('message',event=>{
+  if(event.source===frame?.contentWindow&&event.data?.type==='chibi:game-exit'){exit();show('home');return;}
   if(event.source!==frame?.contentWindow||event.data?.type!=='chibi:fullscreen')return;
   if(event.data.action==='exit'){exit();return;}
   if(event.data.action!=='toggle')return;

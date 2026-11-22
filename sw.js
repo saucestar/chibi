@@ -1,6 +1,6 @@
 // TWEWY Co-op app (PWA): pages and site files come from the network first (always up to date) and fall back to the
 // last copy when offline; data (Firebase, Discord, YouTube, the auth worker) is never cached here.
-const CACHE = 'twewy-coop-v4';
+const CACHE = 'twewy-coop-v5';
 const SHELL = ['app.html', 'i18n.js', 'language.js', 'english.js', 'language.css', 'auth.js', 'avatar.js', 'progress.js', 'chibi-data.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -9,6 +9,17 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if ('focus' in client) { await client.focus(); return; }
+    }
+    if (self.clients.openWindow) await self.clients.openWindow('./app.html');
+  })());
 });
 
 self.addEventListener('fetch', e => {

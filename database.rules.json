@@ -381,6 +381,58 @@
         ".validate": "newData.hasChildren(['uid','name','bestFloor','rebirths','updatedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('bestFloor').isNumber() && newData.child('bestFloor').val() >= 0 && newData.child('bestFloor').val() <= 100 && newData.child('rebirths').isNumber() && newData.child('rebirths').val() >= 0 && newData.child('rebirths').val() <= 1000 && newData.child('updatedAt').isNumber()"
       }
     },
+    "chatPublicKeys": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "newData.hasChildren(['publicKey','updatedAt']) && newData.child('publicKey').child('kty').val() === 'EC' && newData.child('publicKey').child('crv').val() === 'P-256' && newData.child('updatedAt').isNumber()"
+      }
+    },
+    "chatGroups": {
+      "$group": {
+        ".read": "auth != null && data.child('members').child(auth.token.discordId).val() === true",
+        ".write": "auth != null && !data.exists() && newData.child('createdBy').val() === auth.token.discordId",
+        ".validate": "newData.hasChildren(['id','name','createdBy','createdAt','members','packets']) && newData.child('id').val() === $group && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 48 && newData.child('createdBy').val() === auth.token.discordId && newData.child('members').child(auth.token.discordId).val() === true && newData.child('createdAt').isNumber() && newData.child('members').hasChild(auth.token.discordId) && newData.child('packets').hasChild(auth.token.discordId)"
+      }
+    },
+    "chatMembership": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        "$group": {
+          ".write": "auth != null && !data.exists() && newData.val() === true && root.child('chatGroups').child($group).child('createdBy').val() === auth.token.discordId && root.child('chatGroups').child($group).child('members').child($uid).val() === true",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    "chatMessages": {
+      "$group": {
+        ".read": "auth != null && root.child('chatGroups').child($group).child('members').child(auth.token.discordId).val() === true",
+        "$message": {
+          ".write": "auth != null && root.child('chatGroups').child($group).child('members').child(auth.token.discordId).val() === true && !data.exists() && newData.child('sender').val() === auth.token.discordId",
+          ".validate": "newData.hasChildren(['sender','senderName','iv','ciphertext','createdAt']) && newData.child('senderName').isString() && newData.child('senderName').val().length <= 64 && newData.child('iv').isString() && newData.child('iv').val().length === 16 && newData.child('ciphertext').isString() && newData.child('ciphertext').val().length >= 24 && newData.child('ciphertext').val().length <= 6000 && newData.child('createdAt').isNumber()"
+        }
+      }
+    },
+    "factions": {
+      ".read": "auth != null",
+      "$faction": {
+        ".write": "auth != null && !data.exists() && newData.child('leader').val() === auth.token.discordId",
+        ".validate": "newData.hasChildren(['id','name','leader','createdAt','members']) && newData.child('id').val() === $faction && newData.child('name').isString() && newData.child('name').val().length >= 3 && newData.child('name').val().length <= 32 && newData.child('leader').isString() && newData.child('members').child(newData.child('leader').val()).exists()",
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.token.discordId === $uid && root.child('factions').child($faction).exists()",
+            ".validate": "newData.hasChildren(['uid','name','joinedAt']) && newData.child('uid').val() === $uid && newData.child('name').isString() && newData.child('name').val().length > 0 && newData.child('name').val().length <= 64 && newData.child('joinedAt').isNumber()"
+          }
+        }
+      }
+    },
+    "factionMembership": {
+      "$uid": {
+        ".read": "auth != null && auth.token.discordId === $uid",
+        ".write": "auth != null && auth.token.discordId === $uid",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','name']) && root.child('factions').child(newData.child('id').val()).exists() && root.child('factions').child(newData.child('id').val()).child('members').child($uid).exists())"
+      }
+    },
     "friendRequests": {
       "$to": {
         ".read": "auth != null && auth.token.discordId === $to",

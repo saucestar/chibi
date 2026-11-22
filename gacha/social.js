@@ -58,5 +58,126 @@
     return matchId;
   }
   async function declineInvite(uid) { const who = mine(); await db().ref('pvpInvites/' + who.id + '/' + uid).remove(); }
-  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite };
+
+  const chatKey = 'twewy.chat.ecdh.v1.';
+  const b64 = bytes => btoa(String.fromCharCode(...new Uint8Array(bytes)));
+  const un64 = value => Uint8Array.from(atob(value), c => c.charCodeAt(0));
+  async function identityKeys() {
+    const who = mine(), storageKey = chatKey + who.id;
+    let pair = null;
+    try { pair = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch {}
+    let privateKey, publicJwk;
+    if (pair?.privateKey && pair?.publicKey) {
+      privateKey = await crypto.subtle.importKey('jwk', pair.privateKey, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+      publicJwk = pair.publicKey;
+    } else {
+      const generated = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+      privateKey = await crypto.subtle.importKey('jwk', await crypto.subtle.exportKey('jwk', generated.privateKey), { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+      publicJwk = await crypto.subtle.exportKey('jwk', generated.publicKey);
+      localStorage.setItem(storageKey, JSON.stringify({ privateKey: await crypto.subtle.exportKey('jwk', generated.privateKey), publicKey: publicJwk }));
+    }
+    await db().ref('chatPublicKeys/' + who.id).set({ publicKey: publicJwk, updatedAt: firebase.database.ServerValue.TIMESTAMP });
+    return { privateKey, publicJwk };
+  }
+  async function deriveWrapKey(privateKey, publicJwk, groupId) {
+    const publicKey = await crypto.subtle.importKey('jwk', publicJwk, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: publicKey }, privateKey, 256);
+    const material = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: new TextEncoder().encode(groupId), info: new TextEncoder().encode('TWEWY group chat key v1') }, material, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function makeGroupKeyPacket(groupId, rawKey, owner, recipientPublic) {
+    const keyPair = await identityKeys(), wrapKey = await deriveWrapKey(keyPair.privateKey, recipientPublic, groupId), iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrapKey, rawKey);
+    return { owner: owner.id, ownerPublic: keyPair.publicJwk, iv: b64(iv), data: b64(encrypted) };
+  }
+  async function unlockGroupKey(groupId, packet) {
+    const keyPair = await identityKeys(), wrapKey = await deriveWrapKey(keyPair.privateKey, packet.ownerPublic, groupId);
+    const raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(packet.iv) }, wrapKey, un64(packet.data));
+    return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+  }
+  async function createChatGroup(name, memberIds) {
+    const who = mine(), keys = await identityKeys(), members = [...new Set([String(who.id), ...memberIds.map(String)])];
+    if (members.length < 2 || members.length > 16) throw Error('Un groupe doit réunir de 2 à 16 personnes.');
+    const groupId = 'chat-' + crypto.randomUUID(), groupKey = crypto.getRandomValues(new Uint8Array(32)), packets = {};
+    for (const uid of members) {
+      const publicValue = uid === String(who.id) ? keys.publicJwk : (await db().ref('chatPublicKeys/' + uid).get()).val()?.publicKey;
+      if (!publicValue) throw Error('Un membre doit ouvrir Social une première fois pour activer son chiffrement.');
+      packets[uid] = await makeGroupKeyPacket(groupId, groupKey, who, publicValue);
+    }
+    const safeName = String(name || 'Discussion').trim().slice(0, 48) || 'Discussion', now = firebase.database.ServerValue.TIMESTAMP, updates = {};
+    await db().ref('chatGroups/' + groupId).set({ id: groupId, name: safeName, createdBy: String(who.id), createdAt: now, members: Object.fromEntries(members.map(uid => [uid, true])), packets });
+    await Promise.all(members.map(uid => db().ref('chatMembership/' + uid + '/' + groupId).set(true)));
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') await startChatNotifications();
+    return groupId;
+  }
+  async function chatGroups() {
+    const who = mine(); await identityKeys();
+    const index = (await db().ref('chatMembership/' + who.id).get()).val() || {}, groups = await Promise.all(Object.keys(index).map(async id => (await db().ref('chatGroups/' + id).get()).val()));
+    return groups.filter(Boolean).map(group => ({ id: group.id, name: group.name, members: group.members, createdAt: group.createdAt }));
+  }
+  async function readChat(groupId, limit = 100) {
+    const who = mine(), group = (await db().ref('chatGroups/' + groupId).get()).val();
+    if (!group?.members?.[who.id]) throw Error('Tu ne fais pas partie de ce groupe.');
+    const packet = group.packets?.[who.id]; if (!packet) throw Error('Clé de groupe absente pour cet appareil.');
+    const key = await unlockGroupKey(groupId, packet), raw = (await db().ref('chatMessages/' + groupId).orderByChild('createdAt').limitToLast(limit).get()).val() || {};
+    return Promise.all(Object.entries(raw).map(async ([id, message]) => {
+      try { const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: un64(message.iv) }, key, un64(message.ciphertext)); return { id, sender: message.sender, senderName: message.senderName, createdAt: message.createdAt, text: new TextDecoder().decode(plain) }; } catch { return { id, sender: message.sender, senderName: message.senderName, createdAt: message.createdAt, text: '[Message impossible à déchiffrer sur cet appareil]' }; }
+    }));
+  }
+  async function sendChat(groupId, text) {
+    const who = mine(), content = String(text || '').trim(); if (!content || content.length > 2000) throw Error('Le message doit contenir entre 1 et 2 000 caractères.');
+    const group = (await db().ref('chatGroups/' + groupId).get()).val(); if (!group?.members?.[who.id]) throw Error('Tu ne fais pas partie de ce groupe.');
+    const key = await unlockGroupKey(groupId, group.packets[who.id]), iv = crypto.getRandomValues(new Uint8Array(12)), ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(content)), ref = db().ref('chatMessages/' + groupId).push();
+    await ref.set({ sender: String(who.id), senderName: String(who.name).slice(0, 64), iv: b64(iv), ciphertext: b64(ciphertext), createdAt: firebase.database.ServerValue.TIMESTAMP });
+  }
+  function watchChat(groupId, update, error) {
+    const ref = db().ref('chatMessages/' + groupId).orderByChild('createdAt').limitToLast(100);
+    const refresh = () => readChat(groupId).then(update).catch(error);
+    ref.on('value', refresh, error); return () => ref.off('value', refresh);
+  }
+  let notificationStops = [], notificationStart = null;
+  async function startChatNotifications() {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (notificationStart) return notificationStart;
+    notificationStart = (async () => {
+      notificationStops.forEach(stop => stop()); notificationStops = [];
+      const groups = await chatGroups(), who = mine();
+      groups.forEach(group => {
+        let initialized = false, known = new Set();
+        const stop = watchChat(group.id, messages => {
+          if (initialized) messages.forEach(message => {
+            if (!known.has(message.id) && String(message.sender) !== String(who.id)) {
+              const options = { body: message.text, tag: 'twewy-chat-' + group.id + '-' + message.id, icon: new URL('../icons/player-badge.webp', location.href).href, data: { groupId: group.id } };
+              const show = () => { try { new Notification(group.name, options); } catch {} };
+              if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistration().then(reg => reg?.showNotification ? reg.showNotification(group.name, options) : show()).catch(show); else show();
+            }
+          });
+          known = new Set(messages.map(message => message.id)); initialized = true;
+        }, () => {});
+        notificationStops.push(stop);
+      });
+    })().finally(() => { notificationStart = null; });
+    return notificationStart;
+  }
+  async function factionList() { const value = (await db().ref('factions').get()).val() || {}; return Object.values(value); }
+  async function myFaction() { const who = mine(), value = (await db().ref('factionMembership/' + who.id).get()).val(); return value ? (await db().ref('factions/' + value.id).get()).val() : null; }
+  async function createFaction(name) {
+    const who = mine(), safeName = String(name || '').trim().slice(0, 32); if (safeName.length < 3) throw Error('Le nom de faction doit contenir au moins 3 caractères.');
+    if (await myFaction()) throw Error('Tu es déjà dans une faction.');
+    const id = 'faction-' + crypto.randomUUID(), now = firebase.database.ServerValue.TIMESTAMP;
+    await db().ref('factions/' + id).set({ id, name: safeName, leader: String(who.id), createdAt: now, members: { [who.id]: { uid: String(who.id), name: who.name, joinedAt: now } } });
+    await db().ref('factionMembership/' + who.id).set({ id, name: safeName }); return id;
+  }
+  async function joinFaction(faction) {
+    const who = mine(); if (await myFaction()) throw Error('Tu es déjà dans une faction.');
+    const value = (await db().ref('factions/' + faction.id).get()).val(); if (!value) throw Error('Cette faction n’existe plus.');
+    await db().ref('factions/' + faction.id + '/members/' + who.id).set({ uid: String(who.id), name: who.name, joinedAt: firebase.database.ServerValue.TIMESTAMP });
+    await db().ref('factionMembership/' + who.id).set({ id: faction.id, name: value.name });
+  }
+  async function leaveFaction() {
+    const who = mine(), membership = await myFaction(); if (!membership) return;
+    if (membership.leader === String(who.id)) throw Error('Le chef doit transférer sa faction avant de la quitter.');
+    const updates = {}; updates['factions/' + membership.id + '/members/' + who.id] = null; updates['factionMembership/' + who.id] = null; await db().ref().update(updates);
+  }
+  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite, identityKeys, createChatGroup, chatGroups, readChat, sendChat, watchChat, startChatNotifications, factionList, myFaction, createFaction, joinFaction, leaveFaction };
 })();
