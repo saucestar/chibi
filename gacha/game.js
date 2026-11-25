@@ -3194,14 +3194,18 @@ function EventHall({
     onClick: () => start(hero.name)
   }, active?.boss === hero.name ? "Reprendre" : "Défier")))));
 }
+// PvP has its own durable balance layer. It never changes PvE stats: a match
+// starts with a larger health pool while every offensive psych is toned down.
+const pvpBalance = Object.freeze({ hp: 1.4, damage: .62 });
 function pvpTeam(profile, mode) {
   return profile.equipped.filter(Boolean).map(name => {
     const base = characterRoster.find(item => item.name === name),
       fighter = mode === "casual" ? trained(base, xpAtLevel(50), false, 5) : trained(base, profile.xp[name] || 0, profile.awakened.includes(name), profile.copies[name] || 0);
+    const maxHp = Math.max(1, Math.round(fighter.maxHp * pvpBalance.hp));
     return {
       name,
-      hp: fighter.maxHp,
-      maxHp: fighter.maxHp,
+      hp: maxHp,
+      maxHp,
       atk: fighter.atk || 1,
       mag: fighter.mag || 1,
       speed: fighter.speed || 1,
@@ -3246,7 +3250,7 @@ function resolvePvpRoom(room) {
     }
     const kind = pin.kind === "physical" ? "physical" : "special",
       partnerAlive = teams[step.uid].some((member, index) => index !== step.index && member.hp > 0),
-      raw = scaledPinEffect(pin, (pin.kind === "physical" ? fighter.atk : fighter.mag) * (.7 + pin.power / 100) * stabMultiplier(fighter, pin) * passiveDamageMultiplier(fighter.name, kind, fighter.hp, fighter.maxHp, partnerAlive));
+      raw = scaledPinEffect(pin, (pin.kind === "physical" ? fighter.atk : fighter.mag) * (.7 + pin.power / 100) * stabMultiplier(fighter, pin) * passiveDamageMultiplier(fighter.name, kind, fighter.hp, fighter.maxHp, partnerAlive) * pvpBalance.damage);
     const live = enemyTeam.map((member, index) => ({
         member,
         index
