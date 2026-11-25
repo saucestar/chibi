@@ -1382,6 +1382,34 @@ function auditedDuplicateCompensation(profile) {
   const overStar = Object.values(pulls).reduce((sum, count) => sum + Math.max(0, count - 6), 0);
   return { ...profile, duplicateAuditVersion: 1, coins: profile.coins + overStar * 1000 };
 }
+function duplicateCompensationFromEvents(events) {
+  const pulls = {};
+  for (const event of events || []) {
+    try {
+      for (const draw of JSON.parse(event?.drawsJson || "[]")) if (draw?.name && characterRoster.some(fighter => fighter.name === draw.name)) pulls[draw.name] = (pulls[draw.name] || 0) + 1;
+    } catch {}
+  }
+  return Object.values(pulls).reduce((sum, count) => sum + Math.max(0, count - 6) * 1000, 0);
+}
+function recordedDuplicateCompensation(events) {
+  let paid = 0;
+  for (const event of events || []) {
+    try { for (const draw of JSON.parse(event?.drawsJson || "[]")) paid += Math.max(0, Math.floor(Number(draw?.compensation) || 0)); } catch {}
+  }
+  return paid;
+}
+function reconcileArchivedDuplicateCompensation(profile, archive) {
+  if (profile.duplicateArchiveAuditVersion === 1) return profile;
+  const events = new Map();
+  for (const event of [...(archive || []), ...(profile.wishEvents || [])]) if (validWishEvent(event)) events.set(event.id, event);
+  const allEvents = [...events.values()], totalOwed = duplicateCompensationFromEvents(allEvents);
+  const automaticallyPaid = recordedDuplicateCompensation(allEvents);
+  // Version 1 had already paid the same calculation for the local event window.
+  // Credit only what that limited audit could not see, then stamp the account.
+  const paidByLocalAudit = profile.duplicateAuditVersion === 1 ? duplicateCompensationFromEvents(profile.wishEvents || []) : 0;
+  const compensation = Math.max(0, totalOwed - automaticallyPaid - paidByLocalAudit);
+  return { ...profile, duplicateAuditVersion: 1, duplicateArchiveAuditVersion: 1, duplicateArchiveCompensation: compensation, coins: profile.coins + compensation };
+}
 function makeWishEvent(p, next, id, count, free, cost, draws) {
   const at = Date.now();
   return {
@@ -1745,6 +1773,7 @@ function loadProfile() {
       freeWishDaySpent: Number.isSafeInteger(saved.freeWishDaySpent) && saved.freeWishDaySpent >= 0 ? saved.freeWishDaySpent : 0,
       duplicateRefundVersion: 1,
       duplicateAuditVersion: saved.duplicateAuditVersion === 1 ? 1 : 0,
+      duplicateArchiveAuditVersion: saved.duplicateArchiveAuditVersion === 1 ? 1 : 0,
       pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
       starterNekuGranted: saved.starterNekuGranted === true,
       starterWishesGranted: saved.starterWishesGranted === true,
@@ -1792,6 +1821,7 @@ function loadProfile() {
     freeWishDaySpent: 0,
     duplicateRefundVersion: 1,
     duplicateAuditVersion: 1,
+    duplicateArchiveAuditVersion: 1,
     pcMissionCoins: {},
     starterNekuGranted: false,
     starterWishesGranted: false,
@@ -4427,6 +4457,27 @@ function App() {
       clearInterval(timer);
       window.removeEventListener("focus", credit);
       document.removeEventListener("visibilitychange", credit);
+    };
+  }, []);
+  useEffect(() => {
+    let cancelled = false;
+    const reconcile = async () => {
+      const sync = window.ChibiGameSync;
+      if (!sync?.state?.ready || typeof sync.allWishHistory !== "function") return;
+      try {
+        const archive = await sync.allWishHistory();
+        if (!cancelled) setProfile(p => reconcileArchivedDuplicateCompensation(p, archive));
+      } catch {
+        // The game stays playable offline; reconciliation retries after the next sync event.
+      }
+    };
+    window.addEventListener("chibi:save-loaded", reconcile);
+    window.addEventListener("chibi:save-state", reconcile);
+    reconcile();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("chibi:save-loaded", reconcile);
+      window.removeEventListener("chibi:save-state", reconcile);
     };
   }, []);
   useEffect(() => {

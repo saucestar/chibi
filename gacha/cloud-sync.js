@@ -166,6 +166,11 @@
     const items=Object.values(snapshot.val()||{}).sort((a,b)=>b.id.localeCompare(a.id));
     return {items,cursor:items.length?items[items.length-1].id:null,more:items.length===20};
   }
+  async function allWishHistory(){
+    if(!activeUid||!ref)throw Error('Connecte-toi au même compte Discord pour vérifier les compensations.');
+    const snapshot=await firebase.database().ref('wishHistory/'+activeUid).get();
+    return Object.values(snapshot.val()||{});
+  }
 
   async function flush(uid, token) {
     if (writing || !ref || !queue.length) return;
@@ -208,7 +213,7 @@
     if (queue.length && ref) flush(activeUid, generation);
   }
   window.ChibiGameSync = {
-    historyPage,
+    historyPage, allWishHistory,
     get accountId(){return activeUid;},
     get identity(){return activeUid?{id:activeUid,name:activeName}:undefined;},
     get archivedWishIds(){return [...archived];},
