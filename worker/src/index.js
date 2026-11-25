@@ -72,6 +72,27 @@ export default {
         return json({ sent }, 200, cors);
       } catch (e) { return json({ error: String(e && e.message || e).slice(0, 180) }, 502, cors); }
     }
+    if (request.method === 'POST' && url.pathname === '/pvp/notify') {
+      const who = await verifyIdToken(env, (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, ''));
+      if (!who) return json({ error: 'connecte-toi' }, 401, cors);
+      if (!env.VAPID_PRIVATE_JWK || !env.VAPID_PUBLIC_KEY || !env.FIREBASE_DATABASE_URL) return json({ error: 'notifications push non configurées' }, 503, cors);
+      try {
+        const body = await request.json(), recipientId = String(body.recipientId || ''), sender = String(who.discordId || who.user_id || '');
+        if (!/^\d{1,25}$/.test(recipientId) || !/^\d{1,25}$/.test(sender)) return json({ error: 'destinataire invalide' }, 400, cors);
+        const token = await firebaseAccessToken(env), invitation = await firebaseRead(env, token, 'pvpInvites/' + recipientId + '/' + sender);
+        if (!invitation || String(invitation.uid) !== sender) return json({ error: 'défi introuvable' }, 403, cors);
+        const endpoints = await firebaseRead(env, token, 'chatPushEndpoints/' + recipientId) || {};
+        let sent = 0, stale = [];
+        for (const [key, sub] of Object.entries(endpoints)) {
+          if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) continue;
+          const result = await sendWebPush(env, sub, { title: (String(invitation.name || 'Un joueur').slice(0, 64)) + ' vous a défié !', body: 'Match privé Casual · ouvre PVP pour accepter.', data: { screen: 'pvp' } });
+          if (result.status === 404 || result.status === 410) stale.push('chatPushEndpoints/' + recipientId + '/' + key);
+          else if (result.ok) sent++;
+        }
+        if (stale.length) await firebaseDelete(env, token, stale);
+        return json({ sent }, 200, cors);
+      } catch (e) { return json({ error: String(e && e.message || e).slice(0, 180) }, 502, cors); }
+    }
     if (request.method !== 'POST' || url.pathname !== '/session') return json({ error: 'introuvable' }, 404, cors);
 
     let body;

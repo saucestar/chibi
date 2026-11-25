@@ -52,6 +52,7 @@
     const who = mine();
     const rating = window.ChibiPvp ? await window.ChibiPvp.rating(who.id) : { rating: 1000 };
     await db().ref('pvpInvites/' + uid + '/' + who.id).set({ uid: who.id, name: who.name, rating: Number(rating.rating) || 1000, team: clean(team), createdAt: firebase.database.ServerValue.TIMESTAMP });
+    notifyPvpInvite(uid).catch(() => {});
   }
   async function acceptInvite(invitation, team) {
     const who = mine();
@@ -253,5 +254,10 @@
     const workerUrl = window.ChibiAuth?.workerUrl || 'https://chibi-auth.lucasdele77220.workers.dev';
     try { await fetch(workerUrl + '/chat/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ groupId: String(groupId), messageId: String(messageId) }) }); } catch (_) {}
   }
-  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite, identityKeys, createChatGroup, chatGroups, readChat, sendChat, watchChat, startChatNotifications, factionList, myFaction, createFaction, joinFaction, leaveFaction, raidRooms, watchRaidRooms, createRaidRoom, joinRaidRoom, watchRaidRoom, submitRaidAction, forfeitRaid, registerPushEndpoint, enableChatPush, removePushEndpoint, notifyChatRecipients };
+  async function notifyPvpInvite(recipientId) {
+    const token = await firebase.auth().currentUser.getIdToken();
+    const workerUrl = window.ChibiAuth?.workerUrl || 'https://chibi-auth.lucasdele77220.workers.dev';
+    await fetch(workerUrl + '/pvp/notify', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ recipientId: String(recipientId) }) });
+  }
+  window.ChibiSocial = { ready, publish, state, watch, request, acceptRequest, declineRequest, removeFriend, invite, acceptInvite, declineInvite, identityKeys, createChatGroup, chatGroups, readChat, sendChat, watchChat, startChatNotifications, factionList, myFaction, createFaction, joinFaction, leaveFaction, raidRooms, watchRaidRooms, createRaidRoom, joinRaidRoom, watchRaidRoom, submitRaidAction, forfeitRaid, registerPushEndpoint, enableChatPush, removePushEndpoint, notifyChatRecipients, notifyPvpInvite };
 })();

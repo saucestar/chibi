@@ -1368,6 +1368,20 @@ function validWishEvent(e) {
 function historyFull(p) {
   return p.wishEvents.length >= 50 || JSON.stringify(p.wishEvents).length > 28000;
 }
+function auditedDuplicateCompensation(profile) {
+  if (profile.duplicateAuditVersion === 1) return profile;
+  const pulls = {};
+  for (const event of Array.isArray(profile.wishEvents) ? profile.wishEvents : []) {
+    try {
+      for (const draw of JSON.parse(event.drawsJson || "[]")) if (draw?.name && characterRoster.some(f => f.name === draw.name)) pulls[draw.name] = (pulls[draw.name] || 0) + 1;
+    } catch {}
+  }
+  // One initial acquisition is not a duplicate.  Each tracked pull after the
+  // fifth duplicate becomes a 1,000-coin reimbursement. This works for every
+  // affected account without guessing a player-specific number.
+  const overStar = Object.values(pulls).reduce((sum, count) => sum + Math.max(0, count - 6), 0);
+  return { ...profile, duplicateAuditVersion: 1, coins: profile.coins + overStar * 1000 };
+}
 function makeWishEvent(p, next, id, count, free, cost, draws) {
   const at = Date.now();
   return {
@@ -1577,12 +1591,15 @@ function applyRunCheckpoint(p, snapshot, gains = {}) {
     ...p.xp
   };
   if (gains.xp) for (const f of snapshot.team) xp[f.name] = experience((xp[f.name] || 0) + gains.xp).xp;
+  const playerBefore = experience(p.playerXp || 0), playerAfter = experience((p.playerXp || 0) + (gains.xp || 0));
+  const levelCoins = Math.max(0, playerAfter.level - playerBefore.level) * 100;
   const rebirthUnlock = snapshot.wave === 100 && snapshot.status === "complete" && gains.victory && !p.rebirthReady;
   return advanceDailyProgress(grantPins({
     ...p,
     run: snapshot,
     xp,
-    coins: p.coins + (gains.victory ? 5 : 0) + (rebirthUnlock ? 5000 : 0),
+    coins: p.coins + (gains.victory ? 5 : 0) + (rebirthUnlock ? 5000 : 0) + levelCoins,
+    playerXp: playerAfter.xp,
     rebirthReady: p.rebirthReady || rebirthUnlock,
     hasPlayed: true,
     bestFloor: Math.max(p.bestFloor, snapshot.wave),
@@ -1685,7 +1702,9 @@ function assignBasePsychs(profile) {
 function loadProfile() {
   try {
     const saved = JSON.parse(localStorage.getItem(profileKey) || "null");
-    const owned = characterRoster.map(f => f.name).filter(name => saved.owned.includes(name));
+    if (!saved || typeof saved !== "object") throw Error("Save missing");
+    const savedOwned = Array.isArray(saved.owned) ? saved.owned : [];
+    const owned = characterRoster.map(f => f.name).filter(name => savedOwned.includes(name));
     // Older builds could keep values past ★. Convert every excess once, then
     // cap the stored count so the inventory and rank stay unambiguous.
     const legacyDuplicateCoins = saved.duplicateRefundVersion === 1 ? 0 : owned.reduce((sum, name) => {
@@ -1707,7 +1726,7 @@ function loadProfile() {
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 100 ? saved.wishStep : 0;
     const bestFloor = Math.min(100, Math.max(0, Math.floor(Number(saved.bestFloor ?? saved.highestFloor ?? 0) || 0)));
     const legacyRebirthUnlock = saved.rebirthReady === undefined && bestFloor >= 100;
-    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
+    if (Number.isSafeInteger(saved.coins) && saved.coins >= 0) return auditedDuplicateCompensation(accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
       dailyQuestDay: typeof saved.dailyQuestDay === "string" ? saved.dailyQuestDay : "",
       dailyQuestProgress: {
         waves: Math.max(0, Math.floor(Number(saved.dailyQuestProgress?.waves) || 0)),
@@ -1725,6 +1744,7 @@ function loadProfile() {
       freeWishSpent: Number.isSafeInteger(saved.freeWishSpent) && saved.freeWishSpent >= 0 ? saved.freeWishSpent : 0,
       freeWishDaySpent: Number.isSafeInteger(saved.freeWishDaySpent) && saved.freeWishDaySpent >= 0 ? saved.freeWishDaySpent : 0,
       duplicateRefundVersion: 1,
+      duplicateAuditVersion: saved.duplicateAuditVersion === 1 ? 1 : 0,
       pcMissionCoins: Object.fromEntries(Object.entries(saved.pcMissionCoins || {}).filter(([day, n]) => /^\d{4}-\d{2}-\d{2}$/.test(day) && Number.isSafeInteger(n) && Number(n) >= 0 && Number(n) <= 100000)),
       starterNekuGranted: saved.starterNekuGranted === true,
       starterWishesGranted: saved.starterWishesGranted === true,
@@ -1734,6 +1754,8 @@ function loadProfile() {
       lastFreeWishDay: typeof saved.lastFreeWishDay === "string" ? saved.lastFreeWishDay : "",
       bestFloor,
       rebirths: Number.isSafeInteger(saved.rebirths) && saved.rebirths >= 0 ? Math.min(99, saved.rebirths) : 0,
+      playerXp: Number.isSafeInteger(saved.playerXp) && saved.playerXp >= 0 ? saved.playerXp : 0,
+      avatar: typeof saved.avatar === "string" && owned.includes(saved.avatar) ? saved.avatar : equipped.find(Boolean) || owned[0] || "NEKU",
       rebirthReady: saved.rebirthReady === true || legacyRebirthUnlock,
       claimedQuests: Array.isArray(saved.claimedQuests) ? [...new Set(saved.claimedQuests.filter(id => typeof id === "string"))] : [],
       floorRecoveryAvailable: saved.floorRecoveryAvailable === true || saved.floorRecoveryAvailable !== false && saved.bestFloor === undefined && owned.length > 0,
@@ -1750,7 +1772,7 @@ function loadProfile() {
       awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
       loadout: saved.loadout || {},
       coins: saved.coins + (legacyRebirthUnlock ? 5000 : 0) + legacyDuplicateCoins
-    })));
+    }))));
   } catch {}
   return accrueDailyWishes(refreshDailyQuests(assignBasePsychs({
     dailyQuestDay: "",
@@ -1768,6 +1790,8 @@ function loadProfile() {
     freeWishVersion: 0,
     freeWishSpent: 0,
     freeWishDaySpent: 0,
+    duplicateRefundVersion: 1,
+    duplicateAuditVersion: 1,
     pcMissionCoins: {},
     starterNekuGranted: false,
     starterWishesGranted: false,
@@ -1777,6 +1801,8 @@ function loadProfile() {
     lastFreeWishDay: "",
     bestFloor: 0,
     rebirths: 0,
+    playerXp: 0,
+    avatar: "NEKU",
     rebirthReady: false,
     claimedQuests: [],
     floorRecoveryAvailable: false,
@@ -2809,6 +2835,28 @@ function gameFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(() => {});
 }
 const hubScreens = [["home", "Accueil", "⌂"], ["team", "Team", "♟"], ["summon", "Invocations", "✦"], ["leaderboard", "Classement", "♛"], ["social", "Social", "◎"], ["menu", "Menu", "☰"]];
+function PvpInviteNotifications() {
+  const seen = React.useRef(new Set());
+  useEffect(() => {
+    const service = window.ChibiSocial;
+    if (!service?.ready?.()) return;
+    let first = true;
+    const stop = service.watch(data => {
+      const invites = Array.isArray(data.invites) ? data.invites : [];
+      for (const invite of invites) {
+        const key = `${invite.uid || ""}:${invite.createdAt || ""}`;
+        if (!invite?.uid || seen.current.has(key)) continue;
+        seen.current.add(key);
+        if (!first && typeof Notification !== "undefined" && Notification.permission === "granted") {
+          try { new Notification(`${invite.name || "Un joueur"} vous a défié !`, { body: "Match privé Casual · ouvre PVP pour accepter." }); } catch {}
+        }
+      }
+      first = false;
+    }, () => {});
+    return () => stop?.();
+  }, []);
+  return null;
+}
 function GameHub({
   profile,
   screen,
@@ -2825,13 +2873,13 @@ function GameHub({
   }, [screen]);
   return /*#__PURE__*/React.createElement("div", {
     className: "game-hub game-shell"
-  }, /*#__PURE__*/React.createElement("header", {
+  }, /*#__PURE__*/React.createElement(PvpInviteNotifications, null), /*#__PURE__*/React.createElement("header", {
     className: "hub-header"
   }, /*#__PURE__*/React.createElement("button", {
-    className: "hub-brand",
-    onClick: () => navigate("home"),
-    "aria-label": "Accueil du jeu"
-  }, "TWEWY ", /*#__PURE__*/React.createElement("span", null, "REAPERS\u2019 RUN")), /*#__PURE__*/React.createElement("div", {
+    className: "hub-profile",
+    onClick: () => navigate("profile"),
+    "aria-label": "Ouvrir mon profil"
+  }, /*#__PURE__*/React.createElement(HudPortrait, { fighter: characterRoster.find(f => f.name === profile.avatar) || characterRoster[0] }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, window.ChibiGameSync?.identity?.name || "Joueur"), /*#__PURE__*/React.createElement("small", null, "Niv. ", experience(profile.playerXp || 0).level))), /*#__PURE__*/React.createElement("div", {
     className: "hub-wallet"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-label": `${profile.coins} pièces`
@@ -3021,7 +3069,9 @@ function eventCheckpoint(p, snapshot, gains = {}) {
     prize = roll < .01 ? "character" : roll < .06 ? "pin" : "none";
     if (prize === "pin") next = grantPins(p, [signaturePins[name].id]);
     if (prize === "character") {
-      const copies = p.owned.includes(name) ? Math.min(5, (p.copies[name] || 0) + 1) : 0;
+      const existing = Math.max(0, Math.floor(Number(p.copies[name]) || 0));
+      const copies = p.owned.includes(name) ? Math.min(5, existing + 1) : 0;
+      const compensation = p.owned.includes(name) && existing >= 5 ? 1000 : 0;
       next = {
         ...p,
         owned: [...new Set([...p.owned, name])],
@@ -3032,12 +3082,16 @@ function eventCheckpoint(p, snapshot, gains = {}) {
         levels: {
           ...p.levels,
           [name]: copies
-        }
+        },
+        coins: p.coins + compensation
       };
     }
   }
+  const before = experience(p.playerXp || 0), after = experience((p.playerXp || 0) + (gains.xp || 0));
   return advanceDailyProgress({
     ...next,
+    playerXp: after.xp,
+    coins: next.coins + Math.max(0, after.level - before.level) * 100,
     eventRun: {
       ...active,
       run: snapshot,
@@ -3479,7 +3533,9 @@ function PvpLobby({
     [searching, setSearching] = useState(false),
     [matchId, setMatchId] = useState(null),
     [message, setMessage] = useState(""),
-    [rating, setRating] = useState(null);
+    [rating, setRating] = useState(null),
+    [friends, setFriends] = useState([]),
+    [privateInvites, setPrivateInvites] = useState([]);
   const service = window.ChibiPvp,
     team = pvpTeam(profile, mode),
     ready = team.length === 2 && team.every(f => f.loadout.length > 0) && team.some(f => f.loadout.some(offensive));
@@ -3489,6 +3545,7 @@ function PvpLobby({
       service.rating(window.ChibiGameSync.accountId).then(setRating).catch(() => {});
       service.currentMatch().then(id => id && setMatchId(id)).catch(() => {});
     }
+    window.ChibiSocial?.state?.().then(data => { setFriends(Array.isArray(data.friends) ? data.friends.filter(friend => friend?.uid) : []); setPrivateInvites(Array.isArray(data.invites) ? data.invites : []); }).catch(() => {});
     return () => {
       service?.cancel();
     };
@@ -3520,6 +3577,16 @@ function PvpLobby({
     setSearching(false);
     setMessage("");
   };
+  const privateMatch = async friend => {
+    if (!ready) return setMessage("Prépare un duo complet avec au moins un psych offensif dans Team.");
+    try {
+      if (typeof Notification !== "undefined" && Notification.permission === "default") await requestChatNotificationPermission();
+      await window.ChibiSocial.invite(friend.uid, pvpTeam(profile, "casual"));
+      setMessage(`${friend.name} a été défié en match privé Casual.`);
+    }
+    catch (error) { setMessage(failure(error)); }
+  };
+  const acceptPrivate = async invite => { try { const id = await window.ChibiSocial.acceptInvite(invite, pvpTeam(profile, "casual")); setMatchId(id); } catch (error) { setMessage(failure(error)); } };
   if (matchId) return /*#__PURE__*/React.createElement(PvpBattle, {
     matchId: matchId,
     close: () => {
@@ -3553,7 +3620,7 @@ function PvpLobby({
     onClick: search
   }, searching ? "Recherche en cours…" : `Chercher en ${mode === "ranked" ? "Ranked" : "Casual"}`), searching && /*#__PURE__*/React.createElement("button", {
     onClick: cancel
-  }, "Annuler la recherche"));
+  }, "Annuler la recherche"), /*#__PURE__*/React.createElement("section", { className: "pvp-private" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "MATCH PRIVÉ"), /*#__PURE__*/React.createElement("h2", null, "Défier un ami"), /*#__PURE__*/React.createElement("p", null, "Casual · niveau 50 et rang étoile pour les deux joueurs.")), privateInvites.length > 0 && /*#__PURE__*/React.createElement("div", { className: "pvp-private-list" }, privateInvites.map(invite => /*#__PURE__*/React.createElement("article", { key: invite.uid }, /*#__PURE__*/React.createElement("b", null, `${invite.name || "Joueur"} vous a défié !`), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => acceptPrivate(invite) }, "Accepter")))), friends.length ? /*#__PURE__*/React.createElement("div", { className: "pvp-private-list" }, friends.map(friend => /*#__PURE__*/React.createElement("article", { key: friend.uid }, /*#__PURE__*/React.createElement("b", null, friend.name || "Joueur"), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => privateMatch(friend) }, "Défier")))) : /*#__PURE__*/React.createElement("p", null, "Ajoute des amis dans Social pour lancer un match privé.")));
 }
 function Leaderboard({ profile }) {
   const h = React.createElement;
@@ -3572,6 +3639,19 @@ function Leaderboard({ profile }) {
   useEffect(() => { load(); }, []);
   return h("section", { className: "hub-panel leaderboard-panel" }, h("header", null, h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h1", null, "Classement"), h("p", null, "Les joueurs ayant invoqué ou participé au Roguelike.")), h("button", { type: "button", onClick: load }, "Actualiser")), h("div", { className: "leaderboard-list" }, players.length ? players.map((player, index) => h("article", { key: player.uid }, h("b", { className: "leaderboard-place" }, `#${index + 1}`), h("span", { className: "leaderboard-avatar", "aria-hidden": "true" }, (player.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, player.name || "Joueur"), h("small", null, `${player.owned?.length || 0} personnages · Rebirth ${player.rebirths || 0}`)), h("strong", null, "Étage ", player.bestFloor || 0))) : h("p", null, "Aucun joueur classé pour le moment.")), notice && h("p", { role: "status" }, notice));
 }
+function PlayerProfile({ profile, save }) {
+  const h = React.createElement, progress = experience(profile.playerXp || 0), owned = characterRoster.filter(fighter => profile.owned.includes(fighter.name));
+  const [notice, setNotice] = useState("");
+  const activateNotifications = async () => {
+    try {
+      const permission = await requestChatNotificationPermission();
+      if (permission !== "granted") return setNotice("Notifications non autorisées sur cet appareil.");
+      await window.ChibiSocial?.enableChatPush?.("BGk76ZiXSpYgtoNqx-LmvxxaQEiE9p4AtqqP10O2OLmBWFB0Pa7jMrSuFp38EWlmfXAPLXNuX57AJt4Q31mOV7E");
+      setNotice("Notifications activées pour les messages et les défis privés.");
+    } catch (error) { setNotice(String(error?.message || "Activation impossible.")); }
+  };
+  return h("section", { className: "hub-panel player-profile-panel" }, h("header", null, h(HudPortrait, { fighter: characterRoster.find(f => f.name === profile.avatar) || characterRoster[0] }), h("div", null, h("small", null, "REAPERS’ PROFILE"), h("h1", null, window.ChibiGameSync?.identity?.name || "Joueur"), h("p", null, `Niveau ${progress.level} · ${progress.required ? `${progress.current} / ${progress.required} XP` : "Niveau maximum"}`))), h("section", { className: "player-level-card" }, h("b", null, "Niveau joueur ", progress.level), h("progress", { max: progress.required || 1, value: progress.required ? progress.current : 1 }), h("small", null, "Chaque niveau offre 100 pièces.")), h("button", { className: "profile-notifications", type: "button", onClick: activateNotifications }, "Activer les notifications"), notice && h("p", { role: "status" }, notice), h("section", { className: "profile-avatar-picker" }, h("h2", null, "Personnage affiché"), h("p", null, "Choisis le personnage visible sur ton profil."), h("div", null, owned.map(fighter => h("button", { key: fighter.name, type: "button", "aria-pressed": profile.avatar === fighter.name, onClick: () => save(p => ({ ...p, avatar: fighter.name })) }, h(HudPortrait, { fighter }), h("span", null, characterLabel(fighter.name)))))));
+}
 function socialProfile(profile) {
   const member = name => ({
     name,
@@ -3584,6 +3664,7 @@ function socialProfile(profile) {
     bestFloor: profile.bestFloor,
     rebirths: profile.rebirths,
     wishesMade: profile.wishesMade,
+    avatar: profile.avatar,
     team: profile.equipped.filter(Boolean).map(member),
     owned: profile.owned.map(member)
   };
@@ -3816,28 +3897,14 @@ function SocialHub({
       setMessage(fail(error));
     }
   };
-  const playerCard = (player, friend = false) => /*#__PURE__*/React.createElement("article", {
+  const playerCard = player => /*#__PURE__*/React.createElement("article", {
     className: "social-player",
     key: player.uid
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "social-player-main",
-    onClick: () => setSelected(profileById(player.uid) || player)
-  }, /*#__PURE__*/React.createElement("i", { className: player.online ? "presence-dot online" : "presence-dot", "aria-label": player.online ? "En ligne" : "Hors ligne" }), player.team?.[0] ? /*#__PURE__*/React.createElement(HudPortrait, {
-    fighter: characterRoster.find(f => f.name === player.team[0].name)
+  }, /*#__PURE__*/React.createElement("i", { className: player.online ? "presence-dot online" : "presence-dot", "aria-label": player.online ? "En ligne" : "Hors ligne" }), player.avatar || player.team?.[0] ? /*#__PURE__*/React.createElement(HudPortrait, {
+    fighter: characterRoster.find(f => f.name === (player.avatar || player.team?.[0]?.name))
   }) : /*#__PURE__*/React.createElement("span", {
     className: "social-avatar"
-  }, "\u25CE"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, player.name), /*#__PURE__*/React.createElement("small", null, "\xC9tage ", player.bestFloor || 0, " \xB7 Rebirth ", player.rebirths || 0), /*#__PURE__*/React.createElement("em", null, player.owned?.length || 0, " personnages \xB7 Voir le profil"))), /*#__PURE__*/React.createElement("div", {
-    className: "social-actions"
-  }, friend ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
-    disabled: !canFight,
-    onClick: () => challenge(profileById(player.uid) || player)
-  }, "D\xE9fier"), /*#__PURE__*/React.createElement("button", {
-    className: "quiet",
-    onClick: () => service.removeFriend(player.uid).catch(error => setMessage(fail(error)))
-  }, "Retirer")) : /*#__PURE__*/React.createElement("button", {
-    disabled: friendIds.has(String(player.uid)) || sent.includes(String(player.uid)),
-    onClick: () => service.request(player.uid, player.name).then(() => setSent(old => [...old, String(player.uid)])).catch(error => setMessage(fail(error)))
-  }, friendIds.has(String(player.uid)) ? "Ami" : sent.includes(String(player.uid)) ? "Envoyée" : "Ajouter")));
+  }, "\u25CE"), /*#__PURE__*/React.createElement("span", { className: "social-player-name" }, /*#__PURE__*/React.createElement("b", null, player.name)), /*#__PURE__*/React.createElement("button", { className: "social-view", onClick: () => setSelected(profileById(player.uid) || player) }, "Voir"));
   const shown = tab === "players" ? profiles : tab === "friends" ? friends : [];
   return /*#__PURE__*/React.createElement("section", {
     className: "social-panel hub-panel"
@@ -3854,7 +3921,7 @@ function SocialHub({
     role: "status"
   }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
     className: "social-list"
-  }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry, tab === "friends")) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement("div", {
+  }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry)) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement("div", {
     className: "social-list"
   }, requests.length ? requests.map(player => /*#__PURE__*/React.createElement("article", {
     className: "social-request",
@@ -4292,7 +4359,7 @@ function App() {
   useEffect(() => {
     const receive = event => {
       if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
-      if (["home", "team", "summon", "leaderboard", "social", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+      if (["home", "team", "summon", "leaderboard", "social", "profile", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
     };
     window.addEventListener("message", receive);
     if (window.parent !== window) window.parent.postMessage({
@@ -4399,11 +4466,14 @@ function App() {
   const portalName = portal === "shibuya" ? "First Week #1" : portals[portal];
   const closeDialog = () => setPhase("ready");
   const recruit = (id, count) => {
-    if (turning.current || historyFull(profile)) return;
+    if (turning.current || historyFull(profile) || !portalAvailable(id)) return;
     const draws = [];
     setProfile(p => {
-      if (historyFull(p) || p.coins !== profile.coins || wishCost(p, count) !== price || p.coins < price) return p;
+      if (historyFull(p) || !portalAvailable(id) || !Number.isInteger(count) || count < 1 || count > 10) return p;
       const quote = wishQuote(p, count);
+      if (p.coins < quote.cost) return p;
+      const candidates = portalPool(id, p);
+      if (!candidates.length) return p;
       const next = {
         ...p,
         wishesMade: p.wishesMade + count,
@@ -4435,7 +4505,9 @@ function App() {
           });
           continue;
         }
-        const name = pick(portalPool(id, next)).name;
+        const chosen = pick(candidates);
+        if (!chosen?.name) continue;
+        const name = chosen.name;
         if (next.owned.includes(name) && (next.copies[name] || 0) >= 5) {
           next.coins += 1000;
           next.copies[name] = 5;
@@ -4630,6 +4702,10 @@ function App() {
   }));
   if (screen === "leaderboard" || screen === "collection") return hub(/*#__PURE__*/React.createElement(Leaderboard, {
     profile: profile
+  }));
+  if (screen === "profile") return hub(/*#__PURE__*/React.createElement(PlayerProfile, {
+    profile: profile,
+    save: setProfile
   }));
   if (screen === "summon") return hub(/*#__PURE__*/React.createElement("main", {
     className: "game-shell party-lobby"
