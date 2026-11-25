@@ -3196,7 +3196,7 @@ function EventHall({
 }
 // PvP has its own durable balance layer. It never changes PvE stats: a match
 // starts with a larger health pool while every offensive psych is toned down.
-const pvpBalance = Object.freeze({ hp: 1.4, damage: .62 });
+const pvpBalance = Object.freeze({ hp: 1.55, damage: .55, maxSingleHit: .18, maxAoeHit: .12 });
 function pvpTeam(profile, mode) {
   return profile.equipped.filter(Boolean).map(name => {
     const base = characterRoster.find(item => item.name === name),
@@ -3219,6 +3219,7 @@ function resolvePvpRoom(room) {
       ...f
     }))]));
   const shields = new Map(),
+    roundLog = [],
     order = ids.flatMap(uid => teams[uid].map((fighter, index) => ({
       uid,
       index,
@@ -3232,6 +3233,7 @@ function resolvePvpRoom(room) {
       enemyTeam = teams[rival];
     if (plan.kind === "guard") {
       shields.set(`${step.uid}:${step.index}`, .55);
+      roundLog.push({ type: "guard", actorUid: step.uid, actorIndex: step.index, actorName: fighter.name });
       continue;
     }
     const pin = psychs[plan.pin || ""];
@@ -3242,10 +3244,12 @@ function resolvePvpRoom(room) {
         ...member,
         hp: Math.min(member.maxHp, member.hp + amount)
       } : member);
+      roundLog.push({ type: "heal", actorUid: step.uid, actorIndex: step.index, actorName: fighter.name, pinName: pin.name, amount });
       continue;
     }
     if (pin.kind === "guard" || pin.kind === "support") {
       teams[step.uid].forEach((member, index) => member.hp > 0 && shields.set(`${step.uid}:${index}`, Math.max(shields.get(`${step.uid}:${index}`) || 0, pinShieldReduction(pin))));
+      roundLog.push({ type: "support", actorUid: step.uid, actorIndex: step.index, actorName: fighter.name, pinName: pin.name });
       continue;
     }
     const kind = pin.kind === "physical" ? "physical" : "special",
@@ -3262,17 +3266,21 @@ function resolvePvpRoom(room) {
     }) => {
       const reduction = Math.min(.8, (shields.get(`${rival}:${index}`) || 0) + passiveDamageReduction(member.name)),
         evades = deterministicChance(passiveDodgeChance(member.name), `${room.turn}:${step.uid}:${fighter.name}:${member.name}:${pin.id}`),
-        damage = evades ? 0 : Math.max(1, Math.round(typedDamage(raw, pin.element || badgeElement(pin), characterElements[member.name]) * (1 - reduction)));
+        uncappedDamage = typedDamage(raw, pin.element || badgeElement(pin), characterElements[member.name]) * (1 - reduction),
+        cap = member.maxHp * (pinTargetMode(pin) === "aoe" ? pvpBalance.maxAoeHit : pvpBalance.maxSingleHit),
+        damage = evades ? 0 : Math.max(1, Math.min(Math.floor(cap), Math.round(uncappedDamage)));
       enemyTeam[index] = {
         ...member,
         hp: Math.max(0, member.hp - damage)
       };
+      roundLog.push({ type: "attack", actorUid: step.uid, actorIndex: step.index, actorName: fighter.name, targetUid: rival, targetIndex: index, targetName: member.name, pinName: pin.name, damage, evaded });
     });
   }
   const next = {
     ...room,
     turn: room.turn + 1,
     actions: {},
+    lastRoundLog: { turn: room.turn, events: roundLog },
     updatedAt: Date.now(),
     players: {
       ...room.players
@@ -3301,7 +3309,9 @@ function PvpBattle({
     [plans, setPlans] = useState({}),
     [choosing, setChoosing] = useState(null),
     [targeting, setTargeting] = useState(null),
-    [rating, setRating] = useState(null);
+    [rating, setRating] = useState(null),
+    [replay, setReplay] = useState(null);
+  const replayedRounds = React.useRef(new Set());
   useEffect(() => service.watch(matchId, next => setRoom(next), () => setError("Connexion au combat interrompue.")), [matchId]);
   useEffect(() => {
     if (!room || room.status !== "active") return;
@@ -3316,6 +3326,22 @@ function PvpBattle({
     setChoosing(null);
     setTargeting(null);
   }, [room?.turn]);
+  useEffect(() => {
+    const log = room?.lastRoundLog;
+    if (!log?.events?.length || replayedRounds.current.has(`${matchId}:${log.turn}`)) return;
+    replayedRounds.current.add(`${matchId}:${log.turn}`);
+    let cancelled = false;
+    const play = async () => {
+      for (const event of log.events) {
+        if (cancelled) return;
+        setReplay(event);
+        await new Promise(resolve => window.setTimeout(resolve, event.type === "attack" ? 680 : 480));
+      }
+      if (!cancelled) setReplay(null);
+    };
+    play();
+    return () => { cancelled = true; };
+  }, [matchId, room?.lastRoundLog?.turn]);
   if (!room) return /*#__PURE__*/React.createElement("section", {
     className: "pvp-panel"
   }, /*#__PURE__*/React.createElement("h1", null, "PVP"), /*#__PURE__*/React.createElement("p", null, error || "Connexion à l’adversaire…"));
@@ -3353,7 +3379,8 @@ function PvpBattle({
     fighter,
     index
   }))].filter(entry => entry.fighter.hp > 0).sort((a, b) => b.fighter.speed - a.fighter.speed || a.side.localeCompare(b.side));
-  const status = submitted ? "Actions envoyées · attente de l’adversaire" : ready ? "Actions prêtes" : "Choisis une action par personnage";
+  const replayText = replay?.type === "attack" ? `${replay.actorName} · ${replay.pinName} · ${replay.evaded ? "Esquive !" : `−${replay.damage} PV`}` : replay?.type === "heal" ? `${replay.actorName} · ${replay.pinName} · +${replay.amount} PV` : replay ? `${replay.actorName} se protège.` : "";
+  const status = replayText || (submitted ? "Actions envoyées · attente de l’adversaire" : ready ? "Actions prêtes" : "Choisis une action par personnage");
   return /*#__PURE__*/React.createElement("main", {
     className: "game-shell combat-hud pvp-combat"
   }, /*#__PURE__*/React.createElement("header", {
@@ -3443,29 +3470,31 @@ function PvpBattle({
   }, enemy.team.map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? "defeated" : ""}`,
+      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? "defeated" : ""} ${replay?.targetUid === rival && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
-      combat: true
+      combat: true,
+      action: replay?.actorUid === rival && replay?.actorIndex === index ? "shockwave" : null
     }), /*#__PURE__*/React.createElement("span", {
       className: "enemy-hp"
     }, /*#__PURE__*/React.createElement("i", {
       style: {
         width: `${100 * fighter.hp / fighter.maxHp}%`
       }
-    })), /*#__PURE__*/React.createElement("small", null, fighter.name));
+    })), replay?.targetUid === rival && replay?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replay.evaded ? "miss" : ""}` }, replay.evaded ? "MISS" : `−${replay.damage}`), /*#__PURE__*/React.createElement("small", null, fighter.name));
   })), /*#__PURE__*/React.createElement("div", {
     className: "player-line"
   }, mine.team.map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""}`,
+      className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""} ${replay?.targetUid === uid && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
-      combat: true
-    }), /*#__PURE__*/React.createElement("span", null, fighter.name));
+      combat: true,
+      action: replay?.actorUid === uid && replay?.actorIndex === index ? "shockwave" : null
+    }), replay?.targetUid === uid && replay?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replay.evaded ? "miss" : ""}` }, replay.evaded ? "MISS" : `−${replay.damage}`), /*#__PURE__*/React.createElement("span", null, fighter.name));
   })), /*#__PURE__*/React.createElement("p", {
     className: "combat-status",
     role: "status"
