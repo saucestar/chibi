@@ -4699,9 +4699,12 @@ function PortalCarousel({
   portal,
   children
 }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const entries = Object.entries(portals).filter(([id]) => portalAvailable(id));
   const rail = React.useRef(null);
   const drag = React.useRef(null);
   const scrollToCard = (list, card) => {
+    setActiveIndex(Array.from(list.children).indexOf(card));
     list.scrollTo({
       left: card.offsetLeft,
       behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
@@ -4710,7 +4713,10 @@ function PortalCarousel({
   React.useLayoutEffect(() => {
     const list = rail.current;
     const card = list?.querySelector(`[data-portal="${portal}"]`);
-    if (list && card) list.scrollLeft = card.offsetLeft;
+    if (list && card) {
+      list.scrollLeft = card.offsetLeft;
+      setActiveIndex(Array.from(list.children).indexOf(card));
+    }
   }, [portal]);
   const move = direction => {
     const list = rail.current;
@@ -4748,16 +4754,37 @@ function PortalCarousel({
     const distance = list.scrollLeft - state.left;
     delete list.dataset.dragging;
     if (!state.moved) return;
-    const
-      width = list.clientWidth;
+    const width = list.clientWidth;
     const index = Math.round(state.left / width);
     const step = Math.abs(distance) > Math.min(72, width * .17) ? Math.sign(distance) : 0;
     const cards = list.querySelectorAll(".portal-card");
     const target = cards[Math.max(0, Math.min(cards.length - 1, index + step))];
     if (target) scrollToCard(list, target);
   };
+  const choose = index => {
+    const list = rail.current,
+      card = list?.querySelectorAll(".portal-card")[index];
+    if (list && card) scrollToCard(list, card);
+  };
   return React.createElement("div", {
     className: "portal-carousel"
+  }, React.createElement("nav", {
+    className: "portal-thumbnails",
+    "aria-label": "Portails d\u2019invocation"
+  }, entries.map(([id, title], index) => React.createElement("button", {
+    key: id,
+    type: "button",
+    "data-portal-preview": id,
+    "aria-current": index === activeIndex ? "true" : undefined,
+    onClick: () => choose(index)
+  }, React.createElement("span", {
+    className: "portal-thumbnail-art",
+    "aria-hidden": "true"
+  }, portalRoster(id).slice(0, 2).map(fighter => React.createElement(HudPortrait, {
+    key: fighter.name,
+    fighter: fighter
+  }))), React.createElement("span", null, id === "shibuya" ? "First Week #1" : title)))), React.createElement("div", {
+    className: "portal-stage"
   }, React.createElement("button", {
     className: "portal-arrow portal-previous",
     type: "button",
@@ -4769,6 +4796,10 @@ function PortalCarousel({
     tabIndex: 0,
     role: "region",
     "aria-label": "Portails d\u2019invocation",
+    onScroll: event => {
+      const list = event.currentTarget;
+      if (list.clientWidth) setActiveIndex(Math.round(list.scrollLeft / list.clientWidth));
+    },
     onPointerDown: startDrag,
     onPointerMove: dragPortal,
     onPointerUp: endDrag,
@@ -4779,7 +4810,7 @@ function PortalCarousel({
     type: "button",
     "aria-label": "Portail suivant",
     onClick: () => move(1)
-  }, "\u203A"));
+  }, "\u203A")));
 }
 function App() {
   useEffect(gameSound.connect, []);
@@ -5210,15 +5241,7 @@ function App() {
     className: "game-shell party-lobby summon-workspace"
   }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h1", null, "Invocations"), /*#__PURE__*/React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", visibleCollectionRoster().length, " personnages disponibles \xB7 Garantie dans ", 100 - profile.wishStep, " ", profile.wishStep === 99 ? "vœu" : "vœux"), historyFull(profile) && /*#__PURE__*/React.createElement("p", {
     role: "status"
-  }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), /*#__PURE__*/React.createElement("div", {
-    className: "lobby-tools"
-  }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("journal")
-  }, "Historique des v\u0153ux"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("collection")
-  }, "Collection"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("quests")
-  }, "Qu\xEAtes")), /*#__PURE__*/React.createElement("p", {
+  }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), /*#__PURE__*/React.createElement("p", {
     className: "daily-wishes"
   }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, availableFreeWishes(profile)), /*#__PURE__*/React.createElement("small", null, profile.eventWishes ? `${profile.eventWishes} Vœux Vague 2 + 3 quotidiens` : parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement(PortalCarousel, {portal}, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => React.createElement("article", {
     key: id,
@@ -5261,17 +5284,16 @@ function App() {
     },
     "aria-label": `Taux de ${id === "shibuya" ? "First Week #1" : title}`
   }, "Taux"), /*#__PURE__*/React.createElement("div", {
-    className: "bingo-machine"
-  }, /*#__PURE__*/React.createElement("img", {
-    className: "bingo-body",
-    src: "./assets/bingo/machine.webp",
-    alt: "Bingo Kai"
-  }), /*#__PURE__*/React.createElement("span", {
-    className: "bingo-crank",
-    "aria-hidden": "true"
-  })), /*#__PURE__*/React.createElement("div", {
     className: "wish-commands"
-  }, [1, 10].map(n => /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "lobby-tools"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("journal")
+  }, "Historique des v\u0153ux"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("collection")
+  }, "Collection"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("quests")
+  }, "Qu\xEAtes")), [1, 10].map(n => /*#__PURE__*/React.createElement("div", {
     key: n,
     className: "wish-option"
   }, /*#__PURE__*/React.createElement("button", {

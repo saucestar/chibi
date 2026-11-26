@@ -1523,9 +1523,12 @@ function BestiaryMenu(){
 }
 
 function PortalCarousel({portal,children}:{portal:string;children:React.ReactNode}) {
+ const [activeIndex,setActiveIndex]=useState(0);
+ const entries=Object.entries(portals).filter(([id])=>portalAvailable(id));
  const rail=React.useRef<HTMLDivElement>(null);
  const drag=React.useRef<{id:number;x:number;left:number;moved:boolean}|null>(null);
  const scrollToCard=(list:HTMLDivElement,card:HTMLElement)=>{
+  setActiveIndex(Array.from(list.children).indexOf(card));
   list.scrollTo({left:card.offsetLeft,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
  };
  React.useLayoutEffect(()=>{
@@ -1571,11 +1574,25 @@ function PortalCarousel({portal,children}:{portal:string;children:React.ReactNod
   const target=cards[Math.max(0,Math.min(cards.length-1,index+step))];
   if(target)scrollToCard(list,target);
  };
+ const choose=(index:number)=>{
+  const list=rail.current,card=list?.querySelectorAll<HTMLElement>(".portal-card")[index];
+  if(list&&card)scrollToCard(list,card);
+ };
  return <div className="portal-carousel">
+  <nav className="portal-thumbnails" aria-label="Portails d’invocation">
+   {entries.map(([id,title],index)=><button key={id} type="button" data-portal-preview={id}
+    aria-current={index===activeIndex?"true":undefined} onClick={()=>choose(index)}>
+    <span className="portal-thumbnail-art" aria-hidden="true">{portalRoster(id).slice(0,2).map(fighter=><HudPortrait key={fighter.name} fighter={fighter}/>)}</span>
+    <span>{id==="shibuya"?"First Week #1":title}</span>
+   </button>)}
+  </nav>
+  <div className="portal-stage">
   <button className="portal-arrow portal-previous" type="button" aria-label="Portail précédent" onClick={()=>move(-1)}>‹</button>
   <div className="portal-list" ref={rail} tabIndex={0} role="region" aria-label="Portails d’invocation"
+   onScroll={event=>{const list=event.currentTarget;if(list.clientWidth)setActiveIndex(Math.round(list.scrollLeft/list.clientWidth));}}
    onPointerDown={startDrag} onPointerMove={dragPortal} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag}>{children}</div>
   <button className="portal-arrow portal-next" type="button" aria-label="Portail suivant" onClick={()=>move(1)}>›</button>
+  </div>
  </div>;
 }
 
@@ -1749,7 +1766,6 @@ function App() {
     <h1>Invocations</h1>
     <p>{profile.coins} pièces · {profile.owned.length} / {visibleCollectionRoster().length} personnages disponibles · Garantie dans {100-profile.wishStep} {profile.wishStep===99?"vœu":"vœux"}</p>
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
-    <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
     <PortalCarousel portal={portal}>{Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" data-portal={id} aria-label={title}>
       <div className={"portal-scene scene-"+id}>
@@ -1765,11 +1781,7 @@ function App() {
         {(id==="sonicx"||id==="xiii") && <div className={`portal-cast portal-cast-${id}`}>{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>
         <button className="portal-rates" onClick={()=>{setPortal(id);setRateFighter(null);setPhase("rates");}} aria-label={`Taux de ${id==="shibuya"?"First Week #1":title}`}>Taux</button>
-        <div className="bingo-machine">
-          <img className="bingo-body" src="./assets/bingo/machine.webp" alt="Bingo Kai"/>
-          <span className="bingo-crank" aria-hidden="true"/>
-        </div>
-        <div className="wish-commands">{[1,10].map(n=><div key={n} className="wish-option">
+        <div className="wish-commands"><div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>{[1,10].map(n=><div key={n} className="wish-option">
           <button aria-describedby={`wish-price-${id}-${n}`} disabled={historyFull(profile) || phase!=="ready" || profile.coins<wishCost(profile,n)} onClick={()=>openWish(id,n)}><strong>{n} {n===1?"vœu":"vœux"}</strong></button>
           <span className="wish-price" id={`wish-price-${id}-${n}`} aria-label={`${wishCost(profile,n)} pièces requises`}><Icon name="coin"/><span>× {wishCost(profile,n).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span></span>
           {wishQuote(profile,n).free>0&&<small className="wish-free">{wishQuote(profile,n).free} {wishQuote(profile,n).free>1?"gratuits":"gratuit"} inclus</small>}
