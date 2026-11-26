@@ -2015,3 +2015,29 @@
     width:clamp(30px,7vmin,54px);height:clamp(30px,7vmin,54px);
   }
 }
+
+.game-hub .leaderboard-panel > header > .leaderboard-refresh {
+  display:grid;
+  place-items:center;
+  flex:0 0 44px;
+  width:44px;
+  min-width:44px;
+  min-height:44px;
+  padding:0!important;
+  font-size:23px;
+  line-height:1;
+}
+.game-hub .leaderboard-panel > header > div { min-width:0; }
+@media (orientation:portrait) {
+  .game-hub .hub-screen > :is(.menu-workspace,.leaderboard-panel,.social-panel:has(.social-list)) {
+    height:auto;
+    min-height:0;
+    align-content:start;
+  }
+  .game-hub .leaderboard-panel > header {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:start;
+    gap:8px;
+  }
+}

@@ -28,7 +28,7 @@
     try {
       await add('./admin.js?v=settings1').catch(() => {});
       await add('./raid.js?v=landscape3');
-      await add('./game.js?v=landscape4');
+      await add('./game.js?v=portrait-panels1');
     }
     catch (error) { const root = document.getElementById('root'); if (root) root.textContent = 'Impossible de charger le jeu. Recharge la page.'; }
   });
