@@ -490,5 +490,4 @@ Communauté et options|Community and settings
 Portail précédent|Previous banner
 Portail suivant|Next banner
 Portails d’invocation|Summon banners
-Pages de cet écran|Screen pages
 `.trim();

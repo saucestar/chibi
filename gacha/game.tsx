@@ -1113,57 +1113,13 @@ function gameFullscreen(){
  if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
 }
 const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["social","Social","◎"],["menu","Menu","☰"]];
-function HubViewport({screen,children}:{screen:string;children:React.ReactNode}) {
- const viewport=React.useRef<HTMLDivElement>(null);
- const body=React.useRef<HTMLDivElement>(null);
- const controls=React.useRef<HTMLElement>(null);
- const [page,setPage]=useState({index:0,total:1});
- const fixed=screen==="summon";
- const measure=React.useCallback(()=>{
-  const view=viewport.current;
-  if(!view||fixed)return;
-  const height=view.clientHeight;
-  const fullHeight=height+(controls.current?.offsetHeight||0);
-  const max=Math.max(0,view.scrollHeight-height);
-  const step=Math.max(1,height-Math.min(48,Math.floor(height/4)));
-  const total=view.scrollHeight<=fullHeight+1?1:Math.ceil(max/step)+1;
-  const index=total===1?0:Math.min(total-1,max-view.scrollTop<=1?total-1:Math.floor((view.scrollTop+1)/step));
-  setPage(previous=>previous.index===index&&previous.total===total?previous:{index,total});
- },[fixed]);
- React.useLayoutEffect(()=>{
-  const view=viewport.current,content=body.current;
-  if(!view||!content)return;
-  view.scrollTop=0;
-  if(fixed)return;
-  const observer=new ResizeObserver(measure);
-  observer.observe(view);observer.observe(content);
-  measure();
-  return ()=>observer.disconnect();
- },[screen,fixed,measure]);
- const go=(index:number)=>{
-  const view=viewport.current;
-  if(!view)return;
-  const height=view.clientHeight;
-  const step=Math.max(1,height-Math.min(48,Math.floor(height/4)));
-  view.scrollTop=index===page.total-1?view.scrollHeight-height:index*step;
-  measure();
- };
- return <div className="hub-viewport">
-  <div className="hub-content" ref={viewport} onScroll={measure}>
-   <div className="hub-screen" ref={body} key={screen}>{children}</div>
-  </div>
-  {!fixed&&page.total>1&&<nav className="hub-pages" aria-label="Pages de cet écran" ref={controls}>
-   <button type="button" aria-label="Page précédente" disabled={page.index===0} onClick={()=>go(page.index-1)}>‹</button>
-   <span aria-live="polite">{page.index+1} / {page.total}</span>
-   <button type="button" aria-label="Page suivante" disabled={page.index+1===page.total} onClick={()=>go(page.index+1)}>›</button>
-  </nav>}
- </div>;
-}
 function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;openNews:()=>void;children:React.ReactNode}) {
  useMusic("hub");
+ const content=React.useRef<HTMLDivElement>(null);
+ useEffect(()=>{if(content.current)content.current.scrollTop=0;},[screen]);
  return <div className="game-hub game-shell" data-screen={screen}>
   <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-news" onClick={openNews} aria-label="Consulter les nouveautés"><span aria-hidden="true">NEWS</span></button><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
-  <HubViewport screen={screen}>{children}</HubViewport>
+  <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
   <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} data-section-active={id==="menu"&&["settings","bestiary","quests","journal","raid","pvp"].includes(screen)||id==="home"&&["roguelike","events"].includes(screen)||undefined} onClick={()=>navigate(id)}><span className="hub-nav-orb" aria-hidden="true"><i>{icon}</i></span><b>{label}</b></button>)}</nav>
  </div>;
 }
@@ -1546,12 +1502,13 @@ function RoguelikeLaunch({profile,navigate,start,resume,abandon,rebirth}:{profil
  </section>;
 }
 function HubMenu({navigate,quit}:{navigate:(screen:GameScreen)=>void;quit:()=>void}) {
+ const [guideOpen,setGuideOpen]=useState(false);
  const groups:{label:string;links:[GameScreen,string,string][]}[]=[
   {label:"Activités",links:[["roguelike","Roguelike","Lancer ou reprendre une run"],["events","Événement","Défie les personnages"],["raid","Raid","Boss niveau 200 · Réservé aux factions"],["pvp","PVP","Casual normalisé et Ranked Elo"]]},
   {label:"Progression",links:[["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"]]},
   {label:"Communauté et options",links:[["social","Social","Amis, profils et défis Casual"],["settings","Paramètres","Musique et effets sonores"]]}
  ];
- return <section className="hub-panel menu-workspace"><h1>Menu</h1>{groups.map(({label,links})=><section className="menu-group" key={label}><h2>{label}</h2><div className="hub-menu-links">{links.map(([id,title,desc])=><button key={id} onClick={()=>navigate(id)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div></section>)}<button className="quit-game" onClick={quit}><b>Quitter le jeu</b><small>Retour à l’application mobile</small><span aria-hidden="true">↩</span></button><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+ return <section className="hub-panel menu-workspace"><h1>Menu</h1>{groups.map(({label,links})=><section className="menu-group" key={label}><h2>{label}</h2><div className="hub-menu-links">{links.map(([id,title,desc])=><button key={id} onClick={()=>navigate(id)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div></section>)}<button className="quit-game" onClick={quit}><b>Quitter le jeu</b><small>Retour à l’application mobile</small><span aria-hidden="true">↩</span></button><button className="menu-guide" onClick={()=>setGuideOpen(true)}>Guide du jeu</button>{guideOpen&&<WishDialog title="Guide du jeu" close={()=>setGuideOpen(false)}><div className="hub-help"><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></div><button onClick={()=>setGuideOpen(false)}>Fermer</button></WishDialog>}</section>;
 }
 
 function BestiaryMenu(){

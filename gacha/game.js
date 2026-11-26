@@ -3055,80 +3055,6 @@ function InboxPanel({ profile, claim }) {
   const entries = inboxEntries(profile);
   return /*#__PURE__*/React.createElement("main", { className: "inbox-panel hub-panel" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS’ MAIL"), /*#__PURE__*/React.createElement("h1", null, "Boîte de réception"), /*#__PURE__*/React.createElement("p", null, entries.length ? "Des cadeaux t’attendent. Récupère-les quand tu le souhaites." : "Aucun nouveau cadeau pour le moment.")), /*#__PURE__*/React.createElement("div", { className: "inbox-list" }, entries.length ? entries.map(entry => /*#__PURE__*/React.createElement("article", { key: entry.id }, /*#__PURE__*/React.createElement("span", { className: "inbox-gift", "aria-hidden": "true" }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CADEAU"), /*#__PURE__*/React.createElement("h2", null, entry.title), /*#__PURE__*/React.createElement("p", null, entry.text), /*#__PURE__*/React.createElement("b", null, entry.reward)), /*#__PURE__*/React.createElement("button", { type: "button", onClick: () => claim(entry.claim) }, "Récupérer"))) : /*#__PURE__*/React.createElement("p", { className: "inbox-empty" }, "Tes prochaines récompenses apparaîtront ici.")));
 }
-function HubViewport({
-  screen,
-  children
-}) {
-  const viewport = React.useRef(null);
-  const body = React.useRef(null);
-  const controls = React.useRef(null);
-  const [page, setPage] = useState({
-    index: 0,
-    total: 1
-  });
-  const fixed = screen === "summon";
-  const measure = React.useCallback(() => {
-    const view = viewport.current;
-    if (!view || fixed) return;
-    const height = view.clientHeight;
-    const fullHeight = height + (controls.current?.offsetHeight || 0);
-    const max = Math.max(0, view.scrollHeight - height);
-    const step = Math.max(1, height - Math.min(48, Math.floor(height / 4)));
-    const total = view.scrollHeight <= fullHeight + 1 ? 1 : Math.ceil(max / step) + 1;
-    const index = total === 1 ? 0 : Math.min(total - 1, max - view.scrollTop <= 1 ? total - 1 : Math.floor((view.scrollTop + 1) / step));
-    setPage(previous => previous.index === index && previous.total === total ? previous : {
-      index,
-      total
-    });
-  }, [fixed]);
-  React.useLayoutEffect(() => {
-    const view = viewport.current,
-      content = body.current;
-    if (!view || !content) return;
-    view.scrollTop = 0;
-    if (fixed) return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(view);
-    observer.observe(content);
-    measure();
-    return () => observer.disconnect();
-  }, [screen, fixed, measure]);
-  const go = index => {
-    const view = viewport.current;
-    if (!view) return;
-    const height = view.clientHeight;
-    const step = Math.max(1, height - Math.min(48, Math.floor(height / 4)));
-    view.scrollTop = index === page.total - 1 ? view.scrollHeight - height : index * step;
-    measure();
-  };
-  return React.createElement("div", {
-    className: "hub-viewport"
-  }, React.createElement("div", {
-    className: "hub-content",
-    ref: viewport,
-    onScroll: measure
-  }, React.createElement("div", {
-    className: "hub-screen",
-    ref: body,
-    key: screen
-  }, children)), !fixed && page.total > 1 && React.createElement("nav", {
-    className: "hub-pages",
-    "aria-label": "Pages de cet \xE9cran",
-    ref: controls
-  }, React.createElement("button", {
-    type: "button",
-    "aria-label": "Page pr\xE9c\xE9dente",
-    disabled: page.index === 0,
-    onClick: () => go(page.index - 1)
-  }, "\u2039"), React.createElement("span", {
-    "aria-live": "polite"
-  }, page.index + 1, " / ", page.total), React.createElement("button", {
-    type: "button",
-    "aria-label": "Page suivante",
-    disabled: page.index + 1 === page.total,
-    onClick: () => go(page.index + 1)
-  }, "\u203A")));
-}
 function GameHub({
   profile,
   screen,
@@ -3137,6 +3063,8 @@ function GameHub({
   children
 }) {
   useMusic("hub");
+  const content = React.useRef(null);
+  useEffect(() => { if (content.current) content.current.scrollTop = 0; }, [screen]);
   const inboxCount = inboxEntries(profile).length;
   const player = experience(profile.playerXp || 0);
   return /*#__PURE__*/React.createElement("div", {
@@ -3173,7 +3101,7 @@ function GameHub({
     className: "hub-fullscreen",
     onClick: gameFullscreen,
     "aria-label": "Basculer le plein \xE9cran"
-  }, "\u26F6")), React.createElement(HubViewport, {screen}, children), /*#__PURE__*/React.createElement("nav", {
+  }, "\u26F6")), React.createElement("div", {className: "hub-content", ref: content}, React.createElement("div", {className: "hub-screen", key: screen}, children)), /*#__PURE__*/React.createElement("nav", {
     className: "hub-nav",
     "aria-label": "Navigation du jeu"
   }, hubScreens.map(([id, label, icon]) => /*#__PURE__*/React.createElement("button", {
@@ -4699,6 +4627,7 @@ function RoguelikeLaunch({
 function HubMenu({
   navigate
 }) {
+  const [guideOpen, setGuideOpen] = useState(false);
   const groups = [{
     label: "Activités",
     links: [["roguelike", "Roguelike", "Lancer ou reprendre une run"], ["events", "Événement", "Défie les personnages"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"]]
@@ -4724,9 +4653,7 @@ function HubMenu({
     onClick: () => navigate(id)
   }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u203A")))))), React.createElement("section", {
-    className: "hub-help"
-  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Une attaque du m\xEAme type que son personnage re\xE7oit le STAB : sa puissance est multipli\xE9e par 1,2."), React.createElement("p", null, "La premi\xE8re invocation d\u2019un nouveau compte garantit un personnage. Ensuite, chaque v\u0153u a 10 % de chances d\u2019en donner un et le 100e le garantit."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
+  }, "\u203A")))))), React.createElement("button", {className: "menu-guide", onClick: () => setGuideOpen(true)}, "Guide du jeu"), guideOpen && React.createElement(WishDialog, {title: "Guide du jeu", close: () => setGuideOpen(false)}, React.createElement("div", {className: "hub-help"}, React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Une attaque du m\xEAme type que son personnage re\xE7oit le STAB : sa puissance est multipli\xE9e par 1,2."), React.createElement("p", null, "La premi\xE8re invocation d\u2019un nouveau compte garantit un personnage. Ensuite, chaque v\u0153u a 10 % de chances d\u2019en donner un et le 100e le garantit."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")), React.createElement("button", {onClick: () => setGuideOpen(false)}, "Fermer")));
 }
 function BestiaryMenu() {
   const [filter, setFilter] = useState("known"),

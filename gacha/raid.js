@@ -56,46 +56,10 @@
     let partySprites = [], previousFrame = null, draftKey = '', draft = {}, sendingKey = '', syncActions = null, impactTimer = 0;
     const clearSpriteTimers = () => overlay.querySelectorAll('canvas').forEach(canvas => { if (canvas._raidTimer) clearInterval(canvas._raidTimer); });
     const clearBattleSprites = () => { clearTimeout(impactTimer); clearSpriteTimers(); partySprites.forEach(unmount => unmount()); partySprites = []; };
-    const close = () => { hallObserver?.disconnect(); stop?.(); activeStop?.(); clearBattleSprites(); overlay.remove(); };
+    const close = () => { stop?.(); activeStop?.(); clearBattleSprites(); overlay.remove(); };
     overlay.onclick = event => { if (event.target === overlay) close(); };
-    let hallObserver = null;
-    const fitHall = previousTop => {
-      const hall = overlay.querySelector('.raid-native');
-      const header = hall.firstElementChild;
-      const view = document.createElement('div');
-      view.className = 'raid-hall-pages';
-      const content = document.createElement('div');
-      while (header.nextSibling) content.append(header.nextSibling);
-      view.append(content);
-      const pages = document.createElement('nav');
-      pages.className = 'hub-pages';
-      pages.setAttribute('aria-label', 'Pages de cet écran');
-      pages.innerHTML = '<button type="button" aria-label="Page précédente">‹</button><span aria-live="polite"></span><button type="button" aria-label="Page suivante">›</button>';
-      hall.append(view, pages);
-      const [back, position, next] = pages.children;
-      function update() {
-        const height = view.clientHeight;
-        const step = Math.max(1, height - Math.min(48, Math.floor(height / 4)));
-        const last = Math.max(0, view.scrollHeight - height);
-        const total = Math.ceil(last / step) + 1;
-        const index = last - view.scrollTop <= 1 ? total - 1 : Math.floor((view.scrollTop + 1) / step);
-        back.disabled = index === 0;
-        next.disabled = index >= total - 1;
-        position.textContent = `${index + 1} / ${total}`;
-        back.onclick = () => { view.scrollTop = (index - 1) * step; update(); };
-        next.onclick = () => { view.scrollTop = Math.min((index + 1) * step, last); update(); };
-      }
-      view.addEventListener('scroll', update);
-      hallObserver = new ResizeObserver(update);
-      hallObserver.observe(view);
-      hallObserver.observe(content);
-      view.scrollTop = previousTop;
-      update();
-    };
     const renderHall = (notice = '') => {
       if (!overlay.isConnected) return;
-      const previousTop = overlay.querySelector('.raid-hall-pages')?.scrollTop || 0;
-      hallObserver?.disconnect();
       clearBattleSprites();
       const bosses = (window.ChibiGameCatalog?.enemies || []).filter(x => x.enabled && x.boss).sort((a, b) => b.hp - a.hp).slice(0, 18);
       overlay.innerHTML = `<section class="raid-native"><header><div><small>COOPÉRATION · FACTION</small><h1>Raid · 3 joueurs contre Boss</h1><p>${txt(faction?.name || 'Rejoins une faction dans Social pour lancer un Raid.')}</p></div><button class="raid-native-close">×</button></header>${!faction ? '<button class="raid-native-open-social">Ouvrir Social / Factions</button>' : `<div class="raid-native-boss-list">${bosses.map(b => `<button data-boss="${txt(b.id)}" aria-pressed="${selected?.id === b.id}"><span class="raid-monster-art">${b.sprite ? `<img src="${txt(b.sprite)}">` : '◆'}</span><b>${txt(b.displayName || b.name || b.id)}</b><small>Niveau 200 · ${Number(b.hp).toLocaleString()} PV</small></button>`).join('')}</div>${selected ? `<div class="raid-native-selected"><b>${txt(selected.displayName || selected.name || selected.id)}</b><span>Boss niveau 200 · ${Math.max(18000, Math.min(70000, Number(selected.hp) * 8)).toLocaleString()} PV</span><button class="raid-native-create">Créer une salle</button></div>` : ''}<h2>Salles de ta faction</h2><div class="raid-native-rooms">${rooms.map(r => { const ids = Object.values(r.slots || {}), joined = ids.includes(String(window.ChibiGameSync?.accountId)); return `<article><b>${txt(r.meta.bossName)}</b><span>${ids.length}/3 joueurs</span><button data-join="${txt(r.id)}" ${ids.length >= 3 && !joined ? 'disabled' : ''}>${joined ? 'Reprendre' : 'Rejoindre'}</button></article>`; }).join('') || '<p>Aucune salle. Choisis un boss pour la créer.</p>'}</div>`}${notice ? `<p class="raid-native-notice" role="status">${txt(notice)}</p>` : ''}</section>`;
@@ -118,7 +82,6 @@
       overlay.querySelectorAll('[data-boss]').forEach(button => button.onclick = () => { selected = bosses.find(b => b.id === button.dataset.boss); renderHall(); });
       overlay.querySelector('.raid-native-create')?.addEventListener('click', async event => { if (team().length !== 2) return renderHall('Équipe deux personnages et leurs psychs dans Team avant le Raid.'); event.currentTarget.disabled = true; try { const roomId = await ChibiSocial.createRaidRoom(selected, team()); enter(roomId); } catch (err) { renderHall(err.message || 'Impossible de créer la salle.'); } });
       overlay.querySelectorAll('[data-join]').forEach(button => button.onclick = async () => { try { const room = rooms.find(item => item.id === button.dataset.join), joined = Object.values(room?.slots || {}).includes(String(window.ChibiGameSync?.accountId)); if (!joined) await ChibiSocial.joinRaidRoom(button.dataset.join, team()); enter(button.dataset.join); } catch (err) { renderHall(err.message || 'Impossible de rejoindre la salle.'); } });
-      fitHall(previousTop);
     };
     function compute(room) {
       const ids = Object.entries(room.slots || {}).sort(([a], [b]) => Number(a) - Number(b)).map(([, id]) => id).filter(id => room.players?.[id]);
@@ -153,7 +116,6 @@
     }
     function renderBattle(room, roomId) {
       if (!overlay.isConnected) return;
-      hallObserver?.disconnect();
       const openPicker = overlay.querySelector('.raid-action-picker[open]')?.dataset.picker;
       clearBattleSprites();
       syncActions = null;

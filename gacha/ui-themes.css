@@ -1615,23 +1615,6 @@
 }
 
 
-/* Long menus use a viewport with explicit page controls instead of wheel or touch scrolling. */
-.game-hub .hub-viewport {
-  display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0;
-}
-.game-hub .hub-content { overflow:hidden;scroll-behavior:auto; }
-.game-hub .hub-viewport .hub-screen { display:flow-root; }
-:is(.game-hub,.raid-overlay) .hub-pages {
-  display:flex;justify-content:center;align-items:center;gap:10px;
-  min-height:42px;padding:2px 6px;color:#fff5e6;font-size:.75rem;
-}
-:is(.game-hub,.raid-overlay) .hub-pages button {
-  min-width:40px;min-height:38px;padding:0;
-  background:#211525;color:#fff5e6;border:1px solid #e96194;font-size:1.3rem;
-}
-.game-hub .hub-content :is(.quest-list,.wish-history-list,.chat-message-list,.chat-select-friends) {
-  max-height:none!important;overflow:visible!important;
-}
 .game-hub .event-rail {
   display:flex;max-height:none;overflow-x:auto;overflow-y:hidden;touch-action:auto;
   scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scrollbar-width:none;
@@ -1639,8 +1622,6 @@
 .game-hub .event-rail>article { flex:0 0 min(100%,480px);scroll-snap-align:start; }
 
 @media (orientation:landscape) and (max-height:500px) {
-  :is(.game-hub,.raid-overlay) .hub-pages { min-height:34px; }
-  :is(.game-hub,.raid-overlay) .hub-pages button { min-height:30px; }
   .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) { margin-block:5px;padding:8px!important; }
   .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > header { padding:5px 10px!important; }
   .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) h1 { margin-block:3px;font-size:clamp(17px,5dvh,26px); }
@@ -1692,15 +1673,123 @@
 }
 
 
-.raid-overlay .raid-native:not(.raid-battle) {
-  display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden!important;gap:4px;
-}
-.raid-overlay .raid-hall-pages { min-height:0;overflow:hidden; }
-.raid-overlay .raid-hall-pages :is(.raid-native-boss-list,.raid-native-rooms,.raid-faction-list) {
-  max-height:none!important;overflow:visible!important;
-}
 @media (orientation:landscape) and (max-height:500px) {
   .raid-overlay .raid-native:not(.raid-battle) { padding:4px 8px!important; }
   .raid-overlay .raid-native:not(.raid-battle)>header { margin:0;padding:4px 7px!important; }
   .raid-overlay .raid-native:not(.raid-battle)>header h1 { margin:2px 0;font-size:clamp(17px,5dvh,24px); }
+}
+
+/* Common content bounds for the game screens. */
+.game-hub .hub-content {
+  --screen-gutter:clamp(6px,2vmin,18px);
+  container-type:size;
+  overflow:auto;
+  scrollbar-width:thin;
+}
+.game-hub .hub-screen { display:flow-root;max-width:1440px; }
+.game-hub .hub-screen > :is(.hub-panel,.pvp-panel) {
+  box-sizing:border-box;
+  width:calc(100% - 2 * var(--screen-gutter));max-width:none;
+  min-height:calc(100cqh - 2 * var(--screen-gutter));
+  margin:var(--screen-gutter) auto;
+  padding:clamp(8px,2vmin,24px)!important;
+}
+.game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > header {
+  padding:clamp(8px,2vmin,20px)!important;
+}
+.game-hub .hub-screen > :is(.social-panel,.leaderboard-panel) {
+  align-content:start;gap:clamp(6px,1.4vmin,12px);
+}
+.game-hub :is(.social-panel,.leaderboard-panel) > header h1 {
+  margin-block:2px;font-size:clamp(20px,5vmin,40px);line-height:1.05;
+}
+.game-hub .social-panel > header p { margin-block:4px 0; }
+.game-hub .leaderboard-list {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));
+}
+.game-hub .leaderboard-list article { min-width:0; }
+.game-hub .leaderboard-list article b { overflow-wrap:anywhere; }
+.game-hub .leaderboard-list article strong { grid-column:auto; }
+.game-hub .menu-workspace {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);
+  column-gap:clamp(6px,1.5vmin,17px);row-gap:6px;align-content:start;
+}
+.game-hub .menu-workspace > h1 { grid-column:1/-1;margin:0; }
+.game-hub .menu-workspace .menu-group { min-width:0;margin:0; }
+.game-hub .menu-workspace .menu-group h2 { margin:0;padding-bottom:3px;font-size:clamp(11px,2vmin,17px); }
+.game-hub .menu-workspace .hub-menu-links { gap:5px;margin-top:5px; }
+.game-hub .menu-workspace .menu-group:nth-of-type(2) .hub-menu-links { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.game-hub .menu-workspace .hub-menu-links button {
+  min-width:0;min-height:44px;padding:4px 18px 4px 6px;
+  align-content:center;gap:2px;font-size:clamp(10px,2vmin,15px);
+}
+.game-hub .menu-workspace .hub-menu-links button small { font-size:clamp(8px,1.5vmin,11px);line-height:1.12; }
+.game-hub .menu-workspace .hub-menu-links button>span { right:5px;top:50%;transform:translateY(-50%);font-size:16px; }
+.game-hub .menu-workspace .menu-guide { grid-column:1/-1;justify-self:start;min-height:36px;padding:4px 12px; }
+.game-hub .summon-workspace .portal-scene { background:radial-gradient(ellipse at center,#442635,#151017 78%); }
+.game-hub .summon-workspace :is(.scene-shibuya,.scene-reality,.scene-apocalyptic,.scene-destiny) .portal-art {
+  background:transparent;
+}
+
+@media (orientation:portrait) {
+  .game-hub .menu-workspace { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .game-hub .menu-workspace .menu-group:nth-of-type(2) { grid-column:2;grid-row:2/span 2; }
+  .game-hub .menu-workspace .menu-group:nth-of-type(2) .hub-menu-links { grid-template-columns:1fr; }
+  .game-hub .menu-workspace .menu-group:nth-of-type(3) { grid-column:1; }
+  .game-hub .leaderboard-list article { grid-template-columns:auto auto minmax(0,1fr) auto;gap:5px;padding:6px; }
+  .game-hub .social-tabs { grid-template-columns:repeat(3,minmax(0,1fr))!important; }
+}
+@media (orientation:landscape) and (max-height:500px) {
+  .game-hub .hub-content { --screen-gutter:5px; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) { padding:6px!important; }
+  .game-hub .menu-workspace .hub-menu-links button { min-height:33px; }
+  .game-hub .menu-workspace .menu-guide { min-height:29px;font-size:10px; }
+  .game-hub .social-tabs { grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:4px; }
+  .game-hub .social-tabs button { min-height:33px!important;padding:2px 4px!important; }
+  .game-hub .social-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .game-hub .leaderboard-list article { gap:6px;padding:5px; }
+  .game-hub .leaderboard-avatar { width:26px;height:26px; }
+  .game-hub .leaderboard-place { min-width:26px;padding:4px; }
+  .game-hub .monster-grid { grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-block:4px; }
+  .game-hub .monster-grid button { gap:2px;padding:3px; }
+  .game-hub .monster-grid .enemy-sprite { height:32px!important; }
+  .game-hub .character-grid { grid-template-columns:repeat(auto-fit,minmax(63px,1fr));gap:5px; }
+  .game-hub .character-grid button { gap:2px;padding:3px;font-size:9px; }
+  .game-hub .character-grid canvas { max-width:36px; }
+}
+@media (orientation:portrait) and (max-height:650px) {
+  .game-hub .menu-workspace { row-gap:4px; }
+  .game-hub .menu-workspace > h1 { font-size:clamp(22px,6vmin,28px); }
+  .game-hub .menu-workspace .hub-menu-links { gap:4px;margin-top:4px; }
+  .game-hub .menu-workspace .hub-menu-links button { min-height:36px;padding-block:2px; }
+  .game-hub .menu-workspace .menu-guide { min-height:34px; }
+}
+@media (orientation:landscape) and (max-height:500px) {
+  .game-hub .menu-workspace > h1 { font-size:clamp(19px,5dvh,25px); }
+  .game-hub .menu-workspace .menu-group:first-of-type .hub-menu-links {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .game-hub .menu-workspace .menu-group:nth-of-type(2) .hub-menu-links {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+  }
+  .game-hub .menu-workspace .hub-menu-links button { min-height:36px;padding:2px 3px; }
+  .game-hub .menu-workspace .hub-menu-links button > span { display:none; }
+}
+
+@media (orientation:landscape) and (max-height:380px) {
+  .game-hub .hub-screen .menu-workspace > h1 { font-size:21px;line-height:1.1; }
+  .game-hub .menu-workspace .hub-menu-links button small {
+    position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);
+  }
+}
+@media (orientation:landscape) and (max-height:380px) {
+  .game-hub .menu-workspace > h1 { grid-column:1/3;grid-row:1; }
+  .game-hub .menu-workspace .menu-guide { grid-column:3;grid-row:1;justify-self:end;align-self:center; }
+}
+
+@media (orientation:landscape) and (min-height:501px) {
+  .game-hub .menu-workspace { grid-template-rows:auto minmax(0,1fr) auto;align-content:normal; }
+  .game-hub .menu-workspace .menu-group { display:grid;grid-template-rows:auto minmax(0,1fr); }
+  .game-hub .menu-workspace .hub-menu-links { grid-auto-rows:minmax(0,1fr); }
+  .game-hub .menu-workspace .hub-menu-links button { padding-left:clamp(8px,2vmin,18px); }
 }
