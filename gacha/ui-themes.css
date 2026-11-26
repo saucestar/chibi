@@ -1398,16 +1398,36 @@
 }
 .game-hub .summon-workspace .portal-list {
   position:relative;display:flex;min-width:0;max-width:100%;margin:.7rem 0 0;
-  padding:4px 0 12px;overflow-x:auto;overscroll-behavior-inline:contain;
+  gap:0!important;padding:0;overflow-x:auto;overscroll-behavior-inline:contain;
   scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#a91750 #f3e3d6;
 }
 .game-hub .summon-workspace .portal-card {
-  flex:0 0 min(85%,490px);min-width:0;margin:0;scroll-snap-align:start;
+  flex:0 0 100%;min-width:0;margin:0;scroll-snap-align:start;scroll-snap-stop:always;
 }
 .game-hub .summon-workspace .portal-card:hover { transform:none; }
 .game-hub .portal-carousel :is(.portal-list,button):focus-visible { outline:3px solid #a91750;outline-offset:2px; }
+.game-hub .summon-workspace .portal-scene {
+  aspect-ratio:auto;height:clamp(320px,65dvh,640px);
+  border:0!important;border-image:none;clip-path:none!important;box-shadow:none!important;
+  background:var(--portal-backdrop,#211525) center / cover;
+}
+.game-hub .summon-workspace .scene-shibuya { --portal-backdrop:#211525 url('./assets/bingo/first-week-clean.webp'); }
+.game-hub .summon-workspace .scene-reality { --portal-backdrop:#211525 url('./assets/bingo/from-another-reality.webp'); }
+.game-hub .summon-workspace .scene-apocalyptic { --portal-backdrop:#211525 url('./assets/bingo/apocalyptic.webp'); }
+.game-hub .summon-workspace .scene-destiny { --portal-backdrop:#211525 url('./assets/bingo/destiny.webp'); }
+.game-hub .summon-workspace .portal-scene::after {
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(#150e19bb,transparent 24%,transparent 58%,#150e19ef);
+}
+.game-hub .summon-workspace .portal-art { object-fit:contain; }
+.game-hub .summon-workspace .portal-scene :is(h3,.portal-rates,.bingo-machine,.wish-commands,.portal-caption) { z-index:2; }
+.game-hub .summon-workspace .portal-scene h3 { max-width:70%;margin:0;font-size:clamp(20px,4vw,42px); }
+.game-hub .summon-workspace .portal-scene .bingo-machine {
+  width:clamp(62px,15%,125px);left:50%;transform:translateX(-50%);
+}
+.game-hub .summon-workspace .portal-scene .wish-option { flex-basis:min(32%,170px); }
 @media (max-width:520px) {
-  .game-hub .summon-workspace .portal-list { gap:10px!important; }
+  .game-hub .summon-workspace .portal-scene { height:clamp(300px,57dvh,490px); }
 }
 
 .game-hub .wish-dialog :is(.dossier-stats,.badge-info) :is(b,small,strong,dt,dd,p),
