@@ -4214,12 +4214,7 @@ function HubHome({
     key: f.name,
     fighter: f,
     maximumScale: 2.5
-  }))), /*#__PURE__*/React.createElement("button", {
-    className: "home-primary-play",
-    onClick: () => navigate("roguelike")
-  }, /*#__PURE__*/React.createElement("span", {
-    "aria-hidden": "true"
-  }, "\u25B6"), /*#__PURE__*/React.createElement("b", null, "JOUER"), /*#__PURE__*/React.createElement("small", null, "Lancer ou reprendre une run")), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("div", {
     className: "home-mode-banners"
   }, /*#__PURE__*/React.createElement("button", {
     className: "home-mode-banner home-mode-event",
@@ -4231,7 +4226,7 @@ function HubHome({
     onClick: () => navigate("roguelike")
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u25C6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "ASCENSION"), /*#__PURE__*/React.createElement("b", null, "Roguelike"), /*#__PURE__*/React.createElement("p", null, "Une run. Cent \xE9tages. Z\xE9ro seconde chance.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u25C6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "ASCENSION · ROUGUELIKE"), /*#__PURE__*/React.createElement("b", null, "Jouer"), /*#__PURE__*/React.createElement("p", null, "Lancer ou reprendre une run de 100 \xE9tages.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
     className: "home-action-grid"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("team")
