@@ -2938,15 +2938,21 @@ function GameHub({
     });
   }, [screen]);
   const inboxCount = inboxEntries(profile).length;
+  const player = experience(profile.playerXp || 0);
   return /*#__PURE__*/React.createElement("div", {
-    className: "game-hub game-shell"
+    className: "game-hub game-shell",
+    "data-screen": screen
   }, /*#__PURE__*/React.createElement(PvpInviteNotifications, null), /*#__PURE__*/React.createElement("header", {
     className: "hub-header"
   }, /*#__PURE__*/React.createElement("button", {
     className: "hub-profile",
     onClick: () => navigate("profile"),
     "aria-label": "Ouvrir mon profil"
-  }, /*#__PURE__*/React.createElement(HudPortrait, { fighter: characterRoster.find(f => f.name === profile.avatar) || characterRoster[0] }), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("b", null, window.ChibiGameSync?.identity?.name || "Joueur"), /*#__PURE__*/React.createElement("small", null, "Niv. ", experience(profile.playerXp || 0).level))), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement(HudPortrait, { fighter: characterRoster.find(f => f.name === profile.avatar) || characterRoster[0] }), /*#__PURE__*/React.createElement("span", { className: "hub-profile-copy" },
+    /*#__PURE__*/React.createElement("b", null, window.ChibiGameSync?.identity?.name || "Joueur"),
+    /*#__PURE__*/React.createElement("small", null, "Niv. ", player.level),
+    /*#__PURE__*/React.createElement("progress", { value: player.required ? player.current : 1, max: player.required || 1, "aria-label": "Progression du niveau" })
+  )), /*#__PURE__*/React.createElement("div", {
     className: "hub-wallet"
   }, /*#__PURE__*/React.createElement("span", {
     "aria-label": `${profile.coins} pièces`
@@ -2954,6 +2960,7 @@ function GameHub({
     name: "coin"
   }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("small", null, "\u2726 ", availableFreeWishes(profile), " gratuits")), /*#__PURE__*/React.createElement("button", {
     className: "hub-inbox",
+    "data-unread": inboxCount > 0 ? "true" : undefined,
     onClick: () => navigate("inbox"),
     "aria-label": inboxCount ? `${inboxCount} cadeau à récupérer` : "Ouvrir la boîte de réception"
   }, /*#__PURE__*/React.createElement("span", { "aria-hidden": "true" }, "✉"), inboxCount > 0 && /*#__PURE__*/React.createElement("b", null, inboxCount)), /*#__PURE__*/React.createElement("button", {
@@ -4201,7 +4208,7 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("div", {
     className: "home-reapers-hero"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "home-reapers-halo",
+    className: "home-reapers-art",
     "aria-hidden": "true"
   }), /*#__PURE__*/React.createElement("button", {
     className: "home-hero-team-hit",

@@ -690,3 +690,141 @@
 .game-hub :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) :is(h1,h2,h3,p,small,b,strong,span) {
   overflow-wrap:anywhere;
 }
+
+/* The paper silhouette belongs to the artwork, outside the reading and hit areas. */
+.game-hub {
+  --paper-edge: polygon(0 7%,4% 3%,11% 5%,17% 0,26% 4%,35% 2%,43% 5%,52% 1%,62% 4%,70% 0,82% 5%,92% 2%,100% 6%,99% 45%,100% 92%,95% 98%,87% 96%,79% 100%,70% 97%,60% 100%,50% 96%,42% 99%,30% 96%,23% 100%,15% 97%,6% 100%,0 94%,1% 51%);
+}
+.game-hub :is(.home-reapers-hero,.home-hero-play,.home-mode-banner,.home-action-grid button,.hub-nav,.hub-nav button[aria-current=page],.portal-scene,.pvp-modes button,.hub-wallet) {
+  clip-path:none!important;
+}
+.game-hub .home-reapers-layout {
+  height:auto;
+  min-height:100%;
+  grid-template-rows:none;
+  align-content:safe center;
+  overflow:visible;
+}
+.home-reapers-hero {
+  min-height:clamp(195px,55vw,330px)!important;
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.home-reapers-hero::before,.home-reapers-hero::after { display:none; }
+.home-reapers-art {
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  clip-path:var(--paper-edge);
+  border:6px solid #fff3da;
+  background:linear-gradient(180deg,transparent 46%,#1b0d24b0),url('./assets/ui/shibuya-collage-hero.png') center 54%/cover no-repeat;
+}
+.home-reapers-cast { inset:13px 12% 54px!important; }
+.home-reapers-cast>.sprite-preview { height:100%!important; min-height:0; }
+.game-hub .home-hero-play {
+  bottom:9px!important;
+  min-width:0!important;
+  width:min(74%,300px)!important;
+  grid-template: auto / auto auto;
+  justify-content:center;
+  color:#211309!important;
+  background:linear-gradient(110deg,#ffb53a,#ff7a28)!important;
+}
+.home-hero-play>span { grid-row:auto; }
+
+.game-hub .hub-header {
+  background:#110d13d9!important;
+  grid-template-columns:minmax(0,1fr) auto auto auto auto!important;
+}
+.game-hub .hub-profile {
+  justify-self:start;
+  max-width:100%;
+  min-width:0;
+  padding:3px 8px 3px 3px!important;
+  background:#fff3d9!important;
+  box-shadow:2px 3px #ef2871!important;
+}
+.hub-profile-copy { display:grid; justify-items:start; min-width:0; gap:3px; text-align:left; }
+.game-hub .hub-profile b {
+  color:#20141e!important;
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.game-hub .hub-profile small { color:#981747!important; }
+.hub-profile-copy progress { width:100%; max-width:112px; height:5px; accent-color:#d41e63; }
+.game-hub .hub-wallet { background:#fff3d9!important; }
+.game-hub .hub-header .hub-inbox[data-unread=true] { display:grid!important; }
+
+.game-hub .hub-nav {
+  isolation:isolate;
+  border:0!important;
+  padding:9px 6px 8px!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.game-hub .hub-nav::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  clip-path:var(--paper-edge);
+  background:#fff3d9;
+  pointer-events:none;
+}
+.game-hub .hub-nav button { min-height:44px!important; transform:none!important; }
+.game-hub .hub-nav b { font-size:clamp(8px,2vw,12px)!important; white-space:normal!important; overflow-wrap:anywhere; }
+.game-hub .hub-nav button[aria-current=page] { background:#bf1957!important; }
+.game-hub button:focus-visible { outline:2px solid #2565ce; outline-offset:2px; }
+
+.home-mode-banner::before {
+  clip-path:var(--paper-edge);
+  border:3px solid #fff3d9;
+}
+.home-mode-banner {
+  grid-template-columns:30px minmax(0,1fr)!important;
+  border:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.home-mode-banner>div { min-width:0; }
+.home-mode-banner b { font-size:clamp(14px,4.25vw,26px)!important; line-height:1!important; }
+.home-action-grid button {
+  position:relative;
+  isolation:isolate;
+  border:0!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.home-action-grid button::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:-1;
+  clip-path:var(--paper-edge);
+  background:#fff3d9;
+  border-bottom:6px solid var(--tab-ink);
+  pointer-events:none;
+}
+.home-action-grid button:nth-child(1) { --tab-ink:#1973e8; }
+.home-action-grid button:nth-child(2) { --tab-ink:#ff852b; }
+.home-action-grid button:nth-child(3) { --tab-ink:#ef2d78; }
+.home-action-grid b { font-size:clamp(10px,2.5vw,16px)!important; }
+.game-hub .portal-scene { border-image:linear-gradient(120deg,#fff3d9,#ec397b,#fff3d9) 1; }
+
+body:has(.game-hub)>.admin-launch { bottom:calc(80px + env(safe-area-inset-bottom, 0px)); }
+.pixi-menu-fx { z-index:3; opacity:1; mix-blend-mode:normal; }
+
+@media (min-width:880px) and (min-height:570px) {
+  .game-hub .home-reapers-layout { width:100%; max-width:1100px; }
+  .game-hub .home-reapers-hero { min-height:clamp(260px,43vh,350px)!important; }
+}
+@media (max-width:560px) {
+  .game-hub .hub-header { grid-template-columns:minmax(0,1fr) auto auto auto!important; gap:5px!important; }
+  .game-hub .hub-profile { grid-template-columns:34px minmax(0,1fr)!important; }
+  .game-hub .hub-profile canvas { width:34px!important; height:34px!important; }
+  .game-hub .hub-header .hub-inbox[data-unread=true] { min-width:30px!important; }
+  .game-hub .hub-nav { margin-bottom:max(6px,env(safe-area-inset-bottom, 0px))!important; }
+}

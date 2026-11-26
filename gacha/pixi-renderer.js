@@ -3,10 +3,12 @@
   'use strict';
   const active = new WeakMap();
   const menuActive = new WeakMap();
+  const pending = new WeakSet();
   const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   async function mount(arena) {
-    if (!window.PIXI || active.has(arena) || reduceMotion()) return;
+    if (!window.PIXI || active.has(arena) || pending.has(arena) || reduceMotion()) return;
+    pending.add(arena);
     try {
       const app = new PIXI.Application();
       await app.init({
@@ -17,6 +19,7 @@
         resolution: Math.min(window.devicePixelRatio || 1, 2),
         preference: 'webgl'
       });
+      if (!arena.isConnected) { app.destroy(true, { children: true }); return; }
       const canvas = app.canvas;
       canvas.className = 'pixi-combat-fx';
       canvas.setAttribute('aria-hidden', 'true');
@@ -78,6 +81,8 @@
       active.set(arena, { app, observer });
     } catch (_) {
       /* The DOM battle remains fully playable if GPU initialization is unavailable. */
+    } finally {
+      pending.delete(arena);
     }
   }
 
@@ -86,32 +91,42 @@
   }
 
   async function mountMenu(hub) {
-    if (!window.PIXI || menuActive.has(hub)) return;
+    if (!window.PIXI || menuActive.has(hub) || pending.has(hub) || reduceMotion()) return;
+    pending.add(hub);
     try {
       const app = new PIXI.Application();
       await app.init({
-        resizeTo: hub,
         backgroundAlpha: 0,
         antialias: true,
         autoDensity: true,
-        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        resolution: Math.min(window.devicePixelRatio || 1, 1.5),
         preference: 'webgl'
       });
+      if (!hub.isConnected) { app.destroy(true, { children: true }); return; }
       const canvas = app.canvas;
       canvas.className = 'pixi-menu-fx';
       canvas.setAttribute('aria-hidden', 'true');
       hub.prepend(canvas);
+      const resize = () => app.renderer.resize(hub.clientWidth || 1, hub.clientHeight || 1);
+      const sizeObserver = new ResizeObserver(resize);
+      sizeObserver.observe(hub);
+      resize();
+      app.ticker.maxFPS = 45;
       const decor = new PIXI.Container();
       const pulses = new PIXI.Container();
       app.stage.addChild(decor, pulses);
-      const motes = Array.from({ length: 34 }, (_, index) => ({
+      const motes = Array.from({ length: 20 }, (_, index) => ({
         x: ((index * 43) % 100) / 100,
-        y: ((index * 71) % 100) / 100,
+        y: .12 + ((index * 71) % 100) / 135,
         size: 1 + index % 3,
         speed: .04 + index % 5 * .012,
         phase: index * .65,
         color: index % 3 === 0 ? 0xff2d79 : index % 3 === 1 ? 0xff9a26 : 0x6d8cff
       }));
+      // The overlay leaves the central reading area clear.
+      motes.forEach((mote, index) => {
+        mote.x = index % 2 ? .97 - mote.x * .025 : .03 + mote.x * .025;
+      });
       motes.forEach(mote => {
         const dot = new PIXI.Graphics();
         dot.circle(0, 0, mote.size);
@@ -119,6 +134,14 @@
         dot.__mote = mote;
         decor.addChild(dot);
       });
+      const sweep = new PIXI.Graphics();
+      sweep.poly([0, 0, 180, 0, 147, 3, 0, 3]).fill(0xff367b);
+      sweep.poly([22, 8, 92, 8, 76, 10, 22, 10]).fill(0xffae40);
+      sweep.alpha = 0;
+      app.stage.addChild(sweep);
+      let sweepLife = 0;
+      const routeObserver = new MutationObserver(() => { sweepLife = 1; });
+      routeObserver.observe(hub, { attributes: true, attributeFilter: ['data-screen'] });
       let elapsed = 0;
       app.ticker.add(ticker => {
         elapsed += ticker.deltaTime / 60;
@@ -126,34 +149,50 @@
         const height = app.renderer.height / app.renderer.resolution;
         decor.children.forEach(dot => {
           const mote = dot.__mote;
-          dot.position.set(mote.x * width + Math.sin(elapsed * mote.speed + mote.phase) * 16, mote.y * height + Math.cos(elapsed * mote.speed + mote.phase) * 9);
+          dot.position.set(mote.x * width + Math.sin(elapsed * mote.speed + mote.phase) * 4, mote.y * height + Math.cos(elapsed * mote.speed + mote.phase) * 9);
           dot.alpha = .12 + Math.sin(elapsed * .8 + mote.phase) * .08;
         });
         pulses.children.slice().forEach(pulse => {
-          pulse.__life -= ticker.deltaTime / 36;
-          pulse.scale.set(1 + (1 - pulse.__life) * 3.8);
-          pulse.alpha = Math.max(0, pulse.__life) * .75;
+          pulse.__life -= ticker.deltaMS / 260;
+          pulse.scale.set(1 + (1 - pulse.__life) * 1.6);
+          pulse.alpha = Math.max(0, pulse.__life) * .48;
           if (pulse.__life <= 0) { pulses.removeChild(pulse); pulse.destroy(); }
         });
+        sweepLife = Math.max(0, sweepLife - ticker.deltaMS / 280);
+        sweep.position.set(-180 + (1 - sweepLife) * (width + 180), hub.querySelector('.hub-header')?.offsetHeight || 0);
+        sweep.alpha = sweepLife * .75;
       });
       const pulse = event => {
         const target = event.target.closest?.('button');
-        if (!target || !hub.contains(target)) return;
+        if (!target || target.disabled || !hub.contains(target) || !event.isPrimary) return;
         const bounds = hub.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
         const ring = new PIXI.Graphics();
         ring.circle(0, 0, 13);
         ring.stroke({ color: target.closest('.hub-nav') ? 0xff2d79 : 0xffcc63, width: 2, alpha: .85 });
-        ring.position.set(event.clientX - bounds.left, event.clientY - bounds.top);
+        ring.position.set((event.clientX - bounds.left) * app.screen.width / bounds.width,
+          (event.clientY - bounds.top) * app.screen.height / bounds.height);
         ring.__life = 1;
         pulses.addChild(ring);
       };
       hub.addEventListener('pointerdown', pulse, { passive: true });
-      menuActive.set(hub, { app, pulse });
+      menuActive.set(hub, { app, pulse, sizeObserver, routeObserver });
     } catch (_) {
       /* Menus retain their full DOM treatment if the GPU path is unavailable. */
+    } finally {
+      pending.delete(hub);
     }
   }
   function cleanup(node) {
+    if (node.isConnected) return;
+    const menu = menuActive.get(node);
+    if (menu) {
+      node.removeEventListener('pointerdown', menu.pulse);
+      menu.sizeObserver.disconnect();
+      menu.routeObserver.disconnect();
+      menu.app.destroy(true, { children: true });
+      menuActive.delete(node);
+    }
     const instance = active.get(node);
     if (!instance) return;
     instance.observer.disconnect();
@@ -172,7 +211,11 @@
         scan(node);
         node.querySelectorAll?.('.game-hub').forEach(mountMenu);
       });
-      record.removedNodes.forEach(node => node.nodeType === 1 && cleanup(node));
+      record.removedNodes.forEach(node => {
+        if (node.nodeType !== 1 || node.isConnected) return;
+        cleanup(node);
+        node.querySelectorAll('.arena, .pvp-battlefield, .game-hub').forEach(cleanup);
+      });
     })).observe(document.body, { childList: true, subtree: true });
   });
 })();
