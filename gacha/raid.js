@@ -173,6 +173,19 @@
         ? room.actions?.[result.turn > previous.turn ? result.turn - 1 : result.turn] : null;
       const impactDelay = damage && playedRound ? Math.max(0, ...result.ids.map(id =>
         window.ChibiRaidSprites?.partyImpact?.(result.squads[id], playedRound[id]?.plans) || 0)) : 0;
+      const attackCue = damage && playedRound ? result.ids.flatMap(id =>
+        (previous.squads[id] || []).flatMap((fighter, index) => {
+          const plan = playedRound[id]?.plans?.[index];
+          const pin = window.ChibiGameCatalog.badges[plan?.pin];
+          return fighter.hp > 0 && (pin?.kind === 'physical' || pin?.kind === 'special')
+            ? [{ name: fighter.name, kind: pin.kind, element: pin.element }] : [];
+        }))[0] : null;
+      const showBossFx = () => {
+        const arena = overlay.querySelector('.raid-arena');
+        const boss = arena?.querySelector('.raid-boss-sprite');
+        if (boss && attackCue) window.ChibiBattleVfx?.play(arena, [boss], attackCue);
+      };
+      if (attackCue) window.ChibiBattleVfx?.warm(attackCue);
       const shownHp = impactDelay ? previous.hp : result.hp;
       previousFrame = { roomId, result };
       const bossName = txt(room.meta.bossName);
@@ -236,7 +249,9 @@
         hud.querySelector('small').textContent = `${pv(result.hp)} / ${pv(room.meta.bossHp)} PV`;
         const hit = overlay.querySelector('.raid-damage');
         if (hit) hit.hidden = false;
+        showBossFx();
       }, impactDelay);
+      else showBossFx();
       mountBossSprite(overlay.querySelector('.raid-boss-sprite'), room.meta.bossId, true);
       overlay.querySelectorAll('[data-squad]').forEach(host => {
         const id = result.ids[Number(host.dataset.squad)];

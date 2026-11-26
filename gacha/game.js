@@ -888,6 +888,14 @@ function fighterActionTiming(name, action) {
   const clip = fighterAtlases[name]?.clips[state];
   return fighterClipTiming(clip, state);
 }
+function playBattleVfx(selector, targetKeys, cue, actorKey) {
+  const arena = document.querySelector(selector);
+  if (!arena || !window.ChibiBattleVfx) return;
+  const units = [...arena.querySelectorAll('[data-fx-unit]')];
+  const targets = new Set(targetKeys.map(String));
+  window.ChibiBattleVfx.play(arena, units.filter(unit => targets.has(unit.dataset.fxUnit)), cue,
+    units.find(unit => unit.dataset.fxUnit === actorKey));
+}
 async function prepareFighterAction(name, action) {
   const state = fighterClipState(true, action, 1, false);
   const clip = fighterAtlases[name]?.clips[state];
@@ -3662,6 +3670,9 @@ function PvpBattle({
       for (const event of log.events) {
         if (cancelled) return;
         const action = pvpSpriteAction(event, event.actorUid, event.actorIndex);
+        const pin = event.pinName && Object.values(psychs).find(item => item.name === event.pinName);
+        const cue = { name: event.actorName, kind: event.type === "attack" ? pin?.kind || "physical" : event.type, element: pin?.element || (pin && badgeElement(pin)) };
+        if (event.type !== "attack" || event.damage > 0) window.ChibiBattleVfx?.warm(cue);
         const timing = fighterActionTiming(event.actorName, action);
         const impact = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : timing.impact;
         if (impact) await prepareFighterAction(event.actorName, action);
@@ -3679,6 +3690,14 @@ function PvpBattle({
         }
         if (health) setReplayHealth({ turn: log.turn, values: health });
         setReplayImpact(event);
+        const source = `${event.actorUid}:${event.actorIndex}`;
+        if (event.type === "attack" && event.damage > 0) {
+          playBattleVfx(".pvp-battlefield", [`${event.targetUid}:${event.targetIndex}`], cue, source);
+        } else if (["heal", "guard", "support"].includes(event.type)) {
+          const targets = event.type === "guard" ? [source] : room.players[event.actorUid].team
+            .flatMap((fighter, index) => (health?.[event.actorUid]?.[index] ?? fighter.hp) > 0 ? [`${event.actorUid}:${index}`] : []);
+          playBattleVfx(".pvp-battlefield", targets, cue, source);
+        }
         if (event.type === "attack" && event.damage) gameSound.effect("hit");
         await new Promise(resolve => setTimeout(resolve, impact ? Math.max(280, timing.duration - impact) : event.type === "attack" ? 680 : 480));
       }
@@ -3820,6 +3839,7 @@ function PvpBattle({
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
       className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replayImpact?.targetUid === rival && replayImpact?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
+      "data-fx-unit": `${rival}:${index}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
@@ -3841,6 +3861,7 @@ function PvpBattle({
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
       className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replayImpact?.targetUid === uid && replayImpact?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
+      "data-fx-unit": `${uid}:${index}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
@@ -5844,7 +5865,10 @@ function Battle({
           hp: Math.min(e.maxHp, e.hp + Math.ceil(damage * .15))
         } : e);
         sync = Math.min(100, sync + 12);
-        if (damage) gameSound.effect("hit");
+        if (damage) {
+          gameSound.effect("hit");
+          playBattleVfx(".pve-vfx-arena", [`ally:${target.name}`], { name: attacker.name, kind: "physical", element: attackType }, `enemy:${attacker.id}`);
+        }
         timeline[step.key] = Math.round((timeline[step.key] || 0) + 10000 / Math.max(1, attacker.speed || 1));
         setMessage(damage ? `${attacker.name} attaque ${target.name} · −${damage} PV` : `${target.name} esquive ${attacker.name}.`);
       } else {
@@ -5852,6 +5876,11 @@ function Battle({
         const plan = choices[step.name];
         if (fighter.hp <= 0) continue;
         const kind = plan.kind === "psych" ? psychs[plan.pin].kind : plan.kind;
+        const actionPin = plan.kind === "psych" ? psychs[plan.pin] : null;
+        const cue = { name: fighter.name, kind, element: actionPin?.element || (actionPin ? badgeElement(actionPin) : characterElements[fighter.name]?.[0]) };
+        const source = `ally:${fighter.name}`;
+        const showFx = targets => playBattleVfx(".pve-vfx-arena", targets, cue, source);
+        window.ChibiBattleVfx?.warm(cue);
         const animation = { physical: "shockwave", special: "pyro", burst: "burst", heal: "heal", guard: "guard", support: "guard" }[kind] || "pyro";
         const timing = fighterActionTiming(fighter.name, animation);
         const impactDelay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : timing.impact;
@@ -5867,10 +5896,12 @@ function Battle({
           recoveryDelay = Math.max(280, timing.duration - impactDelay);
         }
         if (plan.kind === "guard") {
+          showFx([source]);
           shields.set(fighter.name, Math.max(shields.get(fighter.name) || 0, .55));
           en = Math.min(3, en + 1);
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         } else if (plan.kind === "burst") {
+          showFx(monsters.filter(enemy => enemy.hp > 0).map(enemy => `enemy:${enemy.id}`));
           const partnerAlive = fighters.some(f => f.name !== fighter.name && f.hp > 0),
             damage = Math.round(Math.max(fighter.atk || 1, fighter.mag || 1) * 5 * passiveDamageMultiplier(fighter.name, "burst", fighter.hp, fighter.maxHp, partnerAlive));
           sync = 0;
@@ -5889,10 +5920,12 @@ function Battle({
         } else {
           const pin = psychs[plan.pin];
           if (pin.kind === "heal") {
+            showFx(fighters.filter(member => member.hp > 0).map(member => `ally:${member.name}`));
             const amount = scaledPinEffect(pin, (fighter.mag || 1) * pin.power / 50 * (1 + passiveBonus(/^Cure Boost/, .3)));
             healParty(amount, fighter.name);
             setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
           } else if (pin.kind === "guard" || pin.kind === "support") {
+            showFx(fighters.filter(member => member.hp > 0).map(member => `ally:${member.name}`));
             fighters.filter(f => f.hp > 0).forEach(f => shields.set(f.name, Math.max(shields.get(f.name) || 0, pinShieldReduction(pin))));
             if (pin.kind === "support") {
               if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + scaledPinEffect(pin, 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(scaledPinEffect(pin, (fighter.mag || 1) / 2), fighter.name);else sync = Math.min(100, sync + scaledPinEffect(pin, 18));
@@ -5923,7 +5956,10 @@ function Battle({
               hp: Math.max(0, e.hp - (damages.get(e.id) || 0))
             } : e);
             if (pin.drain) healParty(Math.ceil(total / 4), fighter.name);
-            if (total) gameSound.effect("hit");
+            if (total) {
+              gameSound.effect("hit");
+              showFx(targets.filter(enemy => damages.get(enemy.id) > 0).map(enemy => `enemy:${enemy.id}`));
+            }
             sync = Math.min(100, sync + 18);
             setSelected(primary.id);
             setImpact(primary.id);
@@ -6146,7 +6182,7 @@ function Battle({
       className: "turn-number"
     }, index + 1)));
   }))), /*#__PURE__*/React.createElement("div", {
-    className: "arena",
+    className: "arena pve-vfx-arena",
     style: {
       backgroundImage: `linear-gradient(180deg, rgba(15,20,21,.04), rgba(9,12,13,.42)), url(${battleBackground})`
     }
@@ -6156,6 +6192,7 @@ function Battle({
     className: `enemy-line enemies-count-${enemies.length}`
   }, enemies.map(enemy => /*#__PURE__*/React.createElement("button", {
     key: enemy.id,
+    "data-fx-unit": `enemy:${enemy.id}`,
     className: `enemy-unit ${selected === enemy.id ? "selected" : ""} ${enemy.hp <= 0 ? "defeated" : ""} ${impact === enemy.id ? "hit" : ""}`,
     onClick: () => targetPin && !busy ? choose({
       kind: "psych",
@@ -6183,6 +6220,7 @@ function Battle({
     className: "player-line"
   }, team.map(fighter => /*#__PURE__*/React.createElement("div", {
     className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""}`,
+    "data-fx-unit": `ally:${fighter.name}`,
     key: fighter.name
   }, /*#__PURE__*/React.createElement(Sprite, {
     fighter: fighter,

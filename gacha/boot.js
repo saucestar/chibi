@@ -27,8 +27,8 @@
   config().finally(async () => {
     try {
       await add('./admin.js?v=settings1').catch(() => {});
-      await add('./raid.js?v=game-fit1');
-      await add('./game.js?v=game-fit1');
+      await add('./raid.js?v=game-fit1-vfx1');
+      await add('./game.js?v=game-fit1-vfx1');
     }
     catch (error) { const root = document.getElementById('root'); if (root) root.textContent = 'Impossible de charger le jeu. Recharge la page.'; }
   });
