@@ -4196,64 +4196,50 @@ function HubHome({
   const names = profile.equipped.filter(Boolean),
     duo = (names.length ? names : ["NEKU"]).map(name => characterRoster.find(f => f.name === name));
   const rewards = questsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedQuests.includes(q.id)).length + dailyQuestsFor(profile).filter(q => q.progress >= q.goal && !profile.claimedDailyQuests.includes(q.id)).length;
-  const modeRail = React.useRef(null);
-  const moveMode = direction => {
-    const rail = modeRail.current;
-    if (!rail) return;
-    const cards = Array.from(rail.children);
-    if (!cards.length) return;
-    const current = cards.reduce((nearest, card, index) => Math.abs(card.offsetLeft - rail.scrollLeft) < Math.abs(cards[nearest].offsetLeft - rail.scrollLeft) ? index : nearest, 0);
-    const next = (current + direction + cards.length) % cards.length;
-    rail.scrollTo({
-      left: cards[next].offsetLeft,
-      behavior: "smooth"
-    });
-  };
   return /*#__PURE__*/React.createElement("section", {
-    className: "hub-home"
+    className: "hub-home home-reapers-layout"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "hub-home-heading"
-  }, /*#__PURE__*/React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), /*#__PURE__*/React.createElement("h1", null, "Shinigami\u2019s Game"), /*#__PURE__*/React.createElement("p", null, "\xC0 toi de jouer."), /*#__PURE__*/React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), /*#__PURE__*/React.createElement("div", {
-    className: "hub-home-stage"
+    className: "home-reapers-title"
+  }, /*#__PURE__*/React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), /*#__PURE__*/React.createElement("h1", null, "Shinigami\u2019s Game"), /*#__PURE__*/React.createElement("p", null, "Le jeu des Shinigami commence ici."), /*#__PURE__*/React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), /*#__PURE__*/React.createElement("div", {
+    className: "home-reapers-hero"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "hub-home-halo",
+    className: "home-reapers-halo",
     "aria-hidden": "true"
-  }), duo.map(f => /*#__PURE__*/React.createElement(SpritePreview, {
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "home-reapers-hero-copy"
+  }, /*#__PURE__*/React.createElement("small", null, "MISSION EN COURS"), /*#__PURE__*/React.createElement("b", null, "Survis \xE0 Shibuya"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
+    onClick: () => navigate("pvp")
+  }, "PVP \xB7 Casual & Ranked")), duo.map(f => /*#__PURE__*/React.createElement(SpritePreview, {
     key: f.name,
     fighter: f,
     maximumScale: 2.5
-  }))), /*#__PURE__*/React.createElement("div", {
-    className: "home-mode-switcher"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "home-mode-arrow",
-    "aria-label": "Voir le mode pr\xE9c\xE9dent",
-    onClick: () => moveMode(-1)
-  }, "\u2039"), /*#__PURE__*/React.createElement("div", {
-    className: "home-modes",
-    ref: modeRail,
-    "aria-label": "Choisir un mode de jeu"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "hub-play home-mode-card",
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "home-primary-play",
     onClick: () => navigate("roguelike")
-  }, /*#__PURE__*/React.createElement("small", null, "MODE DE JEU"), /*#__PURE__*/React.createElement("b", null, "Roguelike"), /*#__PURE__*/React.createElement("span", null, "Gravis les 100 \xE9tages")), /*#__PURE__*/React.createElement("button", {
-    className: "hub-play home-mode-card",
-    onClick: () => navigate("events")
-  }, /*#__PURE__*/React.createElement("small", null, "MODE DE JEU"), /*#__PURE__*/React.createElement("b", null, "\xC9v\xE9nement"), /*#__PURE__*/React.createElement("span", null, "D\xE9fie les personnages")), /*#__PURE__*/React.createElement("button", {
-    className: "hub-play home-mode-card pvp-mode-card",
-    onClick: () => navigate("pvp")
-  }, /*#__PURE__*/React.createElement("small", null, "MODE EN LIGNE"), /*#__PURE__*/React.createElement("b", null, "PVP"), /*#__PURE__*/React.createElement("span", null, "Casual \xB7 Ranked"))), /*#__PURE__*/React.createElement("button", {
-    className: "home-mode-arrow",
-    "aria-label": "Voir le mode suivant",
-    onClick: () => moveMode(1)
-  }, "\u203A")), /*#__PURE__*/React.createElement("div", {
-    className: "hub-shortcuts"
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u25B6"), /*#__PURE__*/React.createElement("b", null, "JOUER"), /*#__PURE__*/React.createElement("small", null, "Lancer ou reprendre une run")), /*#__PURE__*/React.createElement("div", {
+    className: "home-mode-banners"
   }, /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("quests")
-  }, /*#__PURE__*/React.createElement("span", null, "\u25C7"), /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes"), /*#__PURE__*/React.createElement("small", null, rewards ? `${rewards} récompense${rewards > 1 ? "s" : ""}` : "Ta progression")), /*#__PURE__*/React.createElement("button", {
+    className: "home-mode-banner home-mode-event",
+    onClick: () => navigate("events")
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u2726"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BOSS NIVEAU 200"), /*#__PURE__*/React.createElement("b", null, "\xC9v\xE9nement"), /*#__PURE__*/React.createElement("p", null, "Affronte les personnages du portail")), /*#__PURE__*/React.createElement("i", null, "\u203A")), /*#__PURE__*/React.createElement("button", {
+    className: "home-mode-banner home-mode-roguelike",
+    onClick: () => navigate("roguelike")
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u25C6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "ASCENSION"), /*#__PURE__*/React.createElement("b", null, "Roguelike"), /*#__PURE__*/React.createElement("p", null, "Une run. Cent \xE9tages. Z\xE9ro seconde chance.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
+    className: "home-action-grid"
+  }, /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("team")
+  }, /*#__PURE__*/React.createElement("span", null, "\u25C8"), /*#__PURE__*/React.createElement("b", null, "\xC9quipe"), /*#__PURE__*/React.createElement("small", null, names.length ? `${names.length} partenaire${names.length > 1 ? "s" : ""}` : "Compose ton duo")), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("summon")
   }, /*#__PURE__*/React.createElement("span", null, "\u2726"), /*#__PURE__*/React.createElement("b", null, "Invocations"), /*#__PURE__*/React.createElement("small", null, availableFreeWishes(profile), " v\u0153ux gratuits")), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("leaderboard")
-  }, /*#__PURE__*/React.createElement("span", null, "♛"), /*#__PURE__*/React.createElement("b", null, "Classement"), /*#__PURE__*/React.createElement("small", null, "Records des joueurs"))));
+    onClick: () => navigate("social")
+  }, /*#__PURE__*/React.createElement("span", null, "\u25CE"), /*#__PURE__*/React.createElement("b", null, "Social"), /*#__PURE__*/React.createElement("small", null, rewards ? `${rewards} r\xE9compense${rewards > 1 ? "s" : ""}` : "Amis et factions"))));
 }
 function TeamWorkspace({ profile, awaken, builder }) {
   const [tab, setTab] = useState("team");
