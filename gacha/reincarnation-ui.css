@@ -177,3 +177,57 @@
   .game-hub .hub-screen { animation: none; }
   .game-hub .hub-play::before { display: none; }
 }
+
+/* Readability correction: the game remains stylised, never low-contrast. */
+.game-hub.game-shell {
+  background:
+    radial-gradient(ellipse at 88% 0%, #dfb9f05e, transparent 41%),
+    radial-gradient(ellipse at 0% 100%, #9ae0e84d, transparent 44%),
+    #f3f0e9;
+  color: #211a2a;
+}
+.game-hub.game-shell::before { opacity: .16; mix-blend-mode: multiply; }
+.game-hub .hub-header {
+  color: #21162b;
+  background: linear-gradient(100deg, #fffdf8 0 72%, #f2e4f4 72% 100%);
+  border-bottom-color: #e5316d;
+  box-shadow: 0 6px 20px #3b255035;
+}
+.game-hub .hub-brand { color: #2b153c; text-shadow: none; }
+.game-hub .hub-brand span { color: #9d2d70; }
+.game-hub .hub-wallet>span { color: #4a2a59; }
+.game-hub .hub-wallet small { color: #654f6b; }
+.game-hub .hub-content { background: linear-gradient(90deg, #4e3a5e 0 4px, #f5f1e9 4px calc(100% - 4px), #4e3a5e calc(100% - 4px)); }
+
+.game-hub .hub-home {
+  background:
+    linear-gradient(100deg, #fffdf9f2 0 46%, #f7f0f8c9 62%, #e5f5f3cc),
+    url('./assets/bingo/shibuya-city.webp') center / cover;
+}
+.game-hub .hub-home::before { opacity: .2; background: linear-gradient(125deg, #ffffffa6, #d9b7f04d 60%, #7ad8e631); }
+.game-hub .hub-home-heading h1 { color: #2e183d; text-shadow: 2px 2px 0 #fff, 0 4px 18px #b56cce4f; }
+.game-hub .hub-home-heading>small { color: #9a2969; text-shadow: 0 1px #fff; }
+.game-hub .hub-home-heading>span { color: #351d46; background: #fffdf9e8; border-color: #8f6aa3; box-shadow: 0 3px 10px #4c2d5c24; }
+.game-hub .hub-home-halo { background: radial-gradient(circle, #fffde9 0 8%, #d19ceb4d 44%, transparent 72%); border-color: #8f5ea980; box-shadow: 0 0 0 10px #ffffffa8, 0 0 56px #a44ac94a; }
+.game-hub .hub-home-stage>.sprite-preview { filter: drop-shadow(0 9px 0 #fff9) drop-shadow(0 12px 15px #45235b5c); }
+
+.game-hub .hub-panel {
+  border-color: #6a536f;
+  color: #27202d;
+  background: linear-gradient(135deg, #fffdf8, #f3edf1 62%, #e7dee3);
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 3px #d8b75c, 0 10px 28px #21122635;
+}
+.game-hub .hub-panel::before { opacity: .1; }
+.game-hub .hub-panel h1,.game-hub .hub-panel h2 { color: #291735; text-shadow: 0 1px #fff; }
+.game-hub .hub-panel p { color: #4c4050; }
+.game-hub .hub-menu-links button { color: #211827; background: linear-gradient(145deg, #fffdf9, #e9dfdc); }
+.game-hub .hub-menu-links button small { color: #5b4c60; }
+.game-hub .hub-shortcuts button { color: #281b31; background: linear-gradient(145deg, #fffdf9, #ddd5d2); }
+.game-hub .character-grid button { background: linear-gradient(180deg, #f8eafa 0 63%, #fffdf8 63%); }
+.game-hub .character-grid button b { color: #271b30; }
+.game-hub .team-character-card { color: #251d2b; background: linear-gradient(145deg, #fffdf8, #eae2e2); }
+
+@media (max-width: 540px) {
+  .game-hub .hub-home { background-position: 61% center; }
+  .game-hub .hub-home-stage { opacity: 1; }
+}
