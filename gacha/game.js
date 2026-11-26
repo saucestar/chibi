@@ -491,18 +491,18 @@ const fighterVisualBounds = {
   SHIKI: [45, 92],
   JOSHUA: [27, 56]
 };
-const fighterDisplayScale = {
-  X: .82,
-  SONIC: .82,
-  ZERO: .82,
-  SHADOW: .82,
-  KNUCKLES: .82,
-  TAILS: .82
-};
+// Each source sheet has different transparent margins. Bounds below normalize
+// them; this common multiplier then keeps every fighter at one visual scale.
+const fighterDisplayScale = {};
+const fighterRenderScale = name => fighterDisplayScale[name] ?? .9;
 // Eos is scheduled for a later reveal: retain its data and portals, but do not expose it yet.
 const hiddenCollectionAndEventCharacters = new Set(["NOCTIS", "PROMPTO", "IGNIS", "GLADIO"]);
 const secondWaveReleaseAt = Date.parse("2026-12-01T00:00:00+01:00");
 const secondWaveCharacters = new Set(["X", "SONIC", "ZERO", "SHADOW", "KNUCKLES", "TAILS", "MARLUXIA", "LEXAEUS", "AXEL", "LARXENE"]);
+const characterReleaseWave = Object.freeze(Object.fromEntries(characterRoster.map(fighter => [fighter.name, secondWaveCharacters.has(fighter.name) ? 2 : 1])));
+// Wave 1 stays viable; Wave 2 gets a measured baseline advantage before rank,
+// level, types and psychs are applied.
+const powerCreepMultiplier = name => characterReleaseWave[name] >= 2 ? 1.08 : .92;
 const visibleCollectionRoster = () => characterRoster.filter(f => !hiddenCollectionAndEventCharacters.has(f.name) && (!secondWaveCharacters.has(f.name) || Date.now() >= secondWaveReleaseAt));
 const Icon = ({
   name
@@ -808,7 +808,7 @@ function SpritePreview({
   const [visualWidth, visualHeight] = fighterVisualBounds[fighter.name] || [fighter.frameWidth || 80, fighter.frameHeight || 116];
   React.useLayoutEffect(() => {
     const element = ref.current;
-    const displayScale = fighterDisplayScale[fighter.name] || 1;
+    const displayScale = fighterRenderScale(fighter.name);
     const fit = () => {
       setScale(Math.min(maximumScale * 100 / visualHeight * displayScale, element.clientWidth / visualWidth, element.clientHeight / visualHeight));
     };
@@ -842,7 +842,7 @@ function Sprite({
     className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
-      "--fighter-normalize": `${100 / visualHeight * (fighterDisplayScale[fighter.name] || 1)}`,
+      "--fighter-normalize": `${100 / visualHeight * fighterRenderScale(fighter.name)}`,
       ...(frameCount ? {
         backgroundSize: `${frameCount * 100}% 100%`
       } : {}),
@@ -1158,7 +1158,7 @@ const portalAvailable = id => !portalReleaseAt[id] || Date.now() >= portalReleas
 const bases = {
   NEKU: [24, 32, 14],
   SHIKI: [22, 26, 20],
-  BEAT: [34, 18, 12],
+  BEAT: [34, 18, 22],
   JOSHUA: [19, 36, 16],
   CLOUD: [36, 21, 15],
   AERITH: [16, 38, 18],
@@ -1246,9 +1246,10 @@ function gainExperience(f, amount, rebirths = 0) {
   const oldLevel = (f.level || 1) - 1,
     newLevel = progress.level - 1;
   const scale = 1.2 ** (f.battleRank || 0),
+    creep = powerCreepMultiplier(f.name),
     [atk, mag, speed] = bases[f.name],
     hpBase = characterRoster.find(hero => hero.name === f.name).maxHp;
-  const delta = (base, step) => Math.round((base + newLevel * step) * scale) - Math.round((base + oldLevel * step) * scale);
+  const delta = (base, step) => Math.round((base + newLevel * step) * creep * scale) - Math.round((base + oldLevel * step) * creep * scale);
   const hpGain = delta(hpBase, 5);
   return {
     ...f,
@@ -1277,8 +1278,9 @@ function trained(f, xp, awake, rank = 0) {
   const progress = experience(xp),
     n = progress.level - 1,
     [atk, mag, speed] = bases[f.name];
-  const scale = v => Math.round(v * 1.2 ** rank);
-  const maxHp = scale(f.maxHp + n * 5) + (awake ? 20 : 0);
+  const creep = powerCreepMultiplier(f.name);
+  const scale = v => Math.round(v * creep * 1.2 ** rank);
+  const maxHp = scale(f.maxHp + n * 5) + (awake ? Math.round(20 * creep) : 0);
   return {
     ...f,
     xp: progress.xp,
@@ -1780,6 +1782,8 @@ function loadProfile() {
       hasPlayed: saved.hasPlayed === true || Number(saved.bestFloor) > 0 || Object.values(saved.xp || saved.wins || {}).some(x => Number(x) > 0),
       wishesMade: Number.isSafeInteger(saved.wishesMade) && saved.wishesMade >= 0 ? saved.wishesMade : Math.max(owned.filter(n => !saved.starterNekuGranted || n !== "NEKU").length, Number(saved.wishStep) || 0, (saved.pins || []).some(id => !saved.starterNekuGranted || id !== basePsych.NEKU) ? 1 : 0),
       freeWishes: Number.isSafeInteger(saved.freeWishes) && saved.freeWishes >= 0 ? saved.freeWishes : 0,
+      eventWishes: Number.isSafeInteger(saved.eventWishes) && saved.eventWishes >= 0 ? saved.eventWishes : 0,
+      secondWaveWishesGranted: saved.secondWaveWishesGranted === true,
       lastFreeWishDay: typeof saved.lastFreeWishDay === "string" ? saved.lastFreeWishDay : "",
       bestFloor,
       rebirths: Number.isSafeInteger(saved.rebirths) && saved.rebirths >= 0 ? Math.min(99, saved.rebirths) : 0,
@@ -1828,6 +1832,8 @@ function loadProfile() {
     hasPlayed: false,
     wishesMade: 0,
     freeWishes: 0,
+    eventWishes: 0,
+    secondWaveWishesGranted: false,
     lastFreeWishDay: "",
     bestFloor: 0,
     rebirths: 0,
@@ -1945,16 +1951,42 @@ function accrueDailyWishes(p, now = new Date()) {
     starterWishesGranted: true
   };
 }
+// Launch gifts are deliberately separate from the three daily wishes. That
+// avoids the daily refresh replacing an unspent event reward on the next day.
+function grantSecondWaveWishes(p, now = Date.now()) {
+  if (now < secondWaveReleaseAt || p.secondWaveWishesGranted) return p;
+  return {
+    ...p,
+    secondWaveWishesGranted: true,
+    eventWishes: Math.max(0, Number(p.eventWishes) || 0) + 50
+  };
+}
+function inboxEntries(profile, now = Date.now()) {
+  const entries = [];
+  if (now >= secondWaveReleaseAt && !profile.secondWaveWishesGranted) entries.push({
+    id: "wave-2-wishes",
+    title: "Vague 2 · Cadeau de lancement",
+    text: "50 vœux offerts pour les portails Final Fantasy Sonic X et XIII.",
+    reward: "50 vœux",
+    claim: "wave-2"
+  });
+  return entries;
+}
 function wishQuote(p, count) {
-  const free = Math.min(count, p.freeWishes),
+  const dailyFree = Math.min(count, p.freeWishes || 0),
+    eventFree = Math.min(count - dailyFree, p.eventWishes || 0),
+    free = dailyFree + eventFree,
     paid = count - free;
   return {
     free,
+    dailyFree,
+    eventFree,
     paid,
     cost: paid * 100,
     starter: false
   };
 }
+const availableFreeWishes = p => Math.max(0, Number(p.freeWishes) || 0) + Math.max(0, Number(p.eventWishes) || 0);
 const characterChance = 0.10;
 function portalRoster(id) {
   const names = id === "sonicx" ? ["X", "SONIC", "ZERO", "SHADOW", "KNUCKLES", "TAILS"] : id === "xiii" ? ["MARLUXIA", "LEXAEUS", "AXEL", "LARXENE"] : id === "partners" ? ["BEAT", "JOSHUA"] : id === "eosDawn" ? ["NOCTIS", "PROMPTO"] : id === "eosDusk" ? ["IGNIS", "GLADIO"] : id === "apocalyptic" ? ["2B", "A2"] : id === "destiny" ? ["SORA", "RIKU"] : id === "reality" ? ["CLOUD", "AERITH"] : id === "shibuya" ? ["NEKU", "SHIKI"] : ["NEKU", "SHIKI"];
@@ -2887,6 +2919,10 @@ function PvpInviteNotifications() {
   }, []);
   return null;
 }
+function InboxPanel({ profile, claim }) {
+  const entries = inboxEntries(profile);
+  return /*#__PURE__*/React.createElement("main", { className: "inbox-panel hub-panel" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS’ MAIL"), /*#__PURE__*/React.createElement("h1", null, "Boîte de réception"), /*#__PURE__*/React.createElement("p", null, entries.length ? "Des cadeaux t’attendent. Récupère-les quand tu le souhaites." : "Aucun nouveau cadeau pour le moment.")), /*#__PURE__*/React.createElement("div", { className: "inbox-list" }, entries.length ? entries.map(entry => /*#__PURE__*/React.createElement("article", { key: entry.id }, /*#__PURE__*/React.createElement("span", { className: "inbox-gift", "aria-hidden": "true" }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CADEAU"), /*#__PURE__*/React.createElement("h2", null, entry.title), /*#__PURE__*/React.createElement("p", null, entry.text), /*#__PURE__*/React.createElement("b", null, entry.reward)), /*#__PURE__*/React.createElement("button", { type: "button", onClick: () => claim(entry.claim) }, "Récupérer"))) : /*#__PURE__*/React.createElement("p", { className: "inbox-empty" }, "Tes prochaines récompenses apparaîtront ici.")));
+}
 function GameHub({
   profile,
   screen,
@@ -2901,6 +2937,7 @@ function GameHub({
       top: 0
     });
   }, [screen]);
+  const inboxCount = inboxEntries(profile).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "game-hub game-shell"
   }, /*#__PURE__*/React.createElement(PvpInviteNotifications, null), /*#__PURE__*/React.createElement("header", {
@@ -2915,7 +2952,11 @@ function GameHub({
     "aria-label": `${profile.coins} pièces`
   }, /*#__PURE__*/React.createElement(Icon, {
     name: "coin"
-  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("small", null, "\u2726 ", profile.freeWishes, " gratuits")), /*#__PURE__*/React.createElement("button", {
+  }), profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("small", null, "\u2726 ", availableFreeWishes(profile), " gratuits")), /*#__PURE__*/React.createElement("button", {
+    className: "hub-inbox",
+    onClick: () => navigate("inbox"),
+    "aria-label": inboxCount ? `${inboxCount} cadeau à récupérer` : "Ouvrir la boîte de réception"
+  }, /*#__PURE__*/React.createElement("span", { "aria-hidden": "true" }, "✉"), inboxCount > 0 && /*#__PURE__*/React.createElement("b", null, inboxCount)), /*#__PURE__*/React.createElement("button", {
     className: "hub-news",
     onClick: openNews,
     "aria-label": "Consulter les nouveaut\xE9s"
@@ -3787,11 +3828,21 @@ function SafeChatPanel({ friends = [] }) {
     try { const list = await service.chatGroups(); setGroups(Array.isArray(list) ? list.filter(group => group && group.id) : []); setNotice(""); }
     catch (error) { setNotice(String(error?.message || error)); }
   };
+  // Open the inbox as soon as the tab is selected. Previously this safe
+  // fallback only loaded after the user pressed Actualiser, which made Chat
+  // appear empty or unresponsive on first use.
+  useEffect(() => { refresh(); }, []);
   const open = async group => {
     setActive(group); setMessages([]);
     try { const list = await service.readChat(group.id); setMessages(Array.isArray(list) ? list : []); }
     catch (error) { setNotice(String(error?.message || error)); }
   };
+  useEffect(() => {
+    if (!active?.id || !service?.watchChat) return;
+    try {
+      return service.watchChat(active.id, list => setMessages(Array.isArray(list) ? list : []), error => setNotice(String(error?.message || error)));
+    } catch (error) { setNotice(String(error?.message || error)); }
+  }, [active?.id]);
   const create = async () => {
     try { const id = await service.createChatGroup(groupName, selected); setGroupName(""); setSelected([]); await refresh(); const list = await service.chatGroups(); const group = Array.isArray(list) && list.find(item => item?.id === id); if (group) await open(group); }
     catch (error) { setNotice(String(error?.message || error)); }
@@ -4074,7 +4125,7 @@ function LaunchNews({
     key: name,
     fighter: characterRoster.find(f => f.name === name),
     maximumScale: .62
-  }))), /*#__PURE__*/React.createElement("small", null, "Publication le 1er d\xE9cembre 2026 \xB7 Ouvrir les portails ", /*#__PURE__*/React.createElement("b", null, "\u2192"))), /*#__PURE__*/React.createElement("section", {
+  }))), /*#__PURE__*/React.createElement("small", null, "1er décembre 2026 · 50 vœux offerts · Ouvrir les portails ", /*#__PURE__*/React.createElement("b", null, "\u2192"))), /*#__PURE__*/React.createElement("section", {
     className: "news-copy"
   }, /*#__PURE__*/React.createElement("p", null, "La mise \xE0 jour de la seconde vague est pr\xEAte. Voici l\u2019ensemble des changements :"), /*#__PURE__*/React.createElement("ol", null, /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Social"), " \u2014 profils joueurs, collections, \xE9quipes d\xE9taill\xE9es, amis et d\xE9fis PVP Casual directs."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "PVP en ligne"), " \u2014 Casual normalis\xE9 au niveau 50 et rang \xE9toile, ou Ranked avec classement Elo et progression r\xE9elle."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Roguelike cauchemar"), " \u2014 difficult\xE9 fortement renforc\xE9e d\xE8s l\u2019\xE9tage 50 et reprise plafonn\xE9e au palier 6 apr\xE8s avoir quitt\xE9 une run plus avanc\xE9e."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Rebirth"), " \u2014 vaincre l\u2019\xE9tage 100 offre 5 000 pi\xE8ces et d\xE9bloque un nouveau cycle aux taux de badges rares renforc\xE9s."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "2 nouveaux portails"), " \u2014 X, Sonic, Zero, Shadow, Knuckles et Tails dans \xAB Final Fantasy Sonic X \xBB ; Marluxia, Lexaeus, Axel et Larxene dans \xAB XIII \xBB."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie d\xE9butant"), " \u2014 la toute premi\xE8re invocation du compte donne toujours un personnage, m\xEAme dans un multi de 10."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Garantie revue"), " \u2014 un personnage garanti au 100e v\u0153u, avec 10 % de chance sur chaque autre invocation."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Raret\xE9 graduelle"), " \u2014 les badges de rang sup\xE9rieur deviennent plus rares dans les portails comme sur les ennemis."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Combat enrichi"), " \u2014 psychs monocibles ou AoE et Sync Burst \xE9gal \xE0 5\xD7 la meilleure statistique offensive."), /*#__PURE__*/React.createElement("li", null, /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes quotidiennes"), " \u2014 3 objectifs journaliers pour 200 pi\xE8ces au total."))), /*#__PURE__*/React.createElement("button", {
     className: "news-update news-daily",
@@ -4200,7 +4251,7 @@ function HubHome({
     onClick: () => navigate("quests")
   }, /*#__PURE__*/React.createElement("span", null, "\u25C7"), /*#__PURE__*/React.createElement("b", null, "Qu\xEAtes"), /*#__PURE__*/React.createElement("small", null, rewards ? `${rewards} récompense${rewards > 1 ? "s" : ""}` : "Ta progression")), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("summon")
-  }, /*#__PURE__*/React.createElement("span", null, "\u2726"), /*#__PURE__*/React.createElement("b", null, "Invocations"), /*#__PURE__*/React.createElement("small", null, profile.freeWishes, " v\u0153ux gratuits")), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("span", null, "\u2726"), /*#__PURE__*/React.createElement("b", null, "Invocations"), /*#__PURE__*/React.createElement("small", null, availableFreeWishes(profile), " v\u0153ux gratuits")), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("leaderboard")
   }, /*#__PURE__*/React.createElement("span", null, "♛"), /*#__PURE__*/React.createElement("b", null, "Classement"), /*#__PURE__*/React.createElement("small", null, "Records des joueurs"))));
 }
@@ -4561,9 +4612,10 @@ function App() {
       const next = {
         ...p,
         wishesMade: p.wishesMade + count,
-        freeWishes: p.freeWishes - quote.free,
-        freeWishSpent: p.freeWishSpent + quote.free,
-        freeWishDaySpent: p.freeWishDaySpent + quote.free,
+        freeWishes: p.freeWishes - quote.dailyFree,
+        eventWishes: Math.max(0, (p.eventWishes || 0) - quote.eventFree),
+        freeWishSpent: p.freeWishSpent + quote.dailyFree,
+        freeWishDaySpent: p.freeWishDaySpent + quote.dailyFree,
         pins: [...p.pins],
         pinCopies: {
           ...p.pinCopies
@@ -4727,6 +4779,12 @@ function App() {
     navigate: navigate,
     close: () => setNewsOpen(false)
   })));
+  if (screen === "inbox") return hub(/*#__PURE__*/React.createElement(InboxPanel, {
+    profile: profile,
+    claim: id => {
+      if (id === "wave-2") setProfile(p => grantSecondWaveWishes(p));
+    }
+  }));
   if (screen === "home") return hub(/*#__PURE__*/React.createElement(HubHome, {
     profile: profile,
     navigate: navigate
@@ -4805,7 +4863,7 @@ function App() {
     onClick: () => navigate("quests")
   }, "Qu\xEAtes")), /*#__PURE__*/React.createElement("p", {
     className: "daily-wishes"
-  }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, profile.freeWishes), /*#__PURE__*/React.createElement("small", null, parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement("div", {
+  }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, availableFreeWishes(profile)), /*#__PURE__*/React.createElement("small", null, profile.eventWishes ? `${profile.eventWishes} Vœux Vague 2 + 3 quotidiens` : parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement("div", {
     className: "portal-list"
   }, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => /*#__PURE__*/React.createElement("article", {
     key: id,

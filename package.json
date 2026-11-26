@@ -1,0 +1,36 @@
+{
+  "name": "twewy-reapers-run",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desktop launcher for TWEWY Reapers' Run",
+  "main": "desktop/main.cjs",
+  "scripts": {
+    "desktop": "electron .",
+    "build:win": "electron-builder --win nsis --x64"
+  },
+  "build": {
+    "appId": "fr.twewycooperative.reapersrun",
+    "productName": "TWEWY Reapers' Run",
+    "files": [
+      "gacha/**/*",
+      "icons/**/*",
+      "language.css",
+      "language.js",
+      "english.js",
+      "desktop/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "TWEWY-Reapers-Run-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "devDependencies": {
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8"
+  }
+}
