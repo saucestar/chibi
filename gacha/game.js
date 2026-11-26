@@ -1404,18 +1404,20 @@ function XpProgress({
     value: p.required ? p.current : 1
   }));
 }
+const awakeningHpBonus = name => Math.round(20 * powerCreepMultiplier(name));
 function trained(f, xp, awake, rank = 0) {
   const progress = experience(xp),
     n = progress.level - 1,
     [atk, mag, speed] = bases[f.name];
   const creep = powerCreepMultiplier(f.name);
   const scale = v => Math.round(v * creep * 1.2 ** rank);
-  const maxHp = scale(f.maxHp + n * 5) + (awake ? Math.round(20 * creep) : 0);
+  const maxHp = scale(f.maxHp + n * 5) + (awake ? awakeningHpBonus(f.name) : 0);
   return {
     ...f,
     xp: progress.xp,
     level: progress.level,
     battleRank: rank,
+    battleAwakened: !!awake,
     atk: scale(atk + n * 2),
     mag: scale(mag + n * 2),
     speed: scale(speed + n),
@@ -1656,17 +1658,24 @@ function validRun(raw, owned, copies = {}, awakened = []) {
       const base = characterRoster.find(b => b.name === f.name);
       if (!base || !owned.includes(f.name) || !["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].every(k => integer(f[k], k === "hp" || k === "xp" ? 0 : 1, 10000000)) || f.hp > f.maxHp) throw Error();
       const oldRank = integer(f.battleRank, 0, 5) ? f.battleRank : 0;
+      const isAwakened = awakened.includes(f.name);
       if (raw.status === "active" && copies[f.name] > oldRank) {
-        const current = trained(base, f.xp, awakened.includes(f.name), copies[f.name]);
+        const current = trained(base, f.xp, isAwakened, copies[f.name]);
         return {
           ...current,
           hp: f.hp > 0 ? Math.max(1, Math.round(current.maxHp * f.hp / f.maxHp)) : 0
         };
       }
+      // Old checkpoints had no marker. Only upgrade a legacy HP total when
+      // it matches the unawakened total, so existing bonuses are never doubled.
+      const missingAwakening = raw.status === "active" && isAwakened &&
+        (f.battleAwakened === false || (f.battleAwakened !== true && f.maxHp === trained(base, f.xp, false, oldRank).maxHp));
       return {
         ...base,
         battleRank: oldRank,
-        ...Object.fromEntries(["hp", "maxHp", "atk", "mag", "speed", "xp", "level"].map(k => [k, f[k]]))
+        ...Object.fromEntries(["hp", "atk", "mag", "speed", "xp", "level"].map(k => [k, f[k]])),
+        maxHp: f.maxHp + (missingAwakening ? awakeningHpBonus(f.name) : 0),
+        battleAwakened: f.battleAwakened === true || (raw.status === "active" && isAwakened)
       };
     });
     if (!Array.isArray(raw.enemies) || raw.enemies.length < 1 || raw.enemies.length > 4 || new Set(raw.enemies.map(e => e.id)).size !== raw.enemies.length) return null;
@@ -1814,14 +1823,15 @@ function grantStarterNeku(p) {
 }
 function assignBasePsychs(profile) {
   profile = grantStarterNeku(profile);
-  const counts = Object.fromEntries(profile.owned.map(name => [name, Math.min(5, Math.max(0, Math.floor(Number(profile.copies[name]) || 0)))]));
+  const awakened = [...new Set((Array.isArray(profile.awakened) ? profile.awakened : []).filter(name => profile.owned.includes(name)))];
+  const counts = Object.fromEntries(profile.owned.map(name => [name, awakened.includes(name) ? 5 : Math.min(5, Math.max(0, Math.floor(Number(profile.copies[name]) || 0)))]));
   profile = {
     ...profile,
     copies: counts,
     levels: {
       ...counts
     },
-    awakened: profile.awakened.filter(name => counts[name] === 5)
+    awakened
   };
   const pins = [...profile.pins];
   if (profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
@@ -1865,6 +1875,7 @@ function loadProfile() {
     if (!saved || typeof saved !== "object") throw Error("Save missing");
     const savedOwned = Array.isArray(saved.owned) ? saved.owned : [];
     const owned = characterRoster.map(f => f.name).filter(name => savedOwned.includes(name));
+    const awakened = owned.filter(name => Array.isArray(saved.awakened) && saved.awakened.includes(name));
     // Older builds could keep values past ★. Convert every excess once, then
     // cap the stored count so the inventory and rank stay unambiguous.
     const legacyDuplicateCoins = saved.duplicateRefundVersion === 1 ? 0 : owned.reduce((sum, name) => {
@@ -1879,8 +1890,9 @@ function loadProfile() {
     const pinCopies = Object.fromEntries(pins.map(id => [id, Math.max(1, Math.min(999999, Math.floor(Number(saved.pinCopies?.[id]) || 1)))]));
     const copies = Object.fromEntries(owned.map(name => {
       const value = saved.copies?.[name];
-      // An explicit duplicate count is authoritative; only old saves lacking it use legacy star data.
-      const count = value !== undefined && Number.isFinite(Number(value)) ? Math.min(5, Math.max(0, Math.floor(Number(value)))) : saved.awakened?.includes(name) || Number(saved.levels?.[name]) === 5 ? 5 : 0;
+      // A recorded awakening is permanent, including when an old save lost its duplicate count.
+      const count = awakened.includes(name) ? 5 : value !== undefined && Number.isFinite(Number(value))
+        ? Math.min(5, Math.max(0, Math.floor(Number(value)))) : Number(saved.levels?.[name]) === 5 ? 5 : 0;
       return [name, count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 100 ? saved.wishStep : 0;
@@ -1895,8 +1907,8 @@ function loadProfile() {
       },
       claimedDailyQuests: Array.isArray(saved.claimedDailyQuests) ? [...new Set(saved.claimedDailyQuests.filter(id => typeof id === "string"))] : [],
       specialRunRecoveries: Array.isArray(saved.specialRunRecoveries) ? [...new Set(saved.specialRunRecoveries.filter(id => typeof id === "string" && id.length < 100))] : [],
-      eventRun: readEvent(saved.eventRun, owned, copies, Array.isArray(saved.awakened) ? saved.awakened : []),
-      run: validRun(saved.run, owned, copies, Array.isArray(saved.awakened) ? saved.awakened : []),
+      eventRun: readEvent(saved.eventRun, owned, copies, awakened),
+      run: validRun(saved.run, owned, copies, awakened),
       wishEvents: Array.isArray(saved.wishEvents) ? saved.wishEvents.filter(validWishEvent) : [],
       wishHistoryStartedAt: Number(saved.wishHistoryStartedAt) || 0,
       wishHistoryBaseline: Number(saved.wishHistoryBaseline) || 0,
@@ -1932,7 +1944,7 @@ function loadProfile() {
       levels: {
         ...copies
       },
-      awakened: owned.filter(name => copies[name] === 5 && saved.awakened?.includes(name)),
+      awakened,
       loadout: saved.loadout || {},
       coins: saved.coins + (legacyRebirthUnlock ? 5000 : 0) + legacyDuplicateCoins
     }))));
@@ -3244,7 +3256,7 @@ function CharacterCollection({
     profile: profile
   }), canAwaken(selected.name) && React.createElement("button", {
     onClick: () => awaken(selected.name)
-  }, "\xC9veiller \xB7 +20 PV"), React.createElement("section", {
+  }, "\xC9veiller \xB7 +", awakeningHpBonus(selected.name), " PV max"), React.createElement("section", {
     className: "recruitment-sources"
   }, React.createElement("h3", null, "Sources d\u2019obtention"), sources.map(([id, title]) => React.createElement("button", {
     key: id,
@@ -4530,7 +4542,7 @@ function AwakeningPanel({
       key: fighter.name
     }, /*#__PURE__*/React.createElement(HudPortrait, {
       fighter: fighter
-  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, characterLabel(fighter.name)), /*#__PURE__*/React.createElement("small", null, awakened ? "Éveillé · bonus actif" : `${copies} / 5 doublons`), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, characterLabel(fighter.name)), /*#__PURE__*/React.createElement("small", null, awakened ? `Éveillé · +${awakeningHpBonus(fighter.name)} PV max` : `${copies} / 5 doublons`), /*#__PURE__*/React.createElement("div", {
       className: "awakening-ranks",
       "aria-label": `${fighter.name} : ${copies} doublons`
     }, ranks.map((_, rank) => /*#__PURE__*/React.createElement("span", {
@@ -5078,7 +5090,7 @@ function App() {
       setPhase("crank");
     }
   };
-  const awaken = name => setProfile(p => p.copies[name] === 5 && !p.awakened.includes(name) ? {
+  const awaken = name => setProfile(p => p.owned.includes(name) && p.copies[name] === 5 && !p.awakened.includes(name) ? {
     ...p,
     awakened: [...p.awakened, name]
   } : p);
@@ -6369,7 +6381,7 @@ function SaveBoundary() {
     role: "status"
   }, status.message), /*#__PURE__*/React.createElement(App, null));
 }
-window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary };
+window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary, awakeningHpBonus };
 function raidPlanAnimation(plan) {
   const kind = plan?.kind === "guard" ? "guard" : psychs[plan?.pin]?.kind;
   return { physical: "shockwave", special: "pyro", heal: "heal", guard: "guard" }[kind];

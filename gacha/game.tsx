@@ -129,6 +129,7 @@ type Enemy = {
 
 type Fighter = {
   battleRank?:number;
+  battleAwakened?:boolean;
   xp?:number; level?:number; atk?:number; mag?:number; speed?:number; portraitCenter?:number; portraitTop?:number;
   name: string;
   role: string;
@@ -463,7 +464,7 @@ function trained(f:Fighter, xp:number, awake:boolean, rank=0) {
   const progress=experience(xp), n=progress.level-1, [atk,mag,speed]=bases[f.name];
   const scale=(v:number)=>Math.round(v*1.2**rank);
   const maxHp=scale(f.maxHp+n*5)+(awake?20:0);
-  return {...f,xp:progress.xp,level:progress.level,battleRank:rank,atk:scale(atk+n*2),mag:scale(mag+n*2),speed:scale(speed+n),hp:maxHp,maxHp};
+  return {...f,xp:progress.xp,level:progress.level,battleRank:rank,battleAwakened:awake,atk:scale(atk+n*2),mag:scale(mag+n*2),speed:scale(speed+n),hp:maxHp,maxHp};
 }
 const gachaView = new URLSearchParams(location.search).get("vue") === "gacha";
 const ranks = ["E", "D", "C", "B", "A", "etoile"];
@@ -554,11 +555,15 @@ function validRun(raw:any,owned:string[],copies:Record<string,number>={},awakene
   if(!raw||raw.version!==1||typeof raw.id!=="string"||!/^[a-zA-Z0-9-]{1,100}$/.test(raw.id)||!integer(raw.seq,0,1000000)||!["active","lost","complete","abandoned"].includes(raw.status)||!integer(raw.wave,1,100)||!integer(raw.turn,1,100000)||!integer(raw.energy,0,3)||!integer(raw.groove,0,100)||JSON.stringify(raw).length>18000)return null;
   if(!Array.isArray(raw.team)||raw.team.length!==2||new Set(raw.team.map((f:any)=>f.name)).size!==2)return null;
   const team=raw.team.map((f:any)=>{const base=characterRoster.find(b=>b.name===f.name);if(!base||!owned.includes(f.name)||!["hp","maxHp","atk","mag","speed","xp","level"].every(k=>integer(f[k],k==="hp"||k==="xp"?0:1,10000000))||f.hp>f.maxHp)throw Error();const oldRank=integer(f.battleRank,0,5)?f.battleRank:0;
+    const isAwakened=awakened.includes(f.name);
     if(raw.status==="active" && copies[f.name]>oldRank){
-      const current=trained(base,f.xp,awakened.includes(f.name),copies[f.name]);
+      const current=trained(base,f.xp,isAwakened,copies[f.name]);
       return {...current,hp:f.hp>0?Math.max(1,Math.round(current.maxHp*f.hp/f.maxHp)):0};
     }
-    return {...base,battleRank:oldRank,...Object.fromEntries(["hp","maxHp","atk","mag","speed","xp","level"].map(k=>[k,f[k]]))} as Fighter;});
+    const missingAwakening=raw.status==="active"&&isAwakened&&
+      (f.battleAwakened===false||(f.battleAwakened!==true&&f.maxHp===trained(base,f.xp,false,oldRank).maxHp));
+    return {...base,battleRank:oldRank,...Object.fromEntries(["hp","atk","mag","speed","xp","level"].map(k=>[k,f[k]])),
+      maxHp:f.maxHp+(missingAwakening?20:0),battleAwakened:f.battleAwakened===true||(raw.status==="active"&&isAwakened)} as Fighter;});
   if(!Array.isArray(raw.enemies)||raw.enemies.length<1||raw.enemies.length>4||new Set(raw.enemies.map((e:any)=>e.id)).size!==raw.enemies.length)return null;
   for(const e of raw.enemies)if(!enemyCatalog[e.kind]||!["id","hp","maxHp","attack","speed","xp"].every(k=>integer(e[k],0,10000000))||e.hp>e.maxHp||Math.floor(e.id/10)!==raw.wave)return null;
   const names=team.map(f=>f.name),loadout=Object.fromEntries(names.map(name=>[name,raw.loadout?.[name]]));
@@ -612,13 +617,14 @@ function grantStarterNeku(p:Profile):Profile {
 }
 function assignBasePsychs(profile:Profile):Profile {
   profile=grantStarterNeku(profile);
-  const counts=Object.fromEntries(profile.owned.map(name=>[name,Math.min(5,Math.max(0,Math.floor(Number(profile.copies[name])||0)))]));
+  const awakened=[...new Set((Array.isArray(profile.awakened)?profile.awakened:[]).filter(name=>profile.owned.includes(name)))];
+  const counts=Object.fromEntries(profile.owned.map(name=>[name,awakened.includes(name)?5:Math.min(5,Math.max(0,Math.floor(Number(profile.copies[name])||0)))]));
   const refunds={...(profile.awakenedMultiRefunds||{})};let retroactiveWishes=0;
-  for(const name of profile.awakened.filter(name=>counts[name]===5)){
+  for(const name of awakened){
     const pulls=(profile.wishEvents||[]).flatMap(event=>{try{return (JSON.parse(event.drawsJson) as any[]).filter(draw=>draw?.name===name);}catch{return [];}}),maxedAt=pulls.findIndex(draw=>Number(draw.copies)>=5),earned=Math.max(0,maxedAt<0?0:pulls.length-maxedAt-1),already=Math.max(0,Math.floor(Number(refunds[name])||0));
     if(earned>already){retroactiveWishes+=(earned-already)*10;refunds[name]=earned;}
   }
-  profile={...profile,copies:counts,levels:{...counts},awakened:profile.awakened.filter(name=>counts[name]===5),awakenedMultiRefunds:refunds,freeWishes:profile.freeWishes+retroactiveWishes};
+  profile={...profile,copies:counts,levels:{...counts},awakened,awakenedMultiRefunds:refunds,freeWishes:profile.freeWishes+retroactiveWishes};
   const pins=[...profile.pins];
   if(profile.owned.includes("NEKU") && !pins.includes(basePsych.NEKU)) pins.push(basePsych.NEKU);
   const pinCopies={...profile.pinCopies};pins.forEach(id=>pinCopies[id]=Math.max(1,Math.floor(Number(pinCopies[id])||0)));
@@ -650,9 +656,9 @@ function loadProfile(): Profile {
     const pinCopies=Object.fromEntries(pins.map(id=>[id,Math.max(1,Math.min(999999,Math.floor(Number(saved.pinCopies?.[id])||1)))]));
     const copies=Object.fromEntries(owned.map(name=>{
       const value=saved.copies?.[name];
-      // An explicit duplicate count is authoritative; only old saves lacking it use legacy star data.
-      const count=value!==undefined && Number.isFinite(Number(value))?Math.min(5,Math.max(0,Math.floor(Number(value)))):
-        saved.awakened?.includes(name)||Number(saved.levels?.[name])===5?5:0;
+      // A recorded awakening is permanent, even if the old duplicate count is wrong.
+      const count=Array.isArray(saved.awakened)&&saved.awakened.includes(name)?5:
+        value!==undefined && Number.isFinite(Number(value))?Math.min(5,Math.max(0,Math.floor(Number(value)))):Number(saved.levels?.[name])===5?5:0;
       return [name,count];
     }));
     const wishStep = Number.isInteger(saved.wishStep) && saved.wishStep >= 0 && saved.wishStep < 100 ? saved.wishStep : 0;
@@ -1727,7 +1733,7 @@ function App() {
     });
     if(draws.length){turning.current=true;setPortal(id);setQuantity(count);setResult(draws);setPhase("crank");}
   };
-  const awaken = (name:string) => setProfile(p=>p.copies[name]===5 && !p.awakened.includes(name)
+  const awaken = (name:string) => setProfile(p=>p.owned.includes(name) && p.copies[name]===5 && !p.awakened.includes(name)
     ? {...p,awakened:[...p.awakened,name]} : p);
   const fighters=profile.equipped.filter(Boolean);
   function chooseFighter(name:string) {

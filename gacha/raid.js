@@ -32,7 +32,9 @@
       const base = catalog?.characters.find(item => item.name === name), stats = catalog?.bases[name];
       if (!base || !stats || !(save.loadout?.[name] || []).length) return null;
       const level = Math.max(1, Math.min(99, Number(save.levels?.[name] || 1))), rank = Math.max(0, Math.min(5, Number(save.copies?.[name] || 0))), scale = 1.2 ** rank;
-      return { name, hp: Math.round((base.maxHp + (level - 1) * 5) * scale), maxHp: Math.round((base.maxHp + (level - 1) * 5) * scale), atk: Math.round((stats[0] + (level - 1) * 2) * scale), mag: Math.round((stats[1] + (level - 1) * 2) * scale), speed: Math.round((stats[2] + level - 1) * scale), loadout: [...save.loadout[name]].slice(0, 3) };
+      const bonus = save.awakened?.includes(name) ? catalog.awakeningHpBonus(name) : 0;
+      const maxHp = Math.round((base.maxHp + (level - 1) * 5) * scale) + bonus;
+      return { name, hp: maxHp, maxHp, atk: Math.round((stats[0] + (level - 1) * 2) * scale), mag: Math.round((stats[1] + (level - 1) * 2) * scale), speed: Math.round((stats[2] + level - 1) * scale), loadout: [...save.loadout[name]].slice(0, 3) };
     }).filter(Boolean);
   }
   function mountMode() {
