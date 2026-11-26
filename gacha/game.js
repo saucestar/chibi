@@ -4229,11 +4229,11 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, "\u2726"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BOSS NIVEAU 200"), /*#__PURE__*/React.createElement("b", null, "\xC9v\xE9nement"), /*#__PURE__*/React.createElement("p", null, "Affronte les personnages du portail")), /*#__PURE__*/React.createElement("i", null, "\u203A")), /*#__PURE__*/React.createElement("button", {
-    className: "home-mode-banner home-mode-pvp",
-    onClick: () => navigate("pvp")
+    className: "home-mode-banner home-mode-roguelike",
+    onClick: () => navigate("roguelike")
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u25CE"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CASUAL \xB7 RANKED"), /*#__PURE__*/React.createElement("b", null, "PVP"), /*#__PURE__*/React.createElement("p", null, "Affronte les autres joueurs en ligne.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u25C6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "COURSES DU JEU"), /*#__PURE__*/React.createElement("b", null, "Roguelike"), /*#__PURE__*/React.createElement("p", null, "Des runs uniques, des choix risqu\xE9s !")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
     className: "home-action-grid"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("team")
