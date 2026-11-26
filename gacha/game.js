@@ -4205,16 +4205,25 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("div", {
     className: "home-reapers-halo",
     "aria-hidden": "true"
-  }), /*#__PURE__*/React.createElement("div", {
-    className: "home-reapers-hero-copy"
-  }, /*#__PURE__*/React.createElement("small", null, "MISSION EN COURS"), /*#__PURE__*/React.createElement("b", null, "Survis \xE0 Shibuya"), /*#__PURE__*/React.createElement("button", {
+  }), /*#__PURE__*/React.createElement("button", {
+    className: "home-hero-team-hit",
     type: "button",
-    onClick: () => navigate("pvp")
-  }, "PVP \xB7 Casual & Ranked")), duo.map(f => /*#__PURE__*/React.createElement(SpritePreview, {
+    onClick: () => navigate("team"),
+    "aria-label": "Configurer mon \xE9quipe"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "home-reapers-cast",
+    "aria-hidden": "true"
+  }, duo.map(f => /*#__PURE__*/React.createElement(SpritePreview, {
     key: f.name,
     fighter: f,
     maximumScale: 2.5
-  }))), /*#__PURE__*/React.createElement("div", {
+  }))), /*#__PURE__*/React.createElement("button", {
+    className: "home-hero-play",
+    type: "button",
+    onClick: () => navigate("roguelike")
+  }, /*#__PURE__*/React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u25C6"), /*#__PURE__*/React.createElement("b", null, "JOUER"), /*#__PURE__*/React.createElement("small", null, "Roguelike"))), /*#__PURE__*/React.createElement("div", {
     className: "home-mode-banners"
   }, /*#__PURE__*/React.createElement("button", {
     className: "home-mode-banner home-mode-event",
@@ -4222,11 +4231,11 @@ function HubHome({
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
   }, "\u2726"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "BOSS NIVEAU 200"), /*#__PURE__*/React.createElement("b", null, "\xC9v\xE9nement"), /*#__PURE__*/React.createElement("p", null, "Affronte les personnages du portail")), /*#__PURE__*/React.createElement("i", null, "\u203A")), /*#__PURE__*/React.createElement("button", {
-    className: "home-mode-banner home-mode-roguelike",
-    onClick: () => navigate("roguelike")
+    className: "home-mode-banner home-mode-pvp",
+    onClick: () => navigate("pvp")
   }, /*#__PURE__*/React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u25C6"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "ASCENSION · ROUGUELIKE"), /*#__PURE__*/React.createElement("b", null, "Jouer"), /*#__PURE__*/React.createElement("p", null, "Lancer ou reprendre une run de 100 \xE9tages.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
+  }, "\u25CE"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CASUAL \xB7 RANKED"), /*#__PURE__*/React.createElement("b", null, "PVP"), /*#__PURE__*/React.createElement("p", null, "Affronte les autres joueurs en ligne.")), /*#__PURE__*/React.createElement("i", null, "\u203A"))), /*#__PURE__*/React.createElement("div", {
     className: "home-action-grid"
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("team")

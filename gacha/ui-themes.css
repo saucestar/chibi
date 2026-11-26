@@ -261,3 +261,67 @@
   .game-hub .hub-header .hub-fullscreen { display:none!important; }
   .game-hub .hub-nav { gap:3px;padding-inline:5px; }.game-hub .hub-nav button { min-height:49px!important; }
 }
+
+/* Single assembled board: no black bars separating header, stage and navigation. */
+.game-hub.game-shell {
+  background:
+    radial-gradient(circle at 88% 7%,#ee3d7948,transparent 25%),
+    radial-gradient(circle at 10% 90%,#ff9a2544,transparent 28%),
+    linear-gradient(120deg,#16111b,#2b1830 55%,#16111b);
+}
+.game-hub .hub-header {
+  position:relative;
+  z-index:2;
+  margin:0;
+  border:0!important;
+  border-bottom:1px solid #ffcb6d88!important;
+  box-shadow:none!important;
+  background:linear-gradient(90deg,#fff9ecf5,#f3e8d7eb 65%,#eadac5e8)!important;
+}
+.game-hub .hub-content { background:transparent!important; }
+.game-hub .hub-screen { min-height:100%; }
+.game-hub .home-reapers-layout {
+  padding-top:clamp(16px,2.5vw,30px);
+  padding-bottom:clamp(16px,2.5vw,30px);
+  background:
+    radial-gradient(circle at 50% 28%,#ffcf8442,transparent 30%),
+    linear-gradient(105deg,#1a121ce8,#352034a0 50%,#18121de5),
+    url('./assets/bingo/shibuya-city.webp') center/cover!important;
+}
+.game-hub .hub-nav {
+  position:relative;
+  z-index:2;
+  border:0!important;
+  border-top:1px solid #ffcb6d88!important;
+  box-shadow:none!important;
+  background:linear-gradient(90deg,#fff9ecf5,#f3e8d7eb 65%,#eadac5e8)!important;
+}
+
+/* The character frame is a real central tap target. Its cast is centered as a group. */
+.home-reapers-hero {
+  min-height:clamp(245px,37vw,390px)!important;
+  display:block!important;
+  border:2px solid #ffcb6d!important;
+  background:linear-gradient(90deg,#1b1420e0,#43204374 48%,#19111ddd),url('./assets/bingo/shibuya-city.webp') center/cover!important;
+}
+.home-reapers-hero::after { width:min(59vw,550px)!important; }
+.home-hero-team-hit { position:absolute;inset:0;z-index:2;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer; }
+.home-hero-team-hit:focus-visible { outline:3px solid #fff2b4!important;outline-offset:-8px; }
+.home-reapers-cast { position:absolute;z-index:3;inset:14px 10% 55px;display:flex;align-items:flex-end;justify-content:center;gap:clamp(28px,9vw,150px);pointer-events:none; }
+.home-reapers-cast>.sprite-preview { width:clamp(115px,22vw,280px)!important;height:100%!important;margin:0!important;display:grid!important;place-items:end center!important; }
+.home-reapers-cast>.sprite-preview canvas,.home-reapers-cast>.sprite-preview img { max-width:100%!important;max-height:100%!important;object-fit:contain!important; }
+.home-reapers-cast .sprite-preview { filter:drop-shadow(0 9px 0 #070508) drop-shadow(0 0 22px #ff3b8280)!important; }
+.home-hero-play { position:absolute;z-index:4;left:50%;bottom:13px;transform:translateX(-50%);display:grid;grid-template-columns:22px auto;align-items:center;column-gap:7px;min-width:clamp(145px,27vw,230px);padding:9px 17px!important;color:#20111c!important;border:2px solid #fff3c3!important;border-radius:2px!important;background:linear-gradient(120deg,#ffad31,#f65b25 55%,#ee3372)!important;box-shadow:inset 0 -4px #922b1d,4px 4px 0 #100a12!important;font-family:Montserrat,Arial,sans-serif;text-align:left; }
+.home-hero-play>span { grid-row:1/3;color:#fff9e9;font-size:19px;text-shadow:1px 1px #221229; }.home-hero-play b { font:900 clamp(18px,3.1vw,27px)/.85 Montserrat,Arial,sans-serif;letter-spacing:-.04em; }.home-hero-play small { font:900 8px/1 Montserrat,Arial,sans-serif;letter-spacing:.1em; }
+.home-reapers-hero-copy { display:none!important; }
+.home-mode-banners { gap:10px!important; }
+.home-mode-banner { min-height:clamp(74px,9vw,96px)!important;grid-template-columns:52px minmax(0,1fr) 25px!important;padding:10px 14px!important; }
+.home-mode-banner b { font-size:clamp(19px,3vw,29px)!important; }.home-mode-banner>span { width:43px!important;height:43px!important; }
+.home-mode-pvp { color:#f1fbff!important;background:linear-gradient(105deg,#132b45,#196d93 60%,#2aaec4)!important; }.home-mode-pvp>span { color:#15476f!important;background:#d7f7ff!important; }
+@media (prefers-reduced-motion:no-preference) { .home-hero-play:enabled:hover { transform:translateX(-50%) translateY(-3px) rotate(-.15deg); }.home-hero-play:enabled:active { transform:translateX(-50%) translateY(3px); } }
+@media (max-width:560px) {
+  .home-reapers-hero { min-height:285px!important; }
+  .home-reapers-cast { inset:14px 4% 58px;gap:18px; }
+  .home-reapers-cast>.sprite-preview { width:45%!important; }
+  .home-mode-banner { grid-template-columns:45px minmax(0,1fr) 22px!important; }
+}
