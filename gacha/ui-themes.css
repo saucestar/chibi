@@ -1399,8 +1399,9 @@
 .game-hub .summon-workspace .portal-list {
   position:relative;display:flex;min-width:0;max-width:100%;margin:.7rem 0 0;
   gap:0!important;padding:0;overflow-x:auto;overscroll-behavior-inline:contain;
-  scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#a91750 #f3e3d6;
+  scroll-snap-type:x mandatory;scrollbar-width:none;
 }
+.game-hub .summon-workspace .portal-list::-webkit-scrollbar { display:none; }
 .game-hub .summon-workspace .portal-card {
   flex:0 0 100%;min-width:0;margin:0;scroll-snap-align:start;scroll-snap-stop:always;
 }
