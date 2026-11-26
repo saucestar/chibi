@@ -489,4 +489,5 @@ Choisir un portail|Select a banner
 Communauté et options|Community and settings
 Portail précédent|Previous banner
 Portail suivant|Next banner
+Portails d’invocation|Summon banners
 `.trim();

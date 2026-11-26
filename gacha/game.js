@@ -4695,49 +4695,45 @@ function BestiaryMenu() {
     onClick: () => setSelected(null)
   }, "Fermer")));
 }
-function PortalSelector({
+function PortalCarousel({
   portal,
-  disabled,
-  select
+  children
 }) {
   const rail = React.useRef(null);
-  const entries = Object.entries(portals).filter(([id]) => portalAvailable(id));
-  const current = entries.findIndex(([id]) => id === portal);
   React.useLayoutEffect(() => {
     const list = rail.current;
-    const button = list?.querySelector('[aria-pressed="true"]');
-    if (!list || !button) return;
-    const bounds = list.getBoundingClientRect(),
-      target = button.getBoundingClientRect();
-    if (target.left < bounds.left) list.scrollLeft += target.left - bounds.left - 4;
-    if (target.right > bounds.right) list.scrollLeft += target.right - bounds.right + 4;
+    const card = list?.querySelector(`[data-portal="${portal}"]`);
+    if (list && card) list.scrollLeft = card.offsetLeft;
   }, [portal]);
+  const move = direction => {
+    const list = rail.current;
+    if (!list) return;
+    const cards = Array.from(list.querySelectorAll(".portal-card"));
+    const target = direction > 0 ? cards.find(card => card.offsetLeft > list.scrollLeft + 4) : cards.reverse().find(card => card.offsetLeft < list.scrollLeft - 4);
+    if (target) list.scrollTo({
+      left: target.offsetLeft,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+    });
+  };
   return React.createElement("div", {
-    className: "portal-picker"
+    className: "portal-carousel"
+  }, React.createElement("div", {
+    className: "portal-carousel-controls"
   }, React.createElement("button", {
-    className: "portal-arrow",
     type: "button",
     "aria-label": "Portail pr\xE9c\xE9dent",
-    disabled: disabled || current <= 0,
-    onClick: () => select(entries[current - 1][0])
-  }, "\u2039"), React.createElement("div", {
-    className: "portal-selector noir-tabs",
-    ref: rail,
-    role: "group",
-    "aria-label": "Choisir un portail"
-  }, entries.map(([id, title]) => React.createElement("button", {
-    type: "button",
-    key: id,
-    "aria-pressed": portal === id,
-    disabled: disabled,
-    onClick: () => select(id)
-  }, id === "shibuya" ? "First Week #1" : title))), React.createElement("button", {
-    className: "portal-arrow",
+    onClick: () => move(-1)
+  }, "\u2039"), React.createElement("button", {
     type: "button",
     "aria-label": "Portail suivant",
-    disabled: disabled || current === entries.length - 1,
-    onClick: () => select(entries[current + 1][0])
-  }, "\u203A"));
+    onClick: () => move(1)
+  }, "\u203A")), React.createElement("div", {
+    className: "portal-list",
+    ref: rail,
+    tabIndex: 0,
+    role: "region",
+    "aria-label": "Portails d\u2019invocation"
+  }, children));
 }
 function App() {
   useEffect(gameSound.connect, []);
@@ -5178,11 +5174,10 @@ function App() {
     onClick: () => navigate("quests")
   }, "Qu\xEAtes")), /*#__PURE__*/React.createElement("p", {
     className: "daily-wishes"
-  }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, availableFreeWishes(profile)), /*#__PURE__*/React.createElement("small", null, profile.eventWishes ? `${profile.eventWishes} Vœux Vague 2 + 3 quotidiens` : parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement(PortalSelector, {portal, disabled: phase !== "ready", select: setPortal}), React.createElement("div", {
-    className: "portal-list"
-  }, Object.entries(portals).filter(([id]) => id === portal && portalAvailable(id)).map(([id, title]) => React.createElement("article", {
+  }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, availableFreeWishes(profile)), /*#__PURE__*/React.createElement("small", null, profile.eventWishes ? `${profile.eventWishes} Vœux Vague 2 + 3 quotidiens` : parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement(PortalCarousel, {portal}, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => React.createElement("article", {
     key: id,
     className: "portal-card",
+    "data-portal": id,
     "aria-label": title
   }, /*#__PURE__*/React.createElement("div", {
     className: "portal-scene scene-" + id

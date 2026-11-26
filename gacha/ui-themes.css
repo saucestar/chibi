@@ -1322,22 +1322,20 @@
   width:100%;min-height:44px;padding:.5rem .7rem;border:2px solid #271621;
   border-radius:0;background:#fffaf0;color:#211522;font:inherit;
 }
-.game-hub :is(.hub-tabs,.portal-selector).noir-tabs {
+.game-hub .hub-tabs.noir-tabs {
   display:flex;flex-wrap:wrap;gap:.45rem;margin:.75rem 0;
 }
-.game-hub :is(.hub-tabs,.portal-selector).noir-tabs button {
+.game-hub .hub-tabs.noir-tabs button {
   min-height:44px;padding:.45rem .7rem;border:2px solid #211522!important;border-radius:0!important;
   background:#fff5e6!important;color:#251925!important;box-shadow:2px 3px #211522!important;
   font:900 .75rem/1.25 Montserrat,Arial,sans-serif;
 }
-.game-hub :is(.hub-tabs,.portal-selector).noir-tabs button[aria-pressed=true] {
+.game-hub .hub-tabs.noir-tabs button[aria-pressed=true] {
   background:#a91750!important;color:#fffaf0!important;
 }
 .game-hub :is(.noir-tabs button,.collection-search input,.recruitment-sources button):focus-visible {
   outline:3px solid #e65b96;outline-offset:3px;
 }
-.game-hub .summon-workspace .portal-list { display:block; }
-.game-hub .summon-workspace .portal-card { width:min(100%,560px);margin-inline:auto; }
 .game-hub .hub-nav button[data-section-active] { background:#a91750!important; }
 .game-hub .hub-nav button[data-section-active] :is(b,.hub-nav-orb i) { color:#fffaf0!important; }
 .game-hub .menu-group { margin-block:1rem 1.4rem; }
@@ -1390,26 +1388,27 @@
   border-radius:0;background:radial-gradient(ellipse,#8d325d,#261723 76%);
 }
 
-/* Keep navigation arrows visible while the banner names scroll. */
-.game-hub .portal-picker {
-  display:grid;grid-template-columns:44px minmax(0,1fr) 44px;
-  align-items:center;gap:clamp(3px,1vw,10px);margin:.75rem 0;
-}
-.game-hub .portal-picker .portal-selector.noir-tabs {
-  flex-wrap:nowrap;min-width:0;margin:0;padding:5px 4px 8px;
-  overflow-x:auto;overscroll-behavior-inline:contain;
-  scrollbar-width:thin;scrollbar-color:#a91750 #f3e3d6;
-}
-.game-hub .portal-picker .portal-selector button { flex:none;white-space:nowrap; }
-.game-hub .portal-picker .portal-arrow {
-  width:44px;min-height:44px;padding:0;border:2px solid #251925;border-radius:0;
+/* Full-size portal posters share a single horizontal scroll area. */
+.game-hub .portal-carousel { min-width:0;margin:.75rem 0; }
+.game-hub .portal-carousel-controls { display:flex;justify-content:flex-end;gap:8px; }
+.game-hub .portal-carousel-controls button {
+  width:44px;height:44px;padding:0;border:2px solid #251925;border-radius:0;
   background:#251925;color:#fff5e6;box-shadow:2px 3px #a91750;
   font:900 1.6rem/1 Arial,sans-serif;
 }
-.game-hub .portal-picker .portal-arrow:disabled {
-  background:#e8d8cd;color:#6d515e;box-shadow:none;opacity:1;
+.game-hub .summon-workspace .portal-list {
+  position:relative;display:flex;min-width:0;max-width:100%;margin:.7rem 0 0;
+  padding:4px 0 12px;overflow-x:auto;overscroll-behavior-inline:contain;
+  scroll-snap-type:x mandatory;scrollbar-width:thin;scrollbar-color:#a91750 #f3e3d6;
 }
-.game-hub .portal-picker .portal-arrow:focus-visible { outline:3px solid #a91750;outline-offset:2px; }
+.game-hub .summon-workspace .portal-card {
+  flex:0 0 min(85%,490px);min-width:0;margin:0;scroll-snap-align:start;
+}
+.game-hub .summon-workspace .portal-card:hover { transform:none; }
+.game-hub .portal-carousel :is(.portal-list,button):focus-visible { outline:3px solid #a91750;outline-offset:2px; }
+@media (max-width:520px) {
+  .game-hub .summon-workspace .portal-list { gap:10px!important; }
+}
 
 .game-hub .wish-dialog :is(.dossier-stats,.badge-info) :is(b,small,strong,dt,dd,p),
 .game-hub .hub-panel :is(.run-status,.social-message,.badge-info),
@@ -1419,3 +1418,9 @@
 .game-hub .hub-panel .badge-info { background:#261925; }
 .game-hub .party-lobby :is(.equipment-count,.equipment-help) { color:#271621;text-shadow:none; }
 .game-hub .summon-workspace .wish-commands button:enabled { color:#fff8ea; }
+
+/* The profile dialog uses dark tiles inside a light hub panel. */
+.game-hub .social-profile-dialog .social-record b,
+.game-hub .social-profile-dialog .social-psychs small {
+  color:#fff5e6!important;
+}

@@ -1522,24 +1522,26 @@ function BestiaryMenu(){
  </section>;
 }
 
-function PortalSelector({portal,disabled,select}:{portal:string;disabled:boolean;select:(id:string)=>void}) {
+function PortalCarousel({portal,children}:{portal:string;children:React.ReactNode}) {
  const rail=React.useRef<HTMLDivElement>(null);
- const entries=Object.entries(portals).filter(([id])=>portalAvailable(id));
- const current=entries.findIndex(([id])=>id===portal);
  React.useLayoutEffect(()=>{
   const list=rail.current;
-  const button=list?.querySelector<HTMLElement>('[aria-pressed="true"]');
-  if(!list||!button)return;
-  const bounds=list.getBoundingClientRect(),target=button.getBoundingClientRect();
-  if(target.left<bounds.left)list.scrollLeft+=target.left-bounds.left-4;
-  if(target.right>bounds.right)list.scrollLeft+=target.right-bounds.right+4;
+  const card=list?.querySelector<HTMLElement>(`[data-portal="${portal}"]`);
+  if(list&&card) list.scrollLeft=card.offsetLeft;
  },[portal]);
- return <div className="portal-picker">
-  <button className="portal-arrow" type="button" aria-label="Portail précédent" disabled={disabled||current<=0} onClick={()=>select(entries[current-1][0])}>‹</button>
-  <div className="portal-selector noir-tabs" ref={rail} role="group" aria-label="Choisir un portail">
-   {entries.map(([id,title])=><button type="button" key={id} aria-pressed={portal===id} disabled={disabled} onClick={()=>select(id)}>{id==="shibuya"?"First Week #1":title}</button>)}
+ const move=(direction:number)=>{
+  const list=rail.current;
+  if(!list)return;
+  const cards=Array.from(list.querySelectorAll<HTMLElement>(".portal-card"));
+  const target=direction>0?cards.find(card=>card.offsetLeft>list.scrollLeft+4):cards.reverse().find(card=>card.offsetLeft<list.scrollLeft-4);
+  if(target)list.scrollTo({left:target.offsetLeft,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+ };
+ return <div className="portal-carousel">
+  <div className="portal-carousel-controls">
+   <button type="button" aria-label="Portail précédent" onClick={()=>move(-1)}>‹</button>
+   <button type="button" aria-label="Portail suivant" onClick={()=>move(1)}>›</button>
   </div>
-  <button className="portal-arrow" type="button" aria-label="Portail suivant" disabled={disabled||current===entries.length-1} onClick={()=>select(entries[current+1][0])}>›</button>
+  <div className="portal-list" ref={rail} tabIndex={0} role="region" aria-label="Portails d’invocation">{children}</div>
  </div>;
 }
 
@@ -1715,8 +1717,7 @@ function App() {
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
     <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
-    <PortalSelector portal={portal} disabled={phase!=="ready"} select={setPortal}/>
-    <div className="portal-list">{Object.entries(portals).filter(([id])=>id===portal&&portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
+    <PortalCarousel portal={portal}>{Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" data-portal={id} aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
           <PortalVideo src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp"/>}
@@ -1742,7 +1743,7 @@ function App() {
         <p className="portal-caption">{id==="shibuya" ? "Retrouve Neku, Shiki et les badges psych de Shibuya." : id==="reality" ? "Cloud, Aerith et les badges psych · Des alliés venus d’une autre réalité." : id==="apocalyptic" ? "2B, A2 et les badges psych · Un futur à reconstruire." : id==="destiny" ? "Sora, Riku et les badges psych · Les liens qui traversent les mondes." : id==="eosDawn" ? "Noctis et Prompto · Les armes royales de Lucis." : id==="eosDusk" ? "Ignis et Gladio · Les gardiens de la couronne." : id==="sonicx" ? "X, Zero, Sonic, Shadow, Knuckles et Tails · La seconde vague entre en action." : id==="xiii" ? "Marluxia, Lexaeus, Axel et Larxene · L’Organisation XIII se rassemble." : "Beat et Joshua · Les partenaires de la Reapers’ Game."}</p>
       </div>
 
-    </article>)}</div>
+    </article>)}</PortalCarousel>
     {phase==="rates" && <WishDialog key="rates" className={rateFighter?"character-sheet-dialog":"portal-rates-dialog"} title={rateFighter?`Fiche · ${rateFighter}`:`Taux · ${portalName}`} close={closeDialog}>
       {rateFighter?<><CharacterDossier fighter={characterRoster.find(f=>f.name===rateFighter)!} profile={profile} base rate={pool.filter(x=>x.name===rateFighter).length/pool.length*(guaranteed?1:characterChance)}/><button onClick={()=>setRateFighter(null)}>Retour aux taux</button></>:<>
       <p>{profile.wishesMade===0?"Première invocation du compte · personnage garanti.":<>Vœu ordinaire · {percent(characterChance)} personnage, {percent(1-characterChance)} badge.</>} Chaque 100e vœu garantit aussi un personnage.</p>

@@ -28,7 +28,7 @@
     try {
       await add('./admin.js?v=settings1').catch(() => {});
       await add('./raid.js?v=animation-timing1');
-      await add('./game.js?v=portal-scroll1-pivots1');
+      await add('./game.js?v=portal-carousel1');
     }
     catch (error) { const root = document.getElementById('root'); if (root) root.textContent = 'Impossible de charger le jeu. Recharge la page.'; }
   });
