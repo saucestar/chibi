@@ -1522,6 +1522,27 @@ function BestiaryMenu(){
  </section>;
 }
 
+function PortalSelector({portal,disabled,select}:{portal:string;disabled:boolean;select:(id:string)=>void}) {
+ const rail=React.useRef<HTMLDivElement>(null);
+ const entries=Object.entries(portals).filter(([id])=>portalAvailable(id));
+ const current=entries.findIndex(([id])=>id===portal);
+ React.useLayoutEffect(()=>{
+  const list=rail.current;
+  const button=list?.querySelector<HTMLElement>('[aria-pressed="true"]');
+  if(!list||!button)return;
+  const bounds=list.getBoundingClientRect(),target=button.getBoundingClientRect();
+  if(target.left<bounds.left)list.scrollLeft+=target.left-bounds.left-4;
+  if(target.right>bounds.right)list.scrollLeft+=target.right-bounds.right+4;
+ },[portal]);
+ return <div className="portal-picker">
+  <button className="portal-arrow" type="button" aria-label="Portail précédent" disabled={disabled||current<=0} onClick={()=>select(entries[current-1][0])}>‹</button>
+  <div className="portal-selector noir-tabs" ref={rail} role="group" aria-label="Choisir un portail">
+   {entries.map(([id,title])=><button type="button" key={id} aria-pressed={portal===id} disabled={disabled} onClick={()=>select(id)}>{id==="shibuya"?"First Week #1":title}</button>)}
+  </div>
+  <button className="portal-arrow" type="button" aria-label="Portail suivant" disabled={disabled||current===entries.length-1} onClick={()=>select(entries[current+1][0])}>›</button>
+ </div>;
+}
+
 function App() {
   useEffect(gameSound.connect,[]);
   const [profile, displayProfile] = useState(loadProfile);
@@ -1694,9 +1715,7 @@ function App() {
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
     <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
-    <div className="portal-selector noir-tabs" role="group" aria-label="Choisir un portail">
-     {Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><button key={id} aria-pressed={portal===id} disabled={phase!=="ready"} onClick={()=>setPortal(id)}>{id==="shibuya"?"First Week #1":title}</button>)}
-    </div>
+    <PortalSelector portal={portal} disabled={phase!=="ready"} select={setPortal}/>
     <div className="portal-list">{Object.entries(portals).filter(([id])=>id===portal&&portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&

@@ -1389,3 +1389,33 @@
 .game-hub .event-rail .event-preview {
   border-radius:0;background:radial-gradient(ellipse,#8d325d,#261723 76%);
 }
+
+/* Keep navigation arrows visible while the banner names scroll. */
+.game-hub .portal-picker {
+  display:grid;grid-template-columns:44px minmax(0,1fr) 44px;
+  align-items:center;gap:clamp(3px,1vw,10px);margin:.75rem 0;
+}
+.game-hub .portal-picker .portal-selector.noir-tabs {
+  flex-wrap:nowrap;min-width:0;margin:0;padding:5px 4px 8px;
+  overflow-x:auto;overscroll-behavior-inline:contain;
+  scrollbar-width:thin;scrollbar-color:#a91750 #f3e3d6;
+}
+.game-hub .portal-picker .portal-selector button { flex:none;white-space:nowrap; }
+.game-hub .portal-picker .portal-arrow {
+  width:44px;min-height:44px;padding:0;border:2px solid #251925;border-radius:0;
+  background:#251925;color:#fff5e6;box-shadow:2px 3px #a91750;
+  font:900 1.6rem/1 Arial,sans-serif;
+}
+.game-hub .portal-picker .portal-arrow:disabled {
+  background:#e8d8cd;color:#6d515e;box-shadow:none;opacity:1;
+}
+.game-hub .portal-picker .portal-arrow:focus-visible { outline:3px solid #a91750;outline-offset:2px; }
+
+.game-hub .wish-dialog :is(.dossier-stats,.badge-info) :is(b,small,strong,dt,dd,p),
+.game-hub .hub-panel :is(.run-status,.social-message,.badge-info),
+.game-hub .hub-panel :is(.run-status,.social-message,.badge-info,.wish-history-list>article) :is(b,strong,small,p,em) {
+  color:#fff5e6!important;
+}
+.game-hub .hub-panel .badge-info { background:#261925; }
+.game-hub .party-lobby :is(.equipment-count,.equipment-help) { color:#271621;text-shadow:none; }
+.game-hub .summon-workspace .wish-commands button:enabled { color:#fff8ea; }

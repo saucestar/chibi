@@ -487,4 +487,6 @@ Aucun personnage trouvé.|No characters found.
 Sources d’obtention|How to obtain
 Choisir un portail|Select a banner
 Communauté et options|Community and settings
+Portail précédent|Previous banner
+Portail suivant|Next banner
 `.trim();
