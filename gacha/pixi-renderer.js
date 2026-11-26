@@ -139,6 +139,33 @@
       sweep.poly([22, 8, 92, 8, 76, 10, 22, 10]).fill(0xffae40);
       sweep.alpha = 0;
       app.stage.addChild(sweep);
+      const portalLight = new PIXI.Graphics();
+      portalLight.alpha = 0;
+      app.stage.addChild(portalLight);
+      let portalLightLife = 0, lastRail = null, lastScroll = 0;
+      const lightPortalEdge = event => {
+        const rail = event.target;
+        if (!rail.matches?.('.portal-carousel .portal-list')) return;
+        const scroll = rail.scrollLeft;
+        const delta = scroll - (lastRail === rail ? lastScroll : Math.round(scroll / rail.clientWidth) * rail.clientWidth);
+        lastRail = rail;
+        lastScroll = scroll;
+        if (Math.abs(delta) < 1) return;
+        const edge = rail.getBoundingClientRect(), frame = hub.getBoundingClientRect();
+        if (!frame.width || !frame.height) return;
+        const scaleX = app.screen.width / frame.width, scaleY = app.screen.height / frame.height;
+        const x = ((delta > 0 ? edge.right : edge.left) - frame.left) * scaleX;
+        const top = Math.max(edge.top, frame.top);
+        const bottom = Math.min(edge.bottom, frame.bottom);
+        if (bottom <= top) return;
+        const y = (top - frame.top) * scaleY, h = (bottom - top) * scaleY;
+        const inward = delta > 0 ? -1 : 1;
+        portalLight.clear()
+          .poly([x, y, x + inward * 22, y + h * .44, x, y + h]).fill({ color: 0xff367b, alpha: .22 })
+          .moveTo(x, y + h * .16).lineTo(x + inward * 8, y + h * .5).lineTo(x, y + h * .84)
+          .stroke({ color: 0xffbe62, width: 2, alpha: .7 });
+        portalLightLife = 1;
+      };
       let sweepLife = 0;
       const routeObserver = new MutationObserver(() => { sweepLife = 1; });
       routeObserver.observe(hub, { attributes: true, attributeFilter: ['data-screen'] });
@@ -158,6 +185,8 @@
           pulse.alpha = Math.max(0, pulse.__life) * .48;
           if (pulse.__life <= 0) { pulses.removeChild(pulse); pulse.destroy(); }
         });
+        portalLightLife = Math.max(0, portalLightLife - ticker.deltaMS / 220);
+        portalLight.alpha = portalLightLife;
         sweepLife = Math.max(0, sweepLife - ticker.deltaMS / 280);
         sweep.position.set(-180 + (1 - sweepLife) * (width + 180), hub.querySelector('.hub-header')?.offsetHeight || 0);
         sweep.alpha = sweepLife * .75;
@@ -193,6 +222,7 @@
         hero.style.removeProperty('--hero-rotate-x');
         hero.style.removeProperty('--hero-rotate-y');
       };
+      hub.addEventListener('scroll', lightPortalEdge, { ...passive, capture: true });
       hub.addEventListener('pointerdown', pulse, passive);
       hub.addEventListener('pointermove', updateDepth, passive);
       hub.addEventListener('pointerout', resetDepth, passive);
