@@ -3,16 +3,22 @@
   'use strict';
   const storageKey = 'chibi.reapers-run.party.v1';
   const txt = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pv = value => Number(value).toLocaleString(document.documentElement.lang || 'fr');
+  function healthBar(hp, maxHp, label) {
+    const ratio = Math.min(100, Math.max(0, 100 * hp / Math.max(1, maxHp)));
+    return `<div class="raid-health" role="meter" aria-label="${txt(label)}" aria-valuemin="0" aria-valuemax="${Number(maxHp)}" aria-valuenow="${Number(hp)}"><i style="width:${ratio}%"></i></div>`;
+  }
   function profile() { try { return JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch (_) { return {}; } }
   function mountBossSprite(host, id, large = false) {
     const spec = window.ChibiRaidSprites?.enemies?.[id]; if (!host || !spec?.atlasFrames?.length) return;
     const previous = host.querySelector('canvas'); if (previous?._raidTimer) clearInterval(previous._raidTimer);
     const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
     canvas.width = spec.frameWidth; canvas.height = spec.frameHeight; canvas.className = large ? 'raid-boss-pixel-art' : 'raid-monster-pixel-art';
-    canvas.setAttribute('aria-hidden', 'true'); context.imageSmoothingEnabled = false; host.replaceChildren(canvas);
+    if (!context) return;
+    canvas.setAttribute('aria-hidden', 'true'); context.imageSmoothingEnabled = false;
     const pages = new Map(), frames = spec.atlasFrames; let index = 0, ready = false;
     Promise.all([...new Set(frames.map(frame => frame[0]))].map(async page => pages.set(page, await window.ChibiRaidSprites.loadPage(page))))
-      .then(() => { if (!canvas.isConnected) return; ready = true; draw(); canvas._raidTimer = setInterval(() => { index = (index + 1) % frames.length; draw(); }, Math.max(100, 1000 / (spec.fps || 4))); })
+      .then(() => { if (!host.isConnected) return; host.replaceChildren(canvas); ready = true; draw(); canvas._raidTimer = setInterval(() => { index = (index + 1) % frames.length; draw(); }, Math.max(100, 1000 / (spec.fps || 4))); })
       .catch(() => {});
     function draw() {
       if (!ready || !canvas.isConnected) return;
@@ -47,11 +53,14 @@
     if (!window.ChibiSocial?.ready()) return window.alert('Connecte-toi avec Discord pour ouvrir les Raids.');
     const overlay = document.createElement('div'); overlay.className = 'raid-overlay'; document.body.appendChild(overlay);
     let faction = null, factions = [], rooms = [], selected = null, stop = null, activeStop = null;
+    let partySprites = [], previousFrame = null, draftKey = '', draft = {}, sendingKey = '', syncActions = null;
     const clearSpriteTimers = () => overlay.querySelectorAll('canvas').forEach(canvas => { if (canvas._raidTimer) clearInterval(canvas._raidTimer); });
-    const close = () => { stop?.(); activeStop?.(); clearSpriteTimers(); overlay.remove(); };
+    const clearBattleSprites = () => { clearSpriteTimers(); partySprites.forEach(unmount => unmount()); partySprites = []; };
+    const close = () => { stop?.(); activeStop?.(); clearBattleSprites(); overlay.remove(); };
     overlay.onclick = event => { if (event.target === overlay) close(); };
     const renderHall = (notice = '') => {
-      clearSpriteTimers();
+      if (!overlay.isConnected) return;
+      clearBattleSprites();
       const bosses = (window.ChibiGameCatalog?.enemies || []).filter(x => x.enabled && x.boss).sort((a, b) => b.hp - a.hp).slice(0, 18);
       overlay.innerHTML = `<section class="raid-native"><header><div><small>COOPÉRATION · FACTION</small><h1>Raid · 3 joueurs contre Boss</h1><p>${txt(faction?.name || 'Rejoins une faction dans Social pour lancer un Raid.')}</p></div><button class="raid-native-close">×</button></header>${!faction ? '<button class="raid-native-open-social">Ouvrir Social / Factions</button>' : `<div class="raid-native-boss-list">${bosses.map(b => `<button data-boss="${txt(b.id)}" aria-pressed="${selected?.id === b.id}"><span class="raid-monster-art">${b.sprite ? `<img src="${txt(b.sprite)}">` : '◆'}</span><b>${txt(b.displayName || b.name || b.id)}</b><small>Niveau 200 · ${Number(b.hp).toLocaleString()} PV</small></button>`).join('')}</div>${selected ? `<div class="raid-native-selected"><b>${txt(selected.displayName || selected.name || selected.id)}</b><span>Boss niveau 200 · ${Math.max(18000, Math.min(70000, Number(selected.hp) * 8)).toLocaleString()} PV</span><button class="raid-native-create">Créer une salle</button></div>` : ''}<h2>Salles de ta faction</h2><div class="raid-native-rooms">${rooms.map(r => { const ids = Object.values(r.slots || {}), joined = ids.includes(String(window.ChibiGameSync?.accountId)); return `<article><b>${txt(r.meta.bossName)}</b><span>${ids.length}/3 joueurs</span><button data-join="${txt(r.id)}" ${ids.length >= 3 && !joined ? 'disabled' : ''}>${joined ? 'Reprendre' : 'Rejoindre'}</button></article>`; }).join('') || '<p>Aucune salle. Choisis un boss pour la créer.</p>'}</div>`}${notice ? `<p class="raid-native-notice" role="status">${txt(notice)}</p>` : ''}</section>`;
       overlay.querySelector('.raid-native-close').onclick = close;
@@ -101,22 +110,146 @@
     }
     function enter(roomId) {
       stop?.(); activeStop?.(); activeStop = null;
-      ChibiSocial.watchRaidRoom(roomId, room => { if (!room) return; renderBattle(room, roomId); }, error => renderHall(error.message || 'Connexion à la salle interrompue.')).then(off => activeStop = off).catch(err => renderHall(err.message));
+      ChibiSocial.watchRaidRoom(roomId, room => { if (room) renderBattle(room, roomId); }, error => renderHall(error.message || 'Connexion à la salle interrompue.')).then(off => {
+        if (overlay.isConnected) activeStop = off; else off();
+      }).catch(err => renderHall(err.message));
     }
     function renderBattle(room, roomId) {
-      clearSpriteTimers();
-      const uid = String(window.ChibiGameSync?.accountId), me = room.players?.[uid], result = compute(room), mine = result.squads[uid] || me?.team || [], round = room.actions?.[result.turn] || {}, chosen = {};
-      const complete = result.ids.length === 3 && result.ids.every(id => round[id]?.plans), done = result.won || result.lost;
-      overlay.innerHTML = `<section class="raid-native raid-live"><header><div><small>RAID DE FACTION · ${result.ids.length}/3</small><h1>${txt(room.meta.bossName)}</h1><p>Tour ${result.turn} · Niveau 200</p></div><button class="raid-native-close">×</button></header><div class="raid-native-boss"><span>☠</span><b>${txt(room.meta.bossName)}</b><i><u style="width:${Math.max(0,100*result.hp/room.meta.bossHp)}%"></u></i><small>${Math.max(0,result.hp).toLocaleString()} / ${Number(room.meta.bossHp).toLocaleString()} PV</small></div><div class="raid-native-parties">${result.ids.map(id => `<article><h3>${txt(room.players[id].name)}${id===uid?' · Toi':''}</h3><div>${(result.squads[id]||[]).map(f=>`<span>${txt(f.name)}<i>${f.hp}/${f.maxHp} PV</i></span>`).join('')}</div><small>${round[id]?.plans?'Actions envoyées':'Choix en cours'}</small></article>`).join('')}</div><h2>Tes actions</h2><div class="raid-native-plans">${mine.map((f,i)=>`<article><b>${txt(f.name)} · ${f.hp}/${f.maxHp} PV</b><select data-action="${i}" ${round[uid]?.plans||done||f.hp<=0?'disabled':''}><option value="">Choisir un psych</option>${f.loadout.map(id=>{const pin=window.ChibiGameCatalog.badges[id];return pin?`<option value="${txt(id)}">${txt(pin.name)} · ${txt(pin.cost)} EN</option>`:''}).join('')}<option value="guard">Défendre</option></select></article>`).join('')}</div><button class="raid-native-submit" ${round[uid]?.plans||done?'disabled':''}>${done?(result.won?'Boss vaincu':'Raid terminé'):round[uid]?.plans?'Actions validées · attente du groupe':'Valider les deux actions'}</button><button class="raid-native-forfeit">Abandonner le Raid</button></section>`;
+      if (!overlay.isConnected) return;
+      const openPicker = overlay.querySelector('.raid-action-picker[open]')?.dataset.picker;
+      clearBattleSprites();
+      syncActions = null;
+      const uid = String(window.ChibiGameSync?.accountId);
+      const result = compute(room);
+      const mine = result.squads[uid] || [];
+      const round = room.actions?.[result.turn] || {};
+      const submitted = Boolean(round[uid]?.plans);
+      const done = result.won || result.lost;
+      const waiting = result.ids.length < 3;
+      const choosing = !waiting && !done && !submitted;
+      const key = `${roomId}:${result.turn}`;
+      if (draftKey !== key) { draftKey = key; draft = {}; }
+      const previous = previousFrame?.roomId === roomId ? previousFrame.result : null;
+      const damage = previous ? Math.max(0, previous.hp - result.hp) : 0;
+      previousFrame = { roomId, result };
+      const bossName = txt(room.meta.bossName);
+      const bossArt = window.ChibiGameCatalog.enemies.find(enemy => enemy.id === room.meta.bossId)?.sprite;
+      const status = result.won ? 'Boss vaincu !' : result.lost ? 'Raid terminé' :
+        waiting ? 'En attente des autres joueurs de la faction' :
+        submitted ? 'Actions envoyées · en attente du groupe' : 'Choisis une action par personnage debout';
+
+      const groups = Array.from({ length: 3 }, (_, index) => {
+        const id = result.ids[index];
+        if (!id) return '<article class="raid-squad raid-squad-empty"><b>Place libre</b></article>';
+        return `<article class="raid-squad">
+          <div class="raid-party-art" data-squad="${index}" aria-hidden="true"></div>
+          <div class="raid-squad-title"><b>${txt(room.players[id].name)}${id === uid ? ' · Toi' : ''}</b>
+          ${!waiting && !done ? `<small>${round[id]?.plans ? 'Prêt' : 'En cours'}</small>` : ''}</div>
+          ${result.squads[id].map(fighter => `<div class="raid-unit ${fighter.hp <= 0 ? 'raid-unit-down' : ''}">
+            <div><b>${txt(fighter.name)}</b><small>${pv(fighter.hp)}/${pv(fighter.maxHp)} PV</small></div>
+            ${healthBar(fighter.hp, fighter.maxHp, fighter.name)}
+          </div>`).join('')}
+        </article>`;
+      }).join('');
+
+      const plans = choosing ? mine.map((fighter, index) => {
+        if (fighter.hp <= 0) return `<fieldset disabled><legend>${txt(fighter.name)}</legend><small>Hors combat</small></fieldset>`;
+        const choices = fighter.loadout.flatMap(id => {
+          const pin = window.ChibiGameCatalog.badges[id];
+          return pin ? [[id, pin.name]] : [];
+        });
+        choices.push(['guard', 'Défendre']);
+        return `<details class="raid-action-picker" name="raid-actions" data-picker="${index}" ${openPicker === String(index) && sendingKey !== key ? 'open' : ''}>
+          <summary><small>${txt(fighter.name)}</small><b data-selection>${txt(choices.find(([id]) => id === draft[index])?.[1] || 'Choisir une action')}</b></summary>
+          <div class="raid-psych-list">
+          ${choices.map(([id, label]) => `<button type="button" data-action="${index}" data-choice="${txt(id)}" aria-pressed="false">${txt(label)}</button>`).join('')}
+        </div></details>`;
+      }).join('') : '';
+
+      overlay.innerHTML = `<section class="raid-native raid-battle">
+        <header class="topbar raid-combat-bar"><div><small>RAID DE FACTION · ${result.ids.length}/3</small>
+          <h1>${bossName}</h1></div><span class="raid-turn">Tour ${result.turn}</span>
+          <button type="button" class="raid-native-close" aria-label="Quitter l’arène">×</button>
+        </header>
+        <div class="arena raid-arena">
+          <div class="raid-boss-hud"><b>Boss · Niv. 200</b>${healthBar(result.hp, room.meta.bossHp, room.meta.bossName)}
+            <small>${pv(result.hp)} / ${pv(room.meta.bossHp)} PV</small></div>
+          <div class="raid-boss-actor" aria-hidden="true"><span class="raid-boss-sprite">${bossArt ? `<img src="${txt(bossArt)}" alt="">` : '☠'}</span>
+            ${damage ? `<b class="raid-damage">−${pv(damage)}</b>` : ''}</div>
+          <div class="raid-squads">${groups}</div>
+        </div>
+        <section class="raid-command" aria-label="Actions de raid">
+          <p class="raid-round-status" role="status">${txt(status)}</p>
+          ${choosing ? `<div class="raid-actions">${plans}</div><button type="button" class="raid-native-submit" disabled>Valider les actions</button>` : ''}
+          ${done ? '' : '<button type="button" class="raid-native-forfeit">Abandonner le raid</button>'}
+        </section>
+      </section>`;
+
       overlay.querySelector('.raid-native-close').onclick = close;
-      mountBossSprite(overlay.querySelector('.raid-native-boss>span'), room.meta.bossId, true);
-      overlay.querySelectorAll('[data-action]').forEach(select => select.onchange = () => { chosen[select.dataset.action] = select.value === 'guard' ? { kind: 'guard' } : { kind: 'psych', pin: select.value }; });
-      overlay.querySelector('.raid-native-submit').onclick = async event => { const selects = [...overlay.querySelectorAll('[data-action]')]; if (selects.some(s => !s.value)) return; event.currentTarget.disabled = true; try { await ChibiSocial.submitRaidAction(roomId, result.turn, Object.fromEntries(selects.map(s => [s.dataset.action, s.value === 'guard' ? { kind: 'guard' } : { kind: 'psych', pin: s.value }]))); } catch (err) { renderBattle(room, roomId); const notice = document.createElement('p'); notice.className = 'raid-native-notice'; notice.setAttribute('role', 'status'); notice.textContent = err.message || 'Envoi impossible'; overlay.querySelector('.raid-native').appendChild(notice); } };
-      overlay.querySelector('.raid-native-forfeit').onclick = async () => { try { await ChibiSocial.forfeitRaid(roomId); close(); } catch (err) { const notice = document.createElement('p'); notice.className = 'raid-native-notice'; notice.setAttribute('role', 'status'); notice.textContent = err.message || 'Abandon impossible'; overlay.querySelector('.raid-native').appendChild(notice); } };
+      mountBossSprite(overlay.querySelector('.raid-boss-sprite'), room.meta.bossId, true);
+      overlay.querySelectorAll('[data-squad]').forEach(host => {
+        const fighters = result.squads[result.ids[Number(host.dataset.squad)]] || [];
+        const unmount = window.ChibiRaidSprites?.mountParty(host, fighters.filter(fighter => fighter.hp > 0).map(fighter => fighter.name));
+        if (unmount) partySprites.push(unmount);
+      });
+
+      if (choosing) {
+        const buttons = [...overlay.querySelectorAll('[data-action]')];
+        const submit = overlay.querySelector('.raid-native-submit');
+        const sync = () => {
+          buttons.forEach(button => {
+            button.setAttribute('aria-pressed', String(draft[button.dataset.action] === button.dataset.choice));
+            button.disabled = sendingKey === key;
+          });
+          submit.disabled = sendingKey === key || mine.some((fighter, index) => fighter.hp > 0 && !draft[index]);
+        };
+        syncActions = sync;
+        buttons.forEach(button => button.onclick = () => {
+          draft[button.dataset.action] = button.dataset.choice;
+          const picker = button.closest('details');
+          picker.querySelector('[data-selection]').textContent = button.textContent;
+          picker.open = false;
+          picker.querySelector('summary').focus();
+          sync();
+        });
+        submit.onclick = async () => {
+          if (submit.disabled) return;
+          sendingKey = key;
+          sync();
+          const actions = Object.fromEntries(mine.map((fighter, index) => {
+            const choice = fighter.hp > 0 ? draft[index] : 'guard';
+            return [index, choice === 'guard' ? { kind: 'guard' } : { kind: 'psych', pin: choice }];
+          }));
+          try {
+            await ChibiSocial.submitRaidAction(roomId, result.turn, actions);
+          } catch (error) {
+            if (sendingKey === key) sendingKey = '';
+            const message = overlay.querySelector('.raid-round-status');
+            if (message && draftKey === key && syncActions) {
+              syncActions();
+              message.textContent = error.message || 'Envoi impossible';
+            }
+          }
+        };
+        sync();
+      }
+      const forfeit = overlay.querySelector('.raid-native-forfeit');
+      if (forfeit) forfeit.onclick = async () => {
+        forfeit.disabled = true;
+        try { await ChibiSocial.forfeitRaid(roomId); close(); }
+        catch (error) {
+          if (!forfeit.isConnected) return;
+          forfeit.disabled = false;
+          overlay.querySelector('.raid-round-status').textContent = error.message || 'Abandon impossible';
+        }
+      };
     }
     async function refreshFaction() {
       stop?.(); stop = null; faction = await ChibiSocial.myFaction();
-      if (faction) stop = await ChibiSocial.watchRaidRooms(value => { rooms = value; renderHall(); }, error => renderHall(error.message || 'La liste des Raids est inaccessible.'));
+      if (faction) {
+        const off = await ChibiSocial.watchRaidRooms(value => { rooms = value; renderHall(); }, error => renderHall(error.message || 'La liste des Raids est inaccessible.'));
+        if (overlay.isConnected) stop = off; else off();
+      }
       else { rooms = []; factions = await ChibiSocial.factionList(); }
     }
     refreshFaction().then(() => renderHall()).catch(err => renderHall(err.message || 'La liste des Raids est inaccessible.'));

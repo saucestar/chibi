@@ -451,7 +451,7 @@
 /* Pixi sits behind the DOM combatants: GPU ambience, never a hit target. */
 .arena,.pvp-battlefield { position:relative;isolation:isolate;overflow:hidden; }
 .pixi-combat-fx { position:absolute!important;inset:0;z-index:0;width:100%!important;height:100%!important;pointer-events:none;mix-blend-mode:screen; }
-.arena>:not(.pixi-combat-fx),.pvp-battlefield>:not(.pixi-combat-fx) { position:relative;z-index:1; }
+.arena>:not(.pixi-combat-fx),.pvp-battlefield>:not(.pixi-combat-fx) { z-index:1; }
 @media (prefers-reduced-motion:reduce) { .pixi-combat-fx { display:none!important; } }
 
 /* Menu renderer: GPU texture and feedback stay behind every interactive surface. */
@@ -1040,6 +1040,159 @@
   padding:12px 16px;
 }
 .raid-overlay .raid-native>header :is(small,p) { color:#fff1de!important; }
+
+.raid-overlay:has(.raid-battle) { padding:0!important; background:#17132b!important; }
+.raid-overlay .raid-battle {
+  display:grid;
+  grid-template-rows:auto minmax(310px,1fr) auto;
+  gap:8px;
+  width:min(1200px,100%)!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  min-height:0!important;
+  border:0!important;
+  border-radius:0!important;
+  padding:8px clamp(8px,2vw,22px) max(8px,env(safe-area-inset-bottom))!important;
+  background:linear-gradient(#17132b42,#17132bc2),url('./assets/game/battle-bg.jpg') center/cover,#17132b!important;
+  color:#fff8eb!important;
+  box-shadow:none!important;
+}
+.raid-battle::before { display:none; }
+.raid-overlay .raid-battle>.raid-combat-bar {
+  min-height:0!important;
+  margin:0;
+  padding:6px 8px!important;
+  gap:8px;
+  border:0!important;
+  border-radius:0;
+  background:#231b3a;
+}
+.raid-battle>.raid-combat-bar>div { min-width:0; padding-left:8px; border-color:#f44676; }
+.raid-battle>.raid-combat-bar h1 { color:#fff8eb!important; font-size:clamp(16px,4vw,28px)!important; overflow-wrap:anywhere; }
+.raid-battle .raid-turn { white-space:nowrap; color:#ffdc89; font-size:12px; }
+.raid-battle .raid-arena {
+  position:relative;
+  inset:auto;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-rows:auto minmax(95px,1fr) auto;
+  gap:4px;
+  min-height:0;
+  height:auto;
+  padding:8px;
+  border:1px solid #997caa;
+  border-radius:10px;
+  background:transparent;
+}
+.raid-boss-hud {
+  display:grid;
+  gap:4px;
+  justify-self:center;
+  width:min(440px,95%);
+  text-align:center;
+  padding:5px 9px;
+  border-radius:6px;
+  background:#231b3a;
+  font-size:12px;
+}
+.raid-health { height:7px; overflow:hidden; border:1px solid #c3a9ca; border-radius:8px; background:#100e1e; }
+.raid-health i { display:block; height:100%; background:#a5eb86; }
+.raid-boss-hud .raid-health i { background:linear-gradient(90deg,#ff658b,#ffb16a); }
+.raid-boss-actor { position:relative; display:grid; place-items:center; min-height:0; font-size:54px; }
+.raid-boss-sprite { display:grid; place-items:center; height:100%; min-height:0; }
+.raid-boss-sprite :is(img,canvas) {
+  width:auto;
+  height:min(31dvh,290px);
+  max-height:100%;
+  max-width:min(72vw,600px);
+  object-fit:contain;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 7px 6px #000a);
+}
+.raid-damage {
+  position:absolute;
+  top:10%;
+  color:#fff0ab;
+  font-size:clamp(20px,5vw,38px);
+  text-shadow:2px 2px 4px #090714;
+  animation:raid-damage-rise .8s ease-out both;
+}
+@keyframes raid-damage-rise { from { transform:translateY(12px); } to { transform:translateY(-8px); } }
+.raid-squads { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; align-items:end; }
+.raid-squad {
+  position:relative;
+  display:grid;
+  align-content:start;
+  min-width:0;
+  margin-top:28px;
+  gap:3px;
+  padding:5px;
+  border:1px solid #9e82b4;
+  border-radius:7px;
+  background:#241c38;
+  color:#fff8eb;
+  font-size:clamp(9px,2.2vw,13px);
+}
+.raid-squad-empty { min-height:42px; place-items:center; border-style:dashed; }
+.raid-party-art {
+  position:absolute;
+  display:flex;
+  justify-content:center;
+  align-items:end;
+  gap:3px;
+  bottom:100%;
+  width:100%;
+  height:46px;
+  pointer-events:none;
+}
+.raid-party-sprite { display:grid; grid-template: minmax(0,1fr) / minmax(0,1fr); place-items:end center; width:48%; height:100%; }
+.raid-party-sprite .hero-sprite { transform:scale(calc(.43 * var(--fighter-normalize,1))); transform-origin:bottom; }
+.raid-squad-title,.raid-unit>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:3px; flex-wrap:wrap; }
+.raid-squad-title b,.raid-unit b { overflow-wrap:anywhere; }
+.raid-squad-title small { color:#ffdd8e; }
+.raid-unit small { color:#f0e2f4; white-space:nowrap; }
+.raid-unit-down b { color:#f4acba; }
+.raid-unit .raid-health { height:5px; }
+.raid-command { display:grid; gap:5px; }
+.raid-round-status { margin:0; text-align:center; color:#ffebbc; font-size:12px; }
+.raid-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+.raid-actions fieldset { min-width:0; margin:0; padding:5px; border:1px solid #957ca9; border-radius:6px; }
+.raid-actions legend { max-width:100%; overflow-wrap:anywhere; padding-inline:4px; font-size:12px; }
+.raid-action-picker { min-width:0; }
+.raid-action-picker summary {
+  display:grid;
+  place-content:center;
+  min-height:48px;
+  padding:4px;
+  border:1px solid #bba9d6;
+  border-radius:16px;
+  background:linear-gradient(#6552a7,#302054);
+  color:#fff8eb;
+  text-align:center;
+  cursor:pointer;
+  list-style:none;
+  overflow-wrap:anywhere;
+  font-size:clamp(11px,2.8vw,14px);
+}
+.raid-action-picker summary::-webkit-details-marker { display:none; }
+.raid-action-picker[open] summary { border-color:#ffe39e; }
+.raid-psych-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:4px; margin-top:4px; }
+.raid-battle .raid-psych-list button {
+  min-width:0;
+  min-height:34px;
+  padding:4px;
+  border:1px solid #ad98c5;
+  border-radius:5px;
+  background:#382952;
+  color:#fff8eb;
+  overflow-wrap:anywhere;
+  font:inherit;
+  font-size:clamp(10px,2.7vw,13px);
+}
+.raid-battle .raid-psych-list button[aria-pressed=true] { background:#ffe39e; color:#231b3a; }
+.raid-battle .raid-native-submit { margin:0; min-height:40px; }
+.raid-battle .raid-native-forfeit { margin:0 auto!important; padding:4px 10px; }
+@media (prefers-reduced-motion:reduce) { .raid-damage { animation:none; } }
 
 @media (prefers-reduced-motion:no-preference) {
   .home-reapers-hero { perspective:680px; }

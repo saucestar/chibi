@@ -5941,5 +5941,17 @@ function SaveBoundary() {
   }, status.message), /*#__PURE__*/React.createElement(App, null));
 }
 window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary };
-window.ChibiRaidSprites = { loadPage: ffbePage, enemies: enemyCatalog };
+window.ChibiRaidSprites = {
+  loadPage: ffbePage,
+  enemies: enemyCatalog,
+  mountParty(host, names) {
+    const root = ReactDOM.createRoot(host);
+    root.render(names.map((name, index) => {
+      const fighter = characterRoster.find(character => character.name === name);
+      return React.createElement("span", { key: index, className: "raid-party-sprite" },
+        fighter ? React.createElement(Sprite, { fighter, combat: true }) : null);
+    }));
+    return () => root.unmount();
+  }
+};
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));
