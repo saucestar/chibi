@@ -2,7 +2,7 @@
   "name": "twewy-reapers-run",
   "version": "1.0.0",
   "private": true,
-  "description": "Desktop launcher for TWEWY Reapers' Run",
+  "description": "Desktop launcher for Shinigami's Game",
   "main": "desktop/main.cjs",
   "scripts": {
     "desktop": "electron .",
@@ -10,7 +10,7 @@
   },
   "build": {
     "appId": "fr.twewycooperative.reapersrun",
-    "productName": "TWEWY Reapers' Run",
+    "productName": "Shinigami's Game",
     "files": [
       "gacha/**/*",
       "icons/**/*",
@@ -23,7 +23,7 @@
     "win": {
       "target": "nsis",
       "signAndEditExecutable": false,
-      "artifactName": "TWEWY-Reapers-Run-Setup-${version}.${ext}"
+      "artifactName": "Shinigamis-Game-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

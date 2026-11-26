@@ -4213,7 +4213,7 @@ function HubHome({
     className: "hub-home"
   }, /*#__PURE__*/React.createElement("div", {
     className: "hub-home-heading"
-  }, /*#__PURE__*/React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), /*#__PURE__*/React.createElement("h1", null, "\xC0 toi de jouer."), /*#__PURE__*/React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), /*#__PURE__*/React.createElement("h1", null, "Shinigami\u2019s Game"), /*#__PURE__*/React.createElement("p", null, "\xC0 toi de jouer."), /*#__PURE__*/React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), /*#__PURE__*/React.createElement("div", {
     className: "hub-home-stage"
   }, /*#__PURE__*/React.createElement("div", {
     className: "hub-home-halo",

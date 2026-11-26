@@ -1,0 +1,66 @@
+/* Shinigami's Game — Reapers Noir, the sole approved interface direction. */
+.game-hub.game-shell { background:radial-gradient(circle at 80% 0%,#b0196038,transparent 38%),#151117; color:#f7efe1; }
+.game-hub .hub-header { color:#1a111d; background:#f4eddf; border-bottom:3px solid #ff3b82; }
+.game-hub .hub-brand,.game-hub .hub-wallet>span { color:#1a111d; }
+.game-hub .hub-brand span,.game-hub .hub-wallet small { color:#813052; }
+.game-hub .hub-content { background:#151117; }
+.game-hub .hub-home { background:linear-gradient(180deg,#171117da,#171117f0),url('./assets/bingo/shibuya-city.webp') center/cover; }
+.game-hub .hub-home::before { opacity:.52; background:radial-gradient(circle at 70% 25%,#bd2d7766,transparent 38%),linear-gradient(120deg,#151017d8,#15101740); }
+.game-hub .hub-home-heading h1 { color:#fff6e6; text-shadow:3px 3px #100b11,0 0 20px #ff3b8266; }
+.game-hub .hub-home-heading>small { color:#ffd06d; }
+.game-hub .hub-home-heading>p { margin:2px 0 10px; color:#fff1da; font:900 14px/1.2 Montserrat,Arial,sans-serif; letter-spacing:.03em; }
+.game-hub .hub-home-heading>span { color:#fff5e9; background:#201522d9; border-color:#ffd06d; }
+.game-hub .hub-home-stage>.sprite-preview { filter:drop-shadow(0 9px 0 #080609) drop-shadow(0 0 19px #ff3b8272); }
+.game-hub .hub-home-halo { background:radial-gradient(circle,#fff6df 0 5%,#ff4b8b4c 37%,#ff931d20 59%,transparent 72%); border-color:#ffd17c8c; }
+.game-hub .hub-play { background:#f58221!important; border-color:#fff0bd!important; box-shadow:inset 0 -5px #8f3718,0 6px 0 #100c13,0 13px 25px #f5822161!important; }
+.game-hub .hub-play :is(b,small,span) { color:#1b1119!important; }
+.game-hub .hub-shortcuts button { color:#fff7e9; background:#251927; border-color:#f4eddf; box-shadow:inset 0 0 0 1px #ff3b8270,0 4px 0 #080609; }
+.game-hub .hub-shortcuts small { color:#d8b8ca; }
+.game-hub .hub-shortcuts button>span { color:#ffcb6d; }
+.game-hub .hub-panel { color:#291b2c; background:#f4eddf; border-color:#ffcb6d; box-shadow:inset 0 0 0 3px #211522,inset 0 0 0 4px #ffcb6d,0 12px 28px #0008; }
+.game-hub .hub-nav { background:#151117; border-top:3px solid #ffcb6d; }
+.game-hub .hub-nav button { color:#fff6e6; background:#231725; border-color:#f4eddf; box-shadow:inset 0 0 0 3px #231725,0 4px 0 #080609; }
+.game-hub .hub-nav button>span { color:#ffcb6d; }
+.game-hub .hub-nav button[aria-current=page] { color:#1b1119; background:#f58221; border-color:#fff0bd; box-shadow:inset 0 0 0 3px #f58221,0 6px 0 #080609,0 0 18px #f5822180; }
+.game-hub .hub-nav button[aria-current=page]>span { color:#1b1119; }
+
+/* Team: dossier-like, not a pile of pale cards. */
+.game-hub .team-workspace-heading { border-bottom-color:#7e4e65; }
+.game-hub .team-workspace-heading small { color:#9e2e5a; }
+.game-hub .team-workspace-tabs { padding:5px; border-color:#39203a; border-radius:5px; background:#211522; }
+.game-hub .team-workspace-tabs button { border-radius:3px!important; color:#f8efdf; background:transparent; border-color:transparent; box-shadow:none; }
+.game-hub .team-workspace-tabs button[aria-pressed=true] { color:#1b1119!important; background:#ffcb6d!important; border-color:#ffedb9!important; box-shadow:inset 0 -3px #b36d29!important; }
+.game-hub .team-character-card,.game-hub .awakening-list>article { border-radius:5px; border-color:#432543; box-shadow:inset 5px 0 #ff3b82,0 4px 0 #9d8791; }
+.game-hub .team-character-stats>div { background:#211522; color:#fff5e8; }
+
+/* Summon: turn each portal into a high-contrast poster. */
+.game-hub .portal-list { gap:16px; }
+.game-hub .portal-scene { border:2px solid #ffcb6d; border-radius:4px; box-shadow:0 6px 0 #160d17,0 14px 25px #0008; }
+.game-hub .portal-scene h3 { color:#fff6e6; text-shadow:3px 3px #171017,0 0 13px #ff3b82; }
+.game-hub .portal-caption { border-top-color:#ffcb6d; }
+.game-hub .party-lobby .wish-commands button:enabled { border-radius:4px; }
+
+/* Social and raids stay in the same language, even when their own modules load. */
+.game-hub .social-panel>header { border-radius:5px; background:linear-gradient(105deg,#231725,#7a2454); box-shadow:inset 5px 0 #ffcb6d,0 5px 0 #130c14; }
+.game-hub .social-tabs button[aria-pressed=true] { background:#f58221!important; color:#1b1119!important; border-color:#fff0bd!important; box-shadow:inset 0 -3px #8f3718,0 4px 0 #160c15!important; }
+.game-hub .social-player,.game-hub .social-request { border-radius:5px; box-shadow:inset 4px 0 #ff3b82,0 4px 0 #97848d; }
+.raid-native { border-radius:6px!important; border-color:#ffcb6d!important; background:#f4eddf!important; box-shadow:inset 0 0 0 3px #211522, inset 0 0 0 4px #ffcb6d,0 14px 34px #000a!important; }
+.raid-native>header>div { border-left-color:#ff3b82!important; }
+.raid-native-boss-list>button { border-radius:5px!important; border-color:#3f2945!important; box-shadow:inset 4px 0 #f58221,0 4px 0 #3b263c!important; }
+
+/* Motion language: short, directional feedback; sprites never receive transforms. */
+@media (prefers-reduced-motion:no-preference) {
+  .game-hub .hub-header,.game-hub .hub-content,.game-hub .hub-nav,.game-hub .hub-panel,.game-hub .hub-home,.game-hub .hub-play,.game-hub .hub-shortcuts button,.game-hub .hub-nav button { transition:background-color .22s ease,color .22s ease,border-color .22s ease,box-shadow .22s ease,transform .18s cubic-bezier(.2,.85,.25,1); }
+  .game-hub .hub-home-heading { animation:sg-rise .38s .04s both cubic-bezier(.16,.9,.26,1); }
+  .game-hub .hub-home-stage { animation:sg-stage-in .5s .1s both cubic-bezier(.16,.9,.26,1); }
+  .game-hub .home-mode-switcher { animation:sg-rise .36s .18s both cubic-bezier(.16,.9,.26,1); }
+  .game-hub .hub-shortcuts { animation:sg-rise .36s .25s both cubic-bezier(.16,.9,.26,1); }
+  .game-hub .hub-play:enabled:hover { transform:translateY(-3px) skewX(-1deg); }
+  .game-hub .hub-play:enabled:active { transform:translateY(4px) scale(.985); }
+  .game-hub .hub-shortcuts button:enabled:hover { transform:translateY(-4px) rotate(-.35deg); }
+  .game-hub .hub-nav button:enabled:hover { transform:translateY(-3px); }
+  .game-hub .hub-nav button[aria-current=page]:enabled:hover { transform:translateY(-13px); }
+  @keyframes sg-rise { from { opacity:0;transform:translateY(14px); } to { opacity:1;transform:none; } }
+  @keyframes sg-stage-in { from { opacity:0;transform:scale(.96);filter:saturate(.5); } to { opacity:1;transform:none;filter:none; } }
+}
+@media (prefers-reduced-motion:reduce) { .game-hub * { scroll-behavior:auto!important;transition:none!important;animation:none!important; } }
