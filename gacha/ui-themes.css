@@ -980,10 +980,41 @@
   .game-hub[data-screen="home"] .home-mode-banner { min-height:0!important; }
   .game-hub[data-screen="home"] .home-action-grid button { min-height:0!important; }
 }
-@media (min-width:880px) and (min-height:570px) and (orientation:landscape) {
-  .game-hub[data-screen="home"] { --home-width:1100px; }
-  .game-hub[data-screen="home"] .home-mode-banners,
-  .game-hub[data-screen="home"] .home-action-grid { align-self:stretch; }
+@media (min-width:880px) and (orientation:landscape) {
+  .game-hub[data-screen="home"] {
+    --home-width:1600px;
+    --home-gutter:clamp(16px,2vw,36px);
+    --home-gap:clamp(10px,1.65dvh,20px);
+  }
+  .game-hub[data-screen="home"] .hub-screen { max-width:var(--home-width); }
+  .game-hub[data-screen="home"] .home-reapers-layout {
+    height:100%;
+    min-height:0;
+    grid-template-areas:"hero modes" "hero actions";
+    grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);
+    grid-template-rows:minmax(186px,1fr) minmax(68px,.28fr);
+    align-content:stretch;
+  }
+  .game-hub[data-screen="home"] .home-reapers-hero { min-height:0!important; }
+  .game-hub[data-screen="home"] .home-reapers-cast {
+    inset:12% 12% max(64px,13%)!important;
+    gap:clamp(14px,3.5vw,74px)!important;
+  }
+  .game-hub[data-screen="home"] .home-reapers-cast > .sprite-preview { width:40%!important; }
+  .game-hub[data-screen="home"] .home-mode-banners {
+    grid-template-rows:repeat(2,minmax(0,1fr));
+    align-self:stretch;
+  }
+  .game-hub[data-screen="home"] .home-mode-banner {
+    min-height:0!important;
+    padding-inline-end:42%!important;
+  }
+  .game-hub[data-screen="home"] .home-mode-banner p { font-size:clamp(11px,1vw,15px)!important; }
+  .game-hub[data-screen="home"] .home-action-grid {
+    align-self:stretch;
+    gap:var(--home-gap)!important;
+  }
+  .game-hub[data-screen="home"] .home-action-grid button { min-height:0!important; }
 }
 
 .game-hub :is(.hub-nav button,.home-action-grid button,.home-hero-play),
