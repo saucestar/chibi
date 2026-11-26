@@ -393,3 +393,40 @@
 .game-hub .hub-nav { margin:0 clamp(5px,1.5vw,15px) 7px;padding:6px 8px!important;clip-path:polygon(2% 0,98% 4%,100% 95%,1% 100%);border:0!important;background:#fff5e8!important;box-shadow:3px 4px 0 #07050a!important; }
 .game-hub .hub-nav button { min-height:43px!important;color:#20141f!important;border:0!important;border-right:1px solid #2a1f2855!important;border-radius:0!important;background:transparent!important;box-shadow:none!important; }.game-hub .hub-nav button:last-child { border-right:0!important; }.game-hub .hub-nav .hub-nav-orb i { color:#20141f!important;font-size:19px!important; }.game-hub .hub-nav b { color:#20141f!important;font-size:clamp(7px,1.8vw,10px)!important; }.game-hub .hub-nav button[aria-current=page] { color:#fff!important;background:#f33177!important;clip-path:polygon(10% 0,91% 5%,100% 92%,5% 100%,0 88%);box-shadow:none!important; }.game-hub .hub-nav button[aria-current=page] :is(b,.hub-nav-orb i) { color:#fff!important; }
 @media (max-width:560px) { .game-hub .home-reapers-layout { gap:11px;padding-inline:11px!important; }.home-reapers-hero { min-height:245px!important; }.home-reapers-cast { inset:11px 5% 58px!important; }.home-mode-banner { min-height:80px!important; }.home-action-grid button { min-height:72px!important; }.game-hub .hub-profile { grid-template-columns:32px minmax(0,1fr)!important; }.game-hub .hub-profile b { font-size:9px!important; }.game-hub .hub-wallet { min-width:54px!important; }.game-hub .hub-header .hub-inbox { display:none!important; } }
+
+/* Contrast and material pass: black ink, bright paper, visibly torn silhouettes. */
+.game-hub.game-shell { background:#0c090f!important; }
+.game-hub .hub-content { background:
+  radial-gradient(circle at 8% 12%,#f331774d,transparent 21%),
+  radial-gradient(circle at 90% 73%,#ff791e42,transparent 24%),
+  repeating-linear-gradient(155deg,#100b12 0 3px,#160d18 4px 8px)!important; }
+.game-hub .home-reapers-layout { background:transparent!important; }
+.home-reapers-hero {
+  clip-path:polygon(0 4%,5% 1%,17% 3%,31% 0,45% 2%,57% 1%,71% 3%,86% 0,100% 3%,98% 20%,100% 36%,98% 54%,100% 72%,97% 96%,84% 98%,69% 96%,55% 100%,41% 97%,25% 99%,12% 96%,2% 98%,0 81%,2% 66%,0 49%,2% 30%)!important;
+  border:6px solid #fff7e5!important;
+  box-shadow:6px 8px 0 #030205,0 0 0 2px #fa2c78,0 14px 26px #000!important;
+  filter:contrast(1.15) saturate(1.14);
+}
+.home-reapers-hero::before { opacity:.18!important; }.home-reapers-hero::after { border:2px solid #fdd17b!important;box-shadow:0 0 35px #fa397c77; }
+.home-hero-play { border-width:5px!important;box-shadow:5px 7px 0 #050306,0 0 0 2px #fff6df!important; }
+.home-mode-banner,.home-action-grid button,.game-hub .hub-nav {
+  filter:drop-shadow(5px 6px 0 #030205) contrast(1.08);
+}
+.home-mode-banner {
+  clip-path:polygon(0 5%,6% 2%,16% 4%,27% 1%,40% 3%,54% 0,68% 2%,81% 0,100% 4%,98% 18%,100% 35%,98% 51%,100% 70%,98% 96%,85% 99%,70% 97%,55% 100%,40% 98%,26% 100%,11% 97%,2% 99%,0 86%,2% 71%,0 55%,2% 39%,0 22%)!important;
+  border:4px solid #fff7e5!important;
+  box-shadow:inset 0 0 0 2px #161018,5px 6px 0 #030205!important;
+}
+.home-mode-banner::before { opacity:.9!important;background:linear-gradient(90deg,#fff8e9 0 53%,#f3317747 54% 100%),url('./assets/bingo/shibuya-city.webp') right center/50% 100% no-repeat!important; }
+.home-mode-roguelike::before { background:linear-gradient(90deg,#fff8e9 0 53%,#176be84d 54% 100%),url('./assets/bingo/shibuya-city.webp') right center/50% 100% no-repeat!important; }
+.home-mode-banner>span { color:#e91d6c!important;text-shadow:1px 1px #fff8e9; }.home-mode-roguelike>span { color:#145fe2!important; }
+.home-mode-banner small { border:1px solid #fff5df;box-shadow:2px 2px 0 #1d1420; }.home-mode-banner b { color:#100c12!important;text-shadow:.5px .5px #fff8e9; }.home-mode-banner p { color:#160f18!important;font-weight:900!important; }.home-mode-banner i { color:#0e0a10!important;text-shadow:1px 1px #fff8e9; }
+.home-action-grid button {
+  clip-path:polygon(0 4%,8% 1%,20% 4%,34% 0,48% 3%,62% 1%,78% 4%,93% 0,100% 7%,98% 88%,89% 99%,74% 96%,58% 100%,42% 97%,27% 100%,12% 96%,1% 99%)!important;
+  border:4px solid #fff7e5!important;
+  box-shadow:inset 0 0 0 2px #171019,4px 5px 0 #030205!important;
+}
+.home-action-grid b,.home-action-grid button>span { color:#0b090d!important; }
+.game-hub .hub-header { background:linear-gradient(90deg,#100b12d9,#2b1730d9 55%,#100b12d9)!important; }.game-hub .hub-wallet { border:2px solid #fff7e5!important;box-shadow:3px 4px #030205!important; }.game-hub .hub-header .hub-news { border:2px solid #fff7e5!important;box-shadow:3px 4px #030205!important; }
+.game-hub .hub-nav { border:4px solid #fff7e5!important;box-shadow:inset 0 0 0 2px #171019,4px 5px 0 #030205!important; }
+.game-hub .hub-nav button { border-right:2px solid #23172266!important; }.game-hub .hub-nav button[aria-current=page] { background:#f02273!important; }
