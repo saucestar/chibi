@@ -1793,3 +1793,180 @@
   .game-hub .menu-workspace .hub-menu-links { grid-auto-rows:minmax(0,1fr); }
   .game-hub .menu-workspace .hub-menu-links button { padding-left:clamp(8px,2vmin,18px); }
 }
+/* Landscape workspaces use the strip between the HUD and the main navigation. */
+@media (orientation:landscape) {
+  .game-hub .hub-screen { max-width:none; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) {
+    display:grid; align-content:stretch; gap:clamp(4px,1vmin,10px);
+  }
+  .game-hub .hub-screen > .menu-workspace { display:grid; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > :is(h1,h2,p),
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > header :is(h1,h2,p) { margin-block:0; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > header h1,
+  .game-hub .hub-screen > .hub-panel > h1 { font-size:clamp(20px,4.8vmin,40px); }
+  .game-hub .collection-workspace,.game-hub .team-workspace {
+    grid-template-columns:minmax(110px,19%) minmax(0,1fr);grid-template-rows:auto 1fr;
+  }
+  .game-hub :is(.team-workspace-tabs,.collection-workspace > .hub-tabs) {
+    grid-area:2/1;display:grid;grid-template-columns:1fr;align-content:stretch;margin:0;
+  }
+  .game-hub :is(.team-workspace,.collection-workspace) > :is(main,section) {
+    grid-area:1/2/3/3;min-width:0;margin:0;
+  }
+  .game-hub .character-collection {
+    display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto 1fr;align-items:stretch;gap:4px;
+  }
+  .game-hub .character-collection > p { align-self:center;margin:0; }
+  .game-hub .character-collection .collection-search { margin:0; }
+  .game-hub .character-collection > :is(.hub-tabs,.character-grid,[role=status]) { grid-column:1/-1;margin:0; }
+  .game-hub .character-grid { grid-template-columns:repeat(5,minmax(0,1fr));gap:4px; }
+  .game-hub .character-grid button { align-content:center;gap:2px;padding:3px; }
+  .game-hub .character-grid canvas { max-width:min(8vmin,72px); }
+  .game-hub .monster-book {grid-template-columns:minmax(110px,20%) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;}
+  .game-hub .monster-book > :is(h1,p,.hub-tabs) { grid-column:1; }
+  .game-hub .monster-book .monster-filters {display:grid;grid-template-columns:1fr 1fr;align-content:center;}
+  .game-hub .monster-book .monster-grid {grid-area:1/2/5/3;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;gap:4px;}
+  .game-hub .monster-grid button {align-content:center;padding:2px;gap:2px;}
+  .game-hub .monster-grid .enemy-sprite {height:clamp(24px,7vmin,90px)!important;}
+  .game-hub .quest-menu {grid-template-rows:auto auto auto 1fr auto;}
+  .game-hub .quest-tabs:has(button) {grid-template-columns:repeat(5,minmax(0,1fr));margin:0;}
+  .game-hub .quest-list {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-height:none;overflow:visible;gap:4px;}
+  .game-hub .quest-list article {grid-template-columns:minmax(0,1fr);align-content:center;gap:2px;padding:3px;}
+  .game-hub .player-profile-panel {grid-template-columns:2fr 3fr;grid-template-rows:auto 1fr auto;}
+  .game-hub .player-profile-panel > :is(header,.player-level-card,.profile-notifications) {grid-column:1;}
+  .game-hub .profile-avatar-picker {grid-area:1/2/4/3;}
+  .game-hub .audio-settings {grid-template-columns:1fr 1fr;}
+  .game-hub .audio-settings > :is(h1,button,.settings-admin-slot) {grid-column:1/-1;}
+  .game-hub .pvp-panel:has(.pvp-modes),.game-hub .roguelike-launch {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .game-hub .pvp-panel > header,.game-hub .roguelike-launch > h1 {grid-column:1/-1;}
+  .game-hub .event-hall {grid-template-columns:minmax(112px,25%) minmax(0,1fr);grid-template-rows:auto auto 1fr;}
+  .game-hub .event-hall > :is(header,p,button,.event-resume) {grid-column:1;}
+  .game-hub .event-rail {grid-area:1/2/5/3;}
+  .game-hub .hub-screen > :is(.social-panel,.leaderboard-panel,.inbox-panel) {grid-template-rows:auto 1fr;}
+  .game-hub .social-panel:has(.social-tabs) {grid-template-rows:auto auto 1fr;}
+  .game-hub :is(.social-list,.leaderboard-list,.inbox-list) {align-content:stretch;}
+  .game-hub .team-workspace .party-lobby {width:100%;padding:0;min-height:0;}
+  .game-hub .team-workspace .party-lobby > section {max-width:none;margin:0;padding:6px;min-height:0;}
+  .game-hub .team-workspace .team-slots {margin-block:5px;}
+}
+@media (orientation:landscape) and (max-height:550px) {
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) {font-size:clamp(10px,2.9dvh,14px);}
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) :is(.hub-tabs,.quest-tabs,.team-workspace-tabs) button {
+    min-height:29px;padding:3px 5px;font-size:clamp(10px,3dvh,14px);
+  }
+  .game-hub .team-workspace-heading {overflow-wrap:anywhere;}
+  .game-hub .character-collection .collection-search {display:flex;align-items:center;gap:4px;font-size:10px;}
+  .game-hub .collection-search input {min-width:0;width:50%;padding:3px;}
+  .game-hub .team-workspace .party-lobby > section > :is(h1,p) {margin:2px;}
+  .game-hub .monster-book .hub-tabs {margin:0;gap:2px;}
+  .game-hub .monster-grid .enemy-sprite {height:5.5dvh!important;}
+  .game-hub .home-reapers-layout.home-reapers-layout {height:100%;grid-template-areas:"hero modes" "hero actions";grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,2fr) minmax(0,1fr);align-content:stretch;}
+  .game-hub[data-screen=home] :is(.home-reapers-hero,.home-mode-banner,.home-action-grid button) {min-height:0!important;}
+  .game-hub[data-screen=home] .home-mode-banners {grid-template-rows:repeat(2,minmax(0,1fr));}
+}
+@media (orientation:landscape) {
+  .game-hub .hub-screen > .wish-history {grid-template-rows:auto 1fr;}
+  .game-hub .hub-screen > .audio-settings {grid-template-rows:auto 1fr auto auto;}
+  .game-hub .hub-screen > .audio-settings label {align-content:center;}
+  .game-hub .hub-screen > .event-hall > button {align-self:end;}
+  .game-hub .team-workspace-heading {align-self:start;}
+  .game-hub .character-collection .character-grid {align-self:stretch;}
+  .game-hub .collection-workspace .badge-book {max-width:none;width:100%;display:grid;gap:3px;margin:0;padding:4px;}
+  .game-hub .collection-workspace .badge-slots {grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;padding:4px;margin:0;}
+  .game-hub .collection-workspace .badge-slot {aspect-ratio:auto;min-height:0;height:clamp(25px,7vmin,68px);}
+  .game-hub .awakening-list {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .game-hub .pvp-modes {display:grid;grid-template-columns:1fr 1fr;}
+  .game-hub .hub-screen > .pvp-panel:has(.pvp-modes) {grid-template-columns:minmax(0,1fr) minmax(0,1fr);}
+  .game-hub .pvp-panel > .pvp-private {grid-column:2;grid-row:2/span 3;}
+  .game-hub .pvp-panel > :is(.pvp-search,.pvp-party) {grid-column:1;}
+}
+@media (orientation:landscape) and (max-height:550px) {
+  .game-hub .hub-screen > .hub-panel .team-workspace-heading {padding:6px!important;}
+  .game-hub .team-workspace-heading h1 {font-size:22px;}
+  .game-hub .team-workspace-heading p,.game-hub .monster-book > p {font-size:11px;line-height:1.2;}
+  .game-hub .team-workspace-tabs {padding:2px;gap:3px;}
+  .game-hub .hub-screen > :is(.collection-workspace,.team-workspace,.monster-book) {grid-template-columns:minmax(145px,23%) minmax(0,1fr);}
+  .game-hub .hub-screen > :is(.collection-workspace,.team-workspace) {grid-template-rows:auto 1fr;}
+  .game-hub .hub-screen > .hub-panel > header {padding:4px!important;}
+  .game-hub .hub-screen .player-profile-panel :is(h2,p) {margin-block:3px;}
+  .game-hub .hub-screen .pvp-panel :is(h2,p) {margin-block:3px;}
+  .game-hub .hub-screen .quest-list article button {padding:3px;min-height:28px;}
+  .game-hub .hub-screen .quest-menu > .dialog-actions {margin:0;}
+  .game-hub .roguelike-launch .run-status {padding:4px;margin:0;}
+  .game-hub .hub-screen .character-collection .noir-tabs {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));}
+  .game-hub .character-collection .collection-search {padding:2px;}
+  .game-hub .character-collection .character-grid {grid-template-columns:repeat(5,minmax(0,1fr));}
+}
+@media (orientation:landscape) and (max-height:550px) {
+  .game-hub .character-grid button {min-height:0;}
+  .game-hub .team-workspace .team-slots button {min-height:80px;}
+  .game-hub .hub-screen .team-workspace-heading p,
+  .game-hub .hub-screen .roguelike-launch > p,
+  .game-hub .hub-screen .profile-avatar-picker p,
+  .game-hub .hub-screen .pvp-private p {font-size:12px;line-height:1.2;margin:2px 0;}
+  .game-hub .hub-screen .profile-avatar-picker h2 {font-size:19px;}
+  .game-hub .hub-screen .pvp-modes button {min-height:58px;padding:5px;gap:3px;align-content:center;}
+  .game-hub .hub-screen .pvp-search {min-height:32px;}
+  .game-hub .hub-screen .pvp-private {padding:6px;}
+  .game-hub .hub-screen .pvp-private header {padding:4px!important;}
+
+}
+@media (orientation:landscape) {
+  .game-hub .hub-screen > .hub-panel {max-width:none!important;}
+  .game-hub .record-picker {display:grid;grid-template-columns:1fr;align-content:stretch;grid-template-rows:auto;max-height:none;overflow:visible;}
+  .game-hub .record-picker select {width:100%;min-width:0;align-self:start;padding:6px;background:#fff5e6;color:#271621;font:inherit;}
+  .game-hub .record-picker article {align-self:stretch;}
+  .game-hub .team-workspace .party-lobby > section {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:stretch;gap:4px;}
+  .game-hub .team-workspace .party-lobby > section > :is(h1,p,.team-slots) {grid-column:1/-1;}
+  .game-hub .team-workspace .psych-loadout {min-width:0;margin:0;}
+  .game-hub .team-workspace .team-slots .sprite-preview {height:clamp(28px,9vmin,84px);}
+  .game-hub .roguelike-launch .roguelike-party {display:grid;grid-template-columns:1fr 1fr;max-width:none;margin:0;overflow:visible;}
+  .game-hub .roguelike-party article {min-height:0;min-width:0;padding:3px;}
+  .game-hub .roguelike-fighter-art {height:clamp(30px,10vmin,100px);}
+}
+@media (orientation:landscape) and (max-height:550px) {
+  .game-hub .team-workspace .party-lobby {padding:2px!important;}
+  .game-hub .team-workspace .party-lobby > section {padding:4px!important;}
+  .game-hub .team-workspace .team-slots {margin:0;gap:4px;}
+  .game-hub .team-workspace .party-lobby h2 {font-size:14px;margin:0;}
+  .game-hub .team-workspace .psych-equipment-slots {gap:2px;}
+  .game-hub .team-workspace .psych-equipment-slots button {min-height:32px;padding:2px;gap:2px;}
+  .game-hub .team-workspace .psych-equipment-slots button small {font-size:9px;}
+  .game-hub .team-workspace .psych-equipment-slots button :is(svg,img) {width:18px;height:18px;}
+  .game-hub .pvp-party article {grid-template-columns:24px 1fr;padding:2px;gap:2px;}
+  .game-hub .pvp-party canvas {width:24px;height:24px;}
+  .game-hub .profile-avatar-picker button canvas {width:5vmin;height:5vmin;}
+}
+
+@media (orientation:landscape) {
+  .game-hub .hub-content {overflow:clip;}
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel):not(.menu-workspace) {
+    zoom:var(--panel-scale,1);
+    min-height:calc(100cqh / var(--panel-scale,1) - 2 * var(--screen-gutter));
+  }
+}
+
+.raid-hall-picker {display:none;}
+@media (orientation:landscape) {
+  .raid-overlay .raid-native:not(.raid-battle) {
+    width:100%;height:100%;max-height:none;display:grid;box-sizing:border-box;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(3px,1vmin,12px);
+    grid-template-rows:auto auto minmax(0,1fr) auto;align-content:stretch;
+  }
+  .raid-native:not(.raid-battle) > header,.raid-native-notice,.raid-faction-setup {grid-column:1/-1;}
+  .raid-native:not(.raid-battle) > h2 {grid-area:2/2;margin:0;align-self:center;}
+  .raid-native .raid-native-boss-list {grid-area:3/1;margin:0;}
+  .raid-native .raid-native-selected {grid-column:1;grid-row:4;flex-direction:row;align-items:center;padding:4px;}
+  .raid-native .raid-native-rooms {grid-area:3/2/5/3;}
+  .raid-native :is(.raid-native-boss-list,.raid-native-rooms,.raid-faction-list) {max-height:none;overflow:visible;}
+  .raid-native .raid-native-boss-list > button {min-height:0;align-content:center;gap:2px;}
+  .raid-native .raid-monster-art {min-height:0;}
+  .raid-hall-picker {display:block;max-width:100%;min-width:0;font:inherit;}
+  .raid-native > .raid-hall-picker:has(+ .raid-native-boss-list) {grid-area:2/1;}
+  .raid-native > .raid-hall-picker:has(+ .raid-native-rooms) {grid-area:3/2;align-self:start;}
+  .raid-native > .raid-hall-picker + .raid-native-rooms {grid-area:4/2;}
+  .raid-hall-picker + div > :not(.raid-choice-active) {display:none;}
+}
+@media (orientation:landscape) {
+  .game-hub[data-screen=home] .home-reapers-layout {overflow:clip;}
+}

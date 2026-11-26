@@ -526,19 +526,19 @@ function WishHistory({profile,embedded=false}:{profile:Profile;embedded?:boolean
    <p><b>{portals[selected.portal]||selected.portal}</b> · {new Date(selected.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{timeZone:"Europe/Paris"})}</p>
    <p>Vœux {selected.first}–{selected.last} · {selected.freeUsed} gratuits · {selected.coinsPaid} pièces</p>
    <p>Solde : {selected.coinsBefore} → {selected.coinsAfter} pièces · Gratuits : {selected.freeBefore} → {selected.freeAfter}</p>
-   <div className="wish-history-list">{JSON.parse(selected.drawsJson).map((draw:any,i:number)=>{
+   <LandscapeRecords className="wish-history-list">{JSON.parse(selected.drawsJson).map((draw:any,i:number)=>{
     const pin=psychs[draw.pinId];return <article key={i}>{pin?<PinIcon pin={pin}/>:<span>★</span>}<div><b>{pin?.name||draw.name||"Récompense"}</b><small>{pin?"Badge":`Personnage · Rang ${draw.rank===5?"étoile":ranks[draw.rank]} · ${draw.copies} doublon(s)`}</small></div></article>;
-   })}</div>
+   })}</LandscapeRecords>
    <button onClick={()=>setSelected(null)}>Retour à l’historique</button>
   </>:<>
    <p>{profile.wishesMade} invocations comptabilisées · {profile.freeWishSpent} vœux gratuits consommés</p>
    {profile.wishHistoryBaseline>0&&<p>{profile.wishHistoryBaseline} invocations antérieures : total connu, détails non enregistrés à l’époque.</p>}
    {error&&<p role="status">{error}</p>}
-   <div className="wish-history-list">{events.map(event=><button key={event.id} onClick={()=>setSelected(event)}>
+   <LandscapeRecords className="wish-history-list">{events.map(event=><button key={event.id} onClick={()=>setSelected(event)}>
     <b>{event.count} {event.count>1?"vœux":"vœu"} · {portals[event.portal]||event.portal}</b>
     <small>{new Date(event.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR",{timeZone:"Europe/Paris"})} · {event.freeUsed} gratuits · {event.coinsPaid} pièces</small>
     {pending.has(event.id)&&<small>En attente de synchronisation</small>}
-   </button>)}{!events.length&&!loading&&<p>Aucune invocation détaillée enregistrée pour le moment.</p>}</div>
+   </button>)}{!events.length&&!loading&&<p>Aucune invocation détaillée enregistrée pour le moment.</p>}</LandscapeRecords>
    <div className="dialog-actions"><button disabled={loading} onClick={()=>load(true)}>Actualiser</button>{more&&<button disabled={loading} onClick={()=>load()}>Charger plus</button>}</div>
   </>}
   </div>{!embedded&&<button onClick={()=>setOpen(false)}>Fermer</button>}
@@ -1085,16 +1085,16 @@ function QuestMenu({profile,save,embedded=false}:{profile:Profile;save:(fn:(p:Pr
    <p>{category==="daily"?"3 missions par jour · 200 pièces au total":"Récompenses uniques · Progression rétroactive"}</p>
    {profile.floorRecoveryAvailable&&<button className="floor-recovery" onClick={()=>save(p=>({...p,bestFloor:Math.max(p.bestFloor,10),floorRecoveryAvailable:false}))}>Rattraper mon ancien étage 10</button>}
    <div className="quest-tabs">{[["daily","Quotidiennes"],["floor","Étages"],["badges","Collection"],["other","Personnages"],["pc","Missions PC"]].map(([id,name])=><button key={id} aria-pressed={category===id} onClick={()=>setCategory(id)}>{name}</button>)}</div>
-   {category==="pc"?<div className="quest-list pc-mission-coins">
+   {category==="pc"?<LandscapeRecords className="quest-list pc-mission-coins">
     <p>Score PC ÷ 10 = pièces · Crédit automatique</p>
     {missionStatus==="error"&&<p role="alert">Missions PC indisponibles. Les crédits précédents sont conservés ; vérifie la connexion et les règles Firebase.</p>}
     <p>Total reçu : {Object.values(profile.pcMissionCoins).reduce((a,b)=>a+b,0)} pièces</p>
     {Object.keys(profile.pcMissionCoins).length?Object.entries(profile.pcMissionCoins).sort(([a],[b])=>b.localeCompare(a)).map(([day,coins])=><article key={day}><b>{day.split("-").reverse().join("/")}</b><span>{coins} pièces créditées</span></article>):<p>Ouvre le jeu connecté au même compte que sur PC pour récupérer tes missions passées.</p>}
-   </div>:<div className="quest-list">{(category==="daily"?daily:quests.filter(q=>category==="other"?!/^(floor|badges)-/.test(q.id):q.id.startsWith(category+"-"))).map(q=>{
+   </LandscapeRecords>:<LandscapeRecords className="quest-list">{(category==="daily"?daily:quests.filter(q=>category==="other"?!/^(floor|badges)-/.test(q.id):q.id.startsWith(category+"-"))).map(q=>{
     const claimed=category==="daily"?profile.claimedDailyQuests.includes(q.id):profile.claimedQuests.includes(q.id),done=q.progress>=q.goal;
     return <article key={q.id}><div><b>{q.title}</b><small>{Math.min(q.goal,q.progress)} / {q.goal} · {q.reward} pièces</small><progress max={q.goal} value={Math.min(q.goal,q.progress)} aria-label={q.title}/></div>
      <button disabled={claimed||!done} onClick={()=>save(p=>category==="daily"?claimDailyQuests(p,[q.id]):claimQuests(p,[q.id]))}>{claimed?"Récupéré":"Récupérer"}</button></article>;
-   })}</div>}
+   })}</LandscapeRecords>}
    <div className="dialog-actions"><button disabled={category==="daily"?!dailyReady.length:!ready.length} onClick={()=>save(p=>category==="daily"?claimDailyQuests(p,dailyQuestsFor(p).map(q=>q.id)):claimQuests(p,questsFor(p).map(q=>q.id)))}>Tout récupérer · {(category==="daily"?dailyReady:ready).reduce((sum,q)=>sum+q.reward,0)} pièces</button>{!embedded&&<button onClick={()=>setOpen(false)}>Fermer</button>}</div>
   </Panel>}
  </>;
@@ -1119,9 +1119,82 @@ function gameFullscreen(){
  if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
 }
 const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["social","Social","◎"],["menu","Menu","☰"]];
+// Keep long collections usable in landscape with a direct record picker.
+function LandscapeRecords({className, children}:{className:string;children:React.ReactNode}) {
+  const [key, select] = useState("");
+  const landscape = React.useSyncExternalStore(subscribeLandscape, isLandscape);
+  const rows = React.Children.toArray(children);
+  if (!landscape || rows.length <= 4) return React.createElement("div", {className}, children);
+  const records = rows.filter(row => React.isValidElement(row) && (row.type === "article" || row.type === "button"));
+  if (records.length <= 4) return React.createElement("div", {className}, children);
+  const current = records.find(row => String(row.key) === key) || records[0];
+  const other = rows.filter(row => !records.includes(row));
+  const options = records.map((row, i) => React.createElement("option", {key:row.key, value:String(row.key)},
+    (i + 1) + " · " + recordText(row).slice(0,100)));
+  return React.createElement("div", {className:className + " record-picker"}, ...other,
+    React.createElement("select", {value:String(current.key), "aria-label":document.documentElement.lang === "en" ? "Select an entry" : "Choisir une entrée", onChange:event => select(event.target.value)}, options), current);
+}
+function recordText(node:any):string {
+  if (Array.isArray(node)) return node.map(recordText).filter(Boolean).join(" ");
+  if (React.isValidElement<{children?:React.ReactNode}>(node)) return recordText(node.props.children);
+  return typeof node === "string" || typeof node === "number" ? String(node) : "";
+}
+function isLandscape() { return window.matchMedia("(orientation:landscape)").matches; }
+function subscribeLandscape(change:()=>void) {
+  const media = window.matchMedia("(orientation:landscape)");
+  media.addEventListener("change", change);
+  return () => media.removeEventListener("change", change);
+}
+
+// Refit measured content when a team, tab, font or the available viewport changes.
+function fitHubPanel(area:HTMLElement) {
+  const panel = area.querySelector<HTMLElement>(".hub-screen > :is(.hub-panel,.pvp-panel)");
+  if (!panel) return;
+  const media = window.matchMedia("(orientation:landscape)");
+  const fit = () => {
+    if (!media.matches) {
+      panel.style.removeProperty("--panel-scale");
+      return;
+    }
+    const bounds = area.getBoundingClientRect();
+    if (!bounds.height) return;
+    const fits = (scale:number) => {
+      panel.style.setProperty("--panel-scale", String(scale));
+      return area.scrollHeight <= area.clientHeight && area.scrollWidth <= area.clientWidth;
+    };
+    if (fits(1)) return;
+    let low = 0.25, high = 1;
+    for (let step = 0; step < 7; step++) {
+      const mid = (low + high) / 2;
+      if (fits(mid)) low = mid;
+      else high = mid;
+    }
+    fits(low);
+  };
+  fit();
+  const resize = new ResizeObserver(fit);
+  resize.observe(area);
+  resize.observe(panel);
+  const changes = new MutationObserver(fit);
+  changes.observe(panel, {childList:true, characterData:true, subtree:true});
+  area.addEventListener("load", fit, true);
+  document.fonts?.addEventListener("loadingdone", fit);
+  media.addEventListener("change", fit);
+  return () => {
+    resize.disconnect();
+    changes.disconnect();
+    area.removeEventListener("load", fit, true);
+    document.fonts?.removeEventListener("loadingdone", fit);
+    media.removeEventListener("change", fit);
+  };
+}
+
 function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;openNews:()=>void;children:React.ReactNode}) {
  useMusic("hub");
  const content=React.useRef<HTMLDivElement>(null);
+  React.useLayoutEffect(() => {
+    if (content.current && screen !== "menu") return fitHubPanel(content.current);
+  }, [screen]);
  useEffect(()=>{if(content.current)content.current.scrollTop=0;},[screen]);
  return <div className="game-hub game-shell" data-screen={screen}>
   <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-news" onClick={openNews} aria-label="Consulter les nouveautés"><span aria-hidden="true">NEWS</span></button><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
@@ -1358,7 +1431,7 @@ function FactionPanel(){
  const refresh=()=>Promise.all([service.myFaction(),service.factionList()]).then(([mine,list]:any[])=>{setFaction(mine);setFactions(list||[]);}).catch((error:any)=>setNotice(String(error?.message||error)));
  useEffect(()=>{refresh();},[]);
  const create=async(event:React.FormEvent)=>{event.preventDefault();try{await service.createFaction(name);setName("");await refresh();}catch(error){setNotice(String((error as any)?.message||error));}};
- return <section className="faction-panel"><header><small>REAPERS’ NETWORK</small><h2>Factions</h2><p>Tu dois faire partie d’une faction pour participer aux raids à trois joueurs.</p></header>{faction?<article className="faction-card"><h3>{faction.name}</h3><p>{Object.keys(faction.members||{}).length} membres</p><div>{Object.values(faction.members||{}).map((member:any)=><span key={member.uid}>{member.name}</span>)}</div></article>:<><form onSubmit={create}><input value={name} maxLength={32} onChange={event=>setName(event.target.value)} placeholder="Nom de la faction"/><button disabled={name.trim().length<3}>Créer une faction</button></form><h3>Rejoindre une faction</h3><div className="faction-list">{factions.map((item:any)=><article key={item.id}><b>{item.name}</b><small>{Object.keys(item.members||{}).length} membres</small><button onClick={()=>service.joinFaction(item).then(refresh).catch((error:any)=>setNotice(String(error?.message||error)))}>Rejoindre</button></article>)}</div></>}{notice&&<p role="status">{notice}</p>}</section>;
+ return <section className="faction-panel"><header><small>REAPERS’ NETWORK</small><h2>Factions</h2><p>Tu dois faire partie d’une faction pour participer aux raids à trois joueurs.</p></header>{faction?<article className="faction-card"><h3>{faction.name}</h3><p>{Object.keys(faction.members||{}).length} membres</p><div>{Object.values(faction.members||{}).map((member:any)=><span key={member.uid}>{member.name}</span>)}</div></article>:<><form onSubmit={create}><input value={name} maxLength={32} onChange={event=>setName(event.target.value)} placeholder="Nom de la faction"/><button disabled={name.trim().length<3}>Créer une faction</button></form><h3>Rejoindre une faction</h3><LandscapeRecords className="faction-list">{factions.map((item:any)=><article key={item.id}><b>{item.name}</b><small>{Object.keys(item.members||{}).length} membres</small><button onClick={()=>service.joinFaction(item).then(refresh).catch((error:any)=>setNotice(String(error?.message||error)))}>Rejoindre</button></article>)}</LandscapeRecords></>}{notice&&<p role="status">{notice}</p>}</section>;
 }
 type RaidRoomData={id:string;meta:any;slots:Record<string,string>;players:Record<string,{uid:string;name:string;team:PvpFighter[]}>;actions?:Record<string,Record<string,{plans:Record<string,PvpPlan>}>>;forfeits?:Record<string,boolean>};
 type RaidProgress={teams:Record<string,PvpFighter[]>;bossHp:number;turn:number;won:boolean;lost:boolean};
@@ -1436,10 +1509,10 @@ function SocialHub({profile}:{profile:Profile}){
  return <section className="social-panel hub-panel"><header><small>REAPERS’ NETWORK</small><h1>Social</h1><p>Ajoute des amis, inspecte leurs équipes et lance un combat Casual directement.</p></header>
   <div className="social-tabs">{([["players","Joueurs",data.profiles.length],["friends","Amis",data.friends.length],["requests","Demandes",data.requests.length],["invites","Défis",data.invites.length],["chat","Chat","✉"],["faction","Faction","⚑"]] as const).map(([id,label,count])=><button key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}><b>{label}</b><span>{count}</span></button>)}</div>
   {message&&<p className="social-message" role="status">{message}</p>}
-  {(tab==="players"||tab==="friends")&&<div className="social-list">{shown.length?shown.map((entry:any)=>playerCard(profileById(entry.uid)||entry,tab==="friends")):<p>Aucun joueur dans cette section pour le moment.</p>}</div>}
+  {(tab==="players"||tab==="friends")&&<LandscapeRecords className="social-list">{shown.length?shown.map((entry:any)=>playerCard(profileById(entry.uid)||entry,tab==="friends")):<p>Aucun joueur dans cette section pour le moment.</p>}</LandscapeRecords>}
   {tab==="chat"&&<ChatPanel friends={data.friends}/>} {tab==="faction"&&<FactionPanel/>}
-  {tab==="requests"&&<div className="social-list">{data.requests.length?data.requests.map((player:any)=><article className="social-request" key={player.uid}><b>{player.name}</b><span>veut devenir ton ami.</span><div><button onClick={()=>service.acceptRequest(player).catch((error:any)=>setMessage(fail(error)))}>Accepter</button><button className="quiet" onClick={()=>service.declineRequest(player.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucune demande d’ami en attente.</p>}</div>}
-  {tab==="invites"&&<div className="social-list">{data.invites.length?data.invites.map((invitation:any)=><article className="social-request social-challenge" key={invitation.uid}><b>{invitation.name}</b><span>te défie en Casual · Niv. 50 · Rang étoile.</span><div><button disabled={!canFight} onClick={()=>service.acceptInvite(invitation,team).then(setMatchId).catch((error:any)=>setMessage(fail(error)))}>Combattre</button><button className="quiet" onClick={()=>service.declineInvite(invitation.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucun défi PVP en attente.</p>}</div>}
+  {tab==="requests"&&<LandscapeRecords className="social-list">{data.requests.length?data.requests.map((player:any)=><article className="social-request" key={player.uid}><b>{player.name}</b><span>veut devenir ton ami.</span><div><button onClick={()=>service.acceptRequest(player).catch((error:any)=>setMessage(fail(error)))}>Accepter</button><button className="quiet" onClick={()=>service.declineRequest(player.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucune demande d’ami en attente.</p>}</LandscapeRecords>}
+  {tab==="invites"&&<LandscapeRecords className="social-list">{data.invites.length?data.invites.map((invitation:any)=><article className="social-request social-challenge" key={invitation.uid}><b>{invitation.name}</b><span>te défie en Casual · Niv. 50 · Rang étoile.</span><div><button disabled={!canFight} onClick={()=>service.acceptInvite(invitation,team).then(setMatchId).catch((error:any)=>setMessage(fail(error)))}>Combattre</button><button className="quiet" onClick={()=>service.declineInvite(invitation.uid).catch((error:any)=>setMessage(fail(error)))}>Refuser</button></div></article>):<p>Aucun défi PVP en attente.</p>}</LandscapeRecords>}
   {selected&&<WishDialog className="social-profile-dialog" title={`Profil · ${selected.name}`} close={()=>setSelected(null)}><div className="social-record"><span>Record <b>Étage {selected.bestFloor||0}</b></span><span>Rebirth <b>{selected.rebirths||0}</b></span><span>Collection <b>{selected.owned?.length||0}</b></span></div><h3>Team</h3><div className="social-team">{selected.team?.length?selected.team.map((member:any)=><article key={member.name}><div className="social-team-hero"><div className="social-character-art"><SpritePreview fighter={characterRoster.find(f=>f.name===member.name)!} maximumScale={1.15}/></div><span className="social-team-copy"><b>{member.name}</b><small>Niv. {member.level} · Rang {member.rank===5?"★":ranks[member.rank||0]}</small><TypeChips elements={characterElements[member.name]}/></span></div><div className="social-psychs">{member.loadout?.map((id:string)=>{const pin=psychs[id];return pin?<span key={id}><PinIcon pin={pin}/><small>{pin.name.replace(" (Pin)","")} · {pinTargetLabel(pin)}</small></span>:null;})}</div></article>):<p>Team non configurée.</p>}</div><h3>Personnages obtenus</h3><div className="social-collection">{selected.owned?.map((member:any)=>{const fighter=characterRoster.find(f=>f.name===member.name);return fighter?<span key={member.name}><HudPortrait fighter={fighter}/><b>{member.name}</b><small>Niv. {member.level} · {member.rank===5?"★":ranks[member.rank||0]}</small></span>:null;})}</div><button onClick={()=>setSelected(null)}>Fermer</button></WishDialog>}
  </section>;
 }
@@ -1487,12 +1560,12 @@ function HubHome({profile,navigate}:{profile:Profile;navigate:(screen:GameScreen
 function AwakeningPanel({profile,awaken}:{profile:Profile;awaken:(name:string)=>void}) {
  const owned=characterRoster.filter(f=>profile.owned.includes(f.name));
  return <section className="awakening-panel"><header><h2>Éveil</h2><p>Obtiens 5 doublons pour éveiller un personnage et débloquer son bonus permanent.</p></header>
-  {!owned.length?<p>Débloque des personnages dans les invocations pour suivre leur éveil.</p>:<div className="awakening-list">{owned.map(fighter=>{
+  {!owned.length?<p>Débloque des personnages dans les invocations pour suivre leur éveil.</p>:<LandscapeRecords className="awakening-list">{owned.map(fighter=>{
     const copies=Math.min(5,profile.copies[fighter.name]||0),awakened=profile.awakened.includes(fighter.name);
     return <article key={fighter.name}><HudPortrait fighter={fighter}/><div><b>{fighter.name}</b><small>{awakened?"Éveillé · bonus actif":`${copies} / 5 doublons`}</small><div className="awakening-ranks" aria-label={`${fighter.name} : ${copies} doublons`}>
       {ranks.map((_,rank)=><span key={rank} className={rank<=copies?"":"locked"}><RankBadge level={rank}/></span>)}
     </div></div>{!awakened&&<button disabled={copies<5} onClick={()=>awaken(fighter.name)}>{copies<5?`${5-copies} manquant${5-copies>1?"s":""}`:"Éveiller"}</button>}</article>;
-  })}</div>}</section>;
+  })}</LandscapeRecords>}</section>;
 }
 function RoguelikeLaunch({profile,navigate,start,resume,abandon,rebirth}:{profile:Profile;navigate:(screen:GameScreen)=>void;start:()=>void;resume:()=>void;abandon:()=>void;rebirth:()=>void}) {
  const [confirm,setConfirm]=useState(false),[rebirthConfirm,setRebirthConfirm]=useState(false),fighters=profile.equipped.filter(Boolean),ready=fighters.length===2&&fighters.every(name=>profile.loadout[name]?.length)&&fighters.some(name=>profile.loadout[name]?.some(offensive)),run=profile.run?.status==="active"?profile.run:null;

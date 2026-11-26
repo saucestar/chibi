@@ -80,6 +80,32 @@
         });
         setup.querySelector('form').onsubmit = async event => { event.preventDefault(); const button = event.currentTarget.querySelector('button'); button.disabled = true; try { await ChibiSocial.createFaction(new FormData(event.currentTarget).get('name')); await refreshFaction(); renderHall('Faction créée. Prépare un duo pour ouvrir un Raid.'); } catch (err) { renderHall(err.message || 'Impossible de créer la faction.'); } };
       }
+      // Landscape has room for a selector and the active card side by side.
+      function addSelector(list, label, activeIndex, onSelect) {
+        if (!list || list.children.length < 2) return;
+        const cards = Array.from(list.children);
+        const select = document.createElement('select');
+        select.className = 'raid-hall-picker';
+        select.setAttribute('aria-label', label);
+        cards.forEach((card, index) => {
+          const name = card.querySelector('b')?.textContent || card.textContent;
+          select.add(new Option(name, String(index)));
+        });
+        function show(index) {
+          select.selectedIndex = index;
+          cards.forEach((card, i) => card.classList.toggle('raid-choice-active', i === index));
+        }
+        show(Math.max(0, activeIndex));
+        select.onchange = () => {
+          show(select.selectedIndex);
+          onSelect?.(cards[select.selectedIndex]);
+        };
+        list.before(select);
+      }
+      const bossCards = overlay.querySelector('.raid-native-boss-list');
+      addSelector(bossCards, 'Boss du raid', bosses.findIndex(boss => boss.id === selected?.id), card => card.click());
+      addSelector(overlay.querySelector('.raid-native-rooms'), 'Salle de raid', 0);
+      addSelector(overlay.querySelector('.raid-faction-list'), 'Faction', 0);
       overlay.querySelector('.raid-native-open-social')?.addEventListener('click', () => { close(); document.querySelector('.hub-nav button:nth-child(5)')?.click(); });
       overlay.querySelectorAll('[data-boss]').forEach(button => button.onclick = () => { selected = bosses.find(b => b.id === button.dataset.boss); renderHall(); });
       overlay.querySelector('.raid-native-create')?.addEventListener('click', async event => { if (team().length !== 2) return renderHall('Équipe deux personnages et leurs psychs dans Team avant le Raid.'); event.currentTarget.disabled = true; try { const roomId = await ChibiSocial.createRaidRoom(selected, team()); enter(roomId); } catch (err) { renderHall(err.message || 'Impossible de créer la salle.'); } });

@@ -1617,7 +1617,7 @@ function WishHistory({
     className: "wish-history-view"
   }, selected ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", null, /*#__PURE__*/React.createElement("b", null, portals[selected.portal] || selected.portal), " \xB7 ", new Date(selected.at).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR", {
     timeZone: "Europe/Paris"
-  })), /*#__PURE__*/React.createElement("p", null, "V\u0153ux ", selected.first, "\u2013", selected.last, " \xB7 ", selected.freeUsed, " gratuits \xB7 ", selected.coinsPaid, " pi\xE8ces"), /*#__PURE__*/React.createElement("p", null, "Solde : ", selected.coinsBefore, " \u2192 ", selected.coinsAfter, " pi\xE8ces \xB7 Gratuits : ", selected.freeBefore, " \u2192 ", selected.freeAfter), /*#__PURE__*/React.createElement("div", {
+  })), /*#__PURE__*/React.createElement("p", null, "V\u0153ux ", selected.first, "\u2013", selected.last, " \xB7 ", selected.freeUsed, " gratuits \xB7 ", selected.coinsPaid, " pi\xE8ces"), /*#__PURE__*/React.createElement("p", null, "Solde : ", selected.coinsBefore, " \u2192 ", selected.coinsAfter, " pi\xE8ces \xB7 Gratuits : ", selected.freeBefore, " \u2192 ", selected.freeAfter), /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "wish-history-list"
   }, JSON.parse(selected.drawsJson).map((draw, i) => {
     const pin = psychs[draw.pinId];
@@ -1630,7 +1630,7 @@ function WishHistory({
     onClick: () => setSelected(null)
   }, "Retour \xE0 l\u2019historique")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("p", null, profile.wishesMade, " invocations comptabilis\xE9es \xB7 ", profile.freeWishSpent, " v\u0153ux gratuits consomm\xE9s"), profile.wishHistoryBaseline > 0 && /*#__PURE__*/React.createElement("p", null, profile.wishHistoryBaseline, " invocations ant\xE9rieures : total connu, d\xE9tails non enregistr\xE9s \xE0 l\u2019\xE9poque."), error && /*#__PURE__*/React.createElement("p", {
     role: "status"
-  }, error), /*#__PURE__*/React.createElement("div", {
+  }, error), /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "wish-history-list"
   }, events.map(event => /*#__PURE__*/React.createElement("button", {
     key: event.id,
@@ -2963,13 +2963,13 @@ function QuestMenu({
     key: id,
     "aria-pressed": category === id,
     onClick: () => setCategory(id)
-  }, name))), category === "pc" ? /*#__PURE__*/React.createElement("div", {
+  }, name))), category === "pc" ? /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "quest-list pc-mission-coins"
   }, /*#__PURE__*/React.createElement("p", null, "Score PC \xF7 10 = pi\xE8ces \xB7 Cr\xE9dit automatique"), missionStatus === "error" && /*#__PURE__*/React.createElement("p", {
     role: "alert"
   }, "Missions PC indisponibles. Les cr\xE9dits pr\xE9c\xE9dents sont conserv\xE9s ; v\xE9rifie la connexion et les r\xE8gles Firebase."), /*#__PURE__*/React.createElement("p", null, "Total re\xE7u : ", Object.values(profile.pcMissionCoins).reduce((a, b) => a + b, 0), " pi\xE8ces"), Object.keys(profile.pcMissionCoins).length ? Object.entries(profile.pcMissionCoins).sort(([a], [b]) => b.localeCompare(a)).map(([day, coins]) => /*#__PURE__*/React.createElement("article", {
     key: day
-  }, /*#__PURE__*/React.createElement("b", null, day.split("-").reverse().join("/")), /*#__PURE__*/React.createElement("span", null, coins, " pi\xE8ces cr\xE9dit\xE9es"))) : /*#__PURE__*/React.createElement("p", null, "Ouvre le jeu connect\xE9 au m\xEAme compte que sur PC pour r\xE9cup\xE9rer tes missions pass\xE9es.")) : /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, day.split("-").reverse().join("/")), /*#__PURE__*/React.createElement("span", null, coins, " pi\xE8ces cr\xE9dit\xE9es"))) : /*#__PURE__*/React.createElement("p", null, "Ouvre le jeu connect\xE9 au m\xEAme compte que sur PC pour r\xE9cup\xE9rer tes missions pass\xE9es.")) : /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "quest-list"
   }, (category === "daily" ? daily : quests.filter(q => category === "other" ? !/^(floor|badges)-/.test(q.id) : q.id.startsWith(category + "-"))).map(q => {
     const claimed = category === "daily" ? profile.claimedDailyQuests.includes(q.id) : profile.claimedQuests.includes(q.id),
@@ -3065,8 +3065,78 @@ function PvpInviteNotifications() {
 }
 function InboxPanel({ profile, claim }) {
   const entries = inboxEntries(profile);
-  return /*#__PURE__*/React.createElement("main", { className: "inbox-panel hub-panel" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS’ MAIL"), /*#__PURE__*/React.createElement("h1", null, "Boîte de réception"), /*#__PURE__*/React.createElement("p", null, entries.length ? "Des cadeaux t’attendent. Récupère-les quand tu le souhaites." : "Aucun nouveau cadeau pour le moment.")), /*#__PURE__*/React.createElement("div", { className: "inbox-list" }, entries.length ? entries.map(entry => /*#__PURE__*/React.createElement("article", { key: entry.id }, /*#__PURE__*/React.createElement("span", { className: "inbox-gift", "aria-hidden": "true" }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CADEAU"), /*#__PURE__*/React.createElement("h2", null, entry.title), /*#__PURE__*/React.createElement("p", null, entry.text), /*#__PURE__*/React.createElement("b", null, entry.reward)), /*#__PURE__*/React.createElement("button", { type: "button", onClick: () => claim(entry.claim) }, "Récupérer"))) : /*#__PURE__*/React.createElement("p", { className: "inbox-empty" }, "Tes prochaines récompenses apparaîtront ici.")));
+  return /*#__PURE__*/React.createElement("main", { className: "inbox-panel hub-panel" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS’ MAIL"), /*#__PURE__*/React.createElement("h1", null, "Boîte de réception"), /*#__PURE__*/React.createElement("p", null, entries.length ? "Des cadeaux t’attendent. Récupère-les quand tu le souhaites." : "Aucun nouveau cadeau pour le moment.")), /*#__PURE__*/React.createElement(LandscapeRecords, { className: "inbox-list" }, entries.length ? entries.map(entry => /*#__PURE__*/React.createElement("article", { key: entry.id }, /*#__PURE__*/React.createElement("span", { className: "inbox-gift", "aria-hidden": "true" }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CADEAU"), /*#__PURE__*/React.createElement("h2", null, entry.title), /*#__PURE__*/React.createElement("p", null, entry.text), /*#__PURE__*/React.createElement("b", null, entry.reward)), /*#__PURE__*/React.createElement("button", { type: "button", onClick: () => claim(entry.claim) }, "Récupérer"))) : /*#__PURE__*/React.createElement("p", { className: "inbox-empty" }, "Tes prochaines récompenses apparaîtront ici.")));
 }
+// Keep long collections usable in landscape with a direct record picker.
+function LandscapeRecords({className, children}) {
+  const [key, select] = useState("");
+  const landscape = React.useSyncExternalStore(subscribeLandscape, isLandscape);
+  const rows = React.Children.toArray(children);
+  if (!landscape || rows.length <= 4) return React.createElement("div", {className}, children);
+  const records = rows.filter(row => React.isValidElement(row) && (row.type === "article" || row.type === "button"));
+  if (records.length <= 4) return React.createElement("div", {className}, children);
+  const current = records.find(row => String(row.key) === key) || records[0];
+  const other = rows.filter(row => !records.includes(row));
+  const options = records.map((row, i) => React.createElement("option", {key:row.key, value:String(row.key)},
+    (i + 1) + " · " + recordText(row).slice(0,100)));
+  return React.createElement("div", {className:className + " record-picker"}, ...other,
+    React.createElement("select", {value:String(current.key), "aria-label":document.documentElement.lang === "en" ? "Select an entry" : "Choisir une entrée", onChange:event => select(event.target.value)}, options), current);
+}
+function recordText(node) {
+  if (Array.isArray(node)) return node.map(recordText).filter(Boolean).join(" ");
+  if (React.isValidElement(node)) return recordText(node.props.children);
+  return typeof node === "string" || typeof node === "number" ? String(node) : "";
+}
+function isLandscape() { return window.matchMedia("(orientation:landscape)").matches; }
+function subscribeLandscape(change) {
+  const media = window.matchMedia("(orientation:landscape)");
+  media.addEventListener("change", change);
+  return () => media.removeEventListener("change", change);
+}
+
+// Refit measured content when a team, tab, font or the available viewport changes.
+function fitHubPanel(area) {
+  const panel = area.querySelector(".hub-screen > :is(.hub-panel,.pvp-panel)");
+  if (!panel) return;
+  const media = window.matchMedia("(orientation:landscape)");
+  const fit = () => {
+    if (!media.matches) {
+      panel.style.removeProperty("--panel-scale");
+      return;
+    }
+    const bounds = area.getBoundingClientRect();
+    if (!bounds.height) return;
+    const fits = (scale) => {
+      panel.style.setProperty("--panel-scale", String(scale));
+      return area.scrollHeight <= area.clientHeight && area.scrollWidth <= area.clientWidth;
+    };
+    if (fits(1)) return;
+    let low = 0.25, high = 1;
+    for (let step = 0; step < 7; step++) {
+      const mid = (low + high) / 2;
+      if (fits(mid)) low = mid;
+      else high = mid;
+    }
+    fits(low);
+  };
+  fit();
+  const resize = new ResizeObserver(fit);
+  resize.observe(area);
+  resize.observe(panel);
+  const changes = new MutationObserver(fit);
+  changes.observe(panel, {childList:true, characterData:true, subtree:true});
+  area.addEventListener("load", fit, true);
+  document.fonts?.addEventListener("loadingdone", fit);
+  media.addEventListener("change", fit);
+  return () => {
+    resize.disconnect();
+    changes.disconnect();
+    area.removeEventListener("load", fit, true);
+    document.fonts?.removeEventListener("loadingdone", fit);
+    media.removeEventListener("change", fit);
+  };
+}
+
 function GameHub({
   profile,
   screen,
@@ -3076,6 +3146,9 @@ function GameHub({
 }) {
   useMusic("hub");
   const content = React.useRef(null);
+  React.useLayoutEffect(() => {
+    if (content.current && screen !== "menu") return fitHubPanel(content.current);
+  }, [screen]);
   useEffect(() => { if (content.current) content.current.scrollTop = 0; }, [screen]);
   const inboxCount = inboxEntries(profile).length;
   const player = experience(profile.playerXp || 0);
@@ -3999,7 +4072,7 @@ function PvpLobby({
     onClick: search
   }, searching ? "Recherche en cours…" : `Chercher en ${mode === "ranked" ? "Ranked" : "Casual"}`), searching && /*#__PURE__*/React.createElement("button", {
     onClick: cancel
-  }, "Annuler la recherche"), /*#__PURE__*/React.createElement("section", { className: "pvp-private" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "MATCH PRIVÉ"), /*#__PURE__*/React.createElement("h2", null, "Défier un ami"), /*#__PURE__*/React.createElement("p", null, "Casual · niveau 50 et rang étoile pour les deux joueurs.")), privateInvites.length > 0 && /*#__PURE__*/React.createElement("div", { className: "pvp-private-list" }, privateInvites.map(invite => /*#__PURE__*/React.createElement("article", { key: invite.uid }, /*#__PURE__*/React.createElement("b", null, `${invite.name || "Joueur"} vous a défié !`), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => acceptPrivate(invite) }, "Accepter")))), friends.length ? /*#__PURE__*/React.createElement("div", { className: "pvp-private-list" }, friends.map(friend => /*#__PURE__*/React.createElement("article", { key: friend.uid }, /*#__PURE__*/React.createElement("b", null, friend.name || "Joueur"), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => privateMatch(friend) }, "Défier")))) : /*#__PURE__*/React.createElement("p", null, "Ajoute des amis dans Social pour lancer un match privé.")));
+  }, "Annuler la recherche"), /*#__PURE__*/React.createElement("section", { className: "pvp-private" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "MATCH PRIVÉ"), /*#__PURE__*/React.createElement("h2", null, "Défier un ami"), /*#__PURE__*/React.createElement("p", null, "Casual · niveau 50 et rang étoile pour les deux joueurs.")), privateInvites.length > 0 && /*#__PURE__*/React.createElement(LandscapeRecords, { className: "pvp-private-list" }, privateInvites.map(invite => /*#__PURE__*/React.createElement("article", { key: invite.uid }, /*#__PURE__*/React.createElement("b", null, `${invite.name || "Joueur"} vous a défié !`), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => acceptPrivate(invite) }, "Accepter")))), friends.length ? /*#__PURE__*/React.createElement(LandscapeRecords, { className: "pvp-private-list" }, friends.map(friend => /*#__PURE__*/React.createElement("article", { key: friend.uid }, /*#__PURE__*/React.createElement("b", null, friend.name || "Joueur"), /*#__PURE__*/React.createElement("button", { disabled: !ready, onClick: () => privateMatch(friend) }, "Défier")))) : /*#__PURE__*/React.createElement("p", null, "Ajoute des amis dans Social pour lancer un match privé.")));
 }
 function Leaderboard({ profile }) {
   const h = React.createElement;
@@ -4016,7 +4089,7 @@ function Leaderboard({ profile }) {
     } catch (error) { setNotice(String(error?.message || "Classement indisponible.")); }
   };
   useEffect(() => { load(); }, []);
-  return h("section", { className: "hub-panel leaderboard-panel" }, h("header", null, h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h1", null, "Classement"), h("p", null, "Les joueurs ayant invoqué ou participé au Roguelike.")), h("button", { type: "button", onClick: load }, "Actualiser")), h("div", { className: "leaderboard-list" }, players.length ? players.map((player, index) => h("article", { key: player.uid }, h("b", { className: "leaderboard-place" }, `#${index + 1}`), h("span", { className: "leaderboard-avatar", "aria-hidden": "true" }, (player.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, player.name || "Joueur"), h("small", null, `${player.owned?.length || 0} personnages · Rebirth ${player.rebirths || 0}`)), h("strong", null, "Étage ", player.bestFloor || 0))) : h("p", null, "Aucun joueur classé pour le moment.")), notice && h("p", { role: "status" }, notice));
+  return h("section", { className: "hub-panel leaderboard-panel" }, h("header", null, h("div", null, h("small", null, "REAPERS’ NETWORK"), h("h1", null, "Classement"), h("p", null, "Les joueurs ayant invoqué ou participé au Roguelike.")), h("button", { type: "button", onClick: load }, "Actualiser")), h(LandscapeRecords, { className: "leaderboard-list" }, players.length ? players.map((player, index) => h("article", { key: player.uid }, h("b", { className: "leaderboard-place" }, `#${index + 1}`), h("span", { className: "leaderboard-avatar", "aria-hidden": "true" }, (player.name || "?").slice(0, 1).toUpperCase()), h("div", null, h("b", null, player.name || "Joueur"), h("small", null, `${player.owned?.length || 0} personnages · Rebirth ${player.rebirths || 0}`)), h("strong", null, "Étage ", player.bestFloor || 0))) : h("p", null, "Aucun joueur classé pour le moment.")), notice && h("p", { role: "status" }, notice));
 }
 function PlayerProfile({ profile, save }) {
   const h = React.createElement, progress = experience(profile.playerXp || 0), owned = characterRoster.filter(fighter => profile.owned.includes(fighter.name));
@@ -4142,7 +4215,7 @@ function FactionPanel() {
   const refresh = () => Promise.all([service.myFaction(), service.factionList()]).then(([mine, list]) => { setFaction(mine); setFactions(list || []); }).catch(error => setNotice(String(error?.message || error)));
   useEffect(() => { refresh(); }, []);
   const create = async event => { event.preventDefault(); try { await service.createFaction(name); setName(""); await refresh(); } catch (error) { setNotice(String(error?.message || error)); } };
-  return h("section", { className: "faction-panel" }, h("header", null, h("small", null, "REAPERS’ NETWORK"), h("h2", null, "Factions"), h("p", null, "Une faction est requise pour participer aux raids à trois.")), faction ? h("article", { className: "faction-card" }, h("h3", null, faction.name), h("p", null, Object.keys(faction.members || {}).length, " membres"), h("div", null, Object.values(faction.members || {}).map(member => h("span", { key: member.uid }, member.name)))) : h(React.Fragment, null, h("form", { onSubmit: create }, h("input", { value: name, maxLength: 32, placeholder: "Nom de la faction", onChange: event => setName(event.target.value) }), h("button", { disabled: name.trim().length < 3 }, "Créer une faction")), h("h3", null, "Rejoindre une faction"), h("div", { className: "faction-list" }, factions.map(item => h("article", { key: item.id }, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membres"), h("button", { onClick: () => service.joinFaction(item).then(refresh).catch(error => setNotice(String(error?.message || error))) }, "Rejoindre"))))), notice && h("p", { role: "status" }, notice));
+  return h("section", { className: "faction-panel" }, h("header", null, h("small", null, "REAPERS’ NETWORK"), h("h2", null, "Factions"), h("p", null, "Une faction est requise pour participer aux raids à trois.")), faction ? h("article", { className: "faction-card" }, h("h3", null, faction.name), h("p", null, Object.keys(faction.members || {}).length, " membres"), h("div", null, Object.values(faction.members || {}).map(member => h("span", { key: member.uid }, member.name)))) : h(React.Fragment, null, h("form", { onSubmit: create }, h("input", { value: name, maxLength: 32, placeholder: "Nom de la faction", onChange: event => setName(event.target.value) }), h("button", { disabled: name.trim().length < 3 }, "Créer une faction")), h("h3", null, "Rejoindre une faction"), h(LandscapeRecords, { className: "faction-list" }, factions.map(item => h("article", { key: item.id }, h("b", null, item.name), h("small", null, Object.keys(item.members || {}).length, " membres"), h("button", { onClick: () => service.joinFaction(item).then(refresh).catch(error => setNotice(String(error?.message || error))) }, "Rejoindre"))))), notice && h("p", { role: "status" }, notice));
 }
 function ClanPanel() {
   const h = React.createElement, service = window.ChibiSocial;
@@ -4308,9 +4381,9 @@ function SocialHub({
   })), tab === "factions" && /*#__PURE__*/React.createElement(ClashClanPanel, null), message && /*#__PURE__*/React.createElement("p", {
     className: "social-message",
     role: "status"
-  }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement("div", {
+  }, message), (tab === "players" || tab === "friends") && /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "social-list"
-  }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry)) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement("div", {
+  }, shown.length ? shown.map(entry => playerCard(profileById(entry.uid) || entry)) : /*#__PURE__*/React.createElement("p", null, "Aucun joueur dans cette section pour le moment.")), tab === "requests" && /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "social-list"
   }, requests.length ? requests.map(player => /*#__PURE__*/React.createElement("article", {
     className: "social-request",
@@ -4320,7 +4393,7 @@ function SocialHub({
   }, "Accepter"), /*#__PURE__*/React.createElement("button", {
     className: "quiet",
     onClick: () => service.declineRequest(player.uid).catch(error => setMessage(fail(error)))
-  }, "Refuser")))) : /*#__PURE__*/React.createElement("p", null, "Aucune demande d\u2019ami en attente.")), tab === "invites" && /*#__PURE__*/React.createElement("div", {
+  }, "Refuser")))) : /*#__PURE__*/React.createElement("p", null, "Aucune demande d\u2019ami en attente.")), tab === "invites" && /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "social-list"
   }, invites.length ? invites.map(invitation => /*#__PURE__*/React.createElement("article", {
     className: "social-request social-challenge",
@@ -4533,7 +4606,7 @@ function AwakeningPanel({
   const owned = characterRoster.filter(f => profile.owned.includes(f.name));
   return /*#__PURE__*/React.createElement("section", {
     className: "awakening-panel"
-  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("h2", null, "\xC9veil"), /*#__PURE__*/React.createElement("p", null, "Obtiens 5 doublons pour \xE9veiller un personnage et d\xE9bloquer son bonus permanent.")), !owned.length ? /*#__PURE__*/React.createElement("p", null, "D\xE9bloque des personnages dans les invocations pour suivre leur \xE9veil.") : /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("h2", null, "\xC9veil"), /*#__PURE__*/React.createElement("p", null, "Obtiens 5 doublons pour \xE9veiller un personnage et d\xE9bloquer son bonus permanent.")), !owned.length ? /*#__PURE__*/React.createElement("p", null, "D\xE9bloque des personnages dans les invocations pour suivre leur \xE9veil.") : /*#__PURE__*/React.createElement(LandscapeRecords, {
     className: "awakening-list"
   }, owned.map(fighter => {
     const copies = Math.min(5, profile.copies[fighter.name] || 0),
