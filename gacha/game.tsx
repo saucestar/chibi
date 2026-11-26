@@ -1113,13 +1113,57 @@ function gameFullscreen(){
  if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.().catch(()=>{});
 }
 const hubScreens:[GameScreen,string,string][]=[["home","Accueil","⌂"],["team","Team","♟"],["summon","Invocations","✦"],["collection","Collection","▦"],["social","Social","◎"],["menu","Menu","☰"]];
+function HubViewport({screen,children}:{screen:string;children:React.ReactNode}) {
+ const viewport=React.useRef<HTMLDivElement>(null);
+ const body=React.useRef<HTMLDivElement>(null);
+ const controls=React.useRef<HTMLElement>(null);
+ const [page,setPage]=useState({index:0,total:1});
+ const fixed=screen==="summon";
+ const measure=React.useCallback(()=>{
+  const view=viewport.current;
+  if(!view||fixed)return;
+  const height=view.clientHeight;
+  const fullHeight=height+(controls.current?.offsetHeight||0);
+  const max=Math.max(0,view.scrollHeight-height);
+  const step=Math.max(1,height-Math.min(48,Math.floor(height/4)));
+  const total=view.scrollHeight<=fullHeight+1?1:Math.ceil(max/step)+1;
+  const index=total===1?0:Math.min(total-1,max-view.scrollTop<=1?total-1:Math.floor((view.scrollTop+1)/step));
+  setPage(previous=>previous.index===index&&previous.total===total?previous:{index,total});
+ },[fixed]);
+ React.useLayoutEffect(()=>{
+  const view=viewport.current,content=body.current;
+  if(!view||!content)return;
+  view.scrollTop=0;
+  if(fixed)return;
+  const observer=new ResizeObserver(measure);
+  observer.observe(view);observer.observe(content);
+  measure();
+  return ()=>observer.disconnect();
+ },[screen,fixed,measure]);
+ const go=(index:number)=>{
+  const view=viewport.current;
+  if(!view)return;
+  const height=view.clientHeight;
+  const step=Math.max(1,height-Math.min(48,Math.floor(height/4)));
+  view.scrollTop=index===page.total-1?view.scrollHeight-height:index*step;
+  measure();
+ };
+ return <div className="hub-viewport">
+  <div className="hub-content" ref={viewport} onScroll={measure}>
+   <div className="hub-screen" ref={body} key={screen}>{children}</div>
+  </div>
+  {!fixed&&page.total>1&&<nav className="hub-pages" aria-label="Pages de cet écran" ref={controls}>
+   <button type="button" aria-label="Page précédente" disabled={page.index===0} onClick={()=>go(page.index-1)}>‹</button>
+   <span aria-live="polite">{page.index+1} / {page.total}</span>
+   <button type="button" aria-label="Page suivante" disabled={page.index+1===page.total} onClick={()=>go(page.index+1)}>›</button>
+  </nav>}
+ </div>;
+}
 function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;screen:GameScreen;navigate:(screen:GameScreen)=>void;openNews:()=>void;children:React.ReactNode}) {
  useMusic("hub");
- const content=React.useRef<HTMLDivElement>(null);
- useEffect(()=>{content.current?.scrollTo({top:0});},[screen]);
- return <div className="game-hub game-shell">
+ return <div className="game-hub game-shell" data-screen={screen}>
   <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-news" onClick={openNews} aria-label="Consulter les nouveautés"><span aria-hidden="true">NEWS</span></button><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
-  <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
+  <HubViewport screen={screen}>{children}</HubViewport>
   <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} data-section-active={id==="menu"&&["settings","bestiary","quests","journal","raid","pvp"].includes(screen)||id==="home"&&["roguelike","events"].includes(screen)||undefined} onClick={()=>navigate(id)}><span className="hub-nav-orb" aria-hidden="true"><i>{icon}</i></span><b>{label}</b></button>)}</nav>
  </div>;
 }
@@ -1239,13 +1283,13 @@ function EventHall({profile,start,navigate,abandon,target}:{profile:Profile;star
  React.useLayoutEffect(()=>{
    const list=rail.current;
    const card=Array.from(list?.children||[]).find(child=>child.getAttribute("data-hero")===target);
-   if(list&&card)list.scrollTop+=card.getBoundingClientRect().top-list.getBoundingClientRect().top;
+   if(list&&card)list.scrollLeft+=card.getBoundingClientRect().left-list.getBoundingClientRect().left;
  },[target]);
  function scroll(direction:number){
    const el=rail.current;if(!el?.children.length)return;
    const cards=Array.from(el.children) as HTMLElement[];
-   const here=cards.reduce((a,b)=>Math.abs(b.offsetTop-el.scrollTop)<Math.abs(a.offsetTop-el.scrollTop)?b:a);
-   el.scrollTo({top:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetTop,behavior:"smooth"});
+   const here=cards.reduce((a,b)=>Math.abs(b.offsetLeft-el.scrollLeft)<Math.abs(a.offsetLeft-el.scrollLeft)?b:a);
+   el.scrollTo({left:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetLeft,behavior:"smooth"});
  }
  return <section className="hub-panel event-hall"><header><h1>Événement</h1><div><button aria-label="Précédent" onClick={()=>scroll(-1)}>‹</button><button aria-label="Suivant" onClick={()=>scroll(1)}>›</button></div></header>
  <p>2 vagues niveau 100 puis un boss niveau 200</p>
@@ -1522,6 +1566,14 @@ function BestiaryMenu(){
  </section>;
 }
 
+function PortalPoster({id}:{id:string}) {
+ const media=({shibuya:"first-week-clean",reality:"from-another-reality",apocalyptic:"apocalyptic",destiny:"destiny"} as Record<string,string>)[id];
+ if(!media)return null;
+ const poster=`./assets/bingo/${media}.webp`;
+ return matchMedia("(prefers-reduced-motion: reduce)").matches
+  ? <img className="portal-art" src={poster} alt=""/>
+  : <PortalVideo src={`./assets/bingo/${media}.mp4`} poster={poster}/>;
+}
 function PortalCarousel({portal,children}:{portal:string;children:React.ReactNode}) {
  const [activeIndex,setActiveIndex]=useState(0);
  const entries=Object.entries(portals).filter(([id])=>portalAvailable(id));
@@ -1769,14 +1821,7 @@ function App() {
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
     <PortalCarousel portal={portal}>{Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" data-portal={id} aria-label={title}>
       <div className={"portal-scene scene-"+id}>
-        {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
-          <PortalVideo src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp"/>}
-        {id==="reality" && <>
-          {!matchMedia("(prefers-reduced-motion: reduce)").matches && <PortalVideo src="./assets/bingo/from-another-reality.mp4" poster="./assets/bingo/from-another-reality.webp"/>}
-        </>}
-        {(id==="apocalyptic"||id==="destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? <img className="portal-art" src={`./assets/bingo/${id}.webp`} alt=""/>
-          : <PortalVideo src={`./assets/bingo/${id}.mp4`} poster={`./assets/bingo/${id}.webp`}/>)}
+        <PortalPoster id={id}/>
         {(id==="partners"||id==="eosDawn"||id==="eosDusk") && <div className="portal-duo">{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1}/>)}</div>}
         {(id==="sonicx"||id==="xiii") && <div className={`portal-cast portal-cast-${id}`}>{portalRoster(id).map(f=><SpritePreview key={f.name} fighter={f} maximumScale={1}/>)}</div>}
         <h3>{id==="shibuya"?"First Week #1":title}</h3>

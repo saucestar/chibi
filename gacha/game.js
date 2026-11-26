@@ -3047,6 +3047,80 @@ function InboxPanel({ profile, claim }) {
   const entries = inboxEntries(profile);
   return /*#__PURE__*/React.createElement("main", { className: "inbox-panel hub-panel" }, /*#__PURE__*/React.createElement("header", null, /*#__PURE__*/React.createElement("small", null, "REAPERS’ MAIL"), /*#__PURE__*/React.createElement("h1", null, "Boîte de réception"), /*#__PURE__*/React.createElement("p", null, entries.length ? "Des cadeaux t’attendent. Récupère-les quand tu le souhaites." : "Aucun nouveau cadeau pour le moment.")), /*#__PURE__*/React.createElement("div", { className: "inbox-list" }, entries.length ? entries.map(entry => /*#__PURE__*/React.createElement("article", { key: entry.id }, /*#__PURE__*/React.createElement("span", { className: "inbox-gift", "aria-hidden": "true" }, "✦"), /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("small", null, "CADEAU"), /*#__PURE__*/React.createElement("h2", null, entry.title), /*#__PURE__*/React.createElement("p", null, entry.text), /*#__PURE__*/React.createElement("b", null, entry.reward)), /*#__PURE__*/React.createElement("button", { type: "button", onClick: () => claim(entry.claim) }, "Récupérer"))) : /*#__PURE__*/React.createElement("p", { className: "inbox-empty" }, "Tes prochaines récompenses apparaîtront ici.")));
 }
+function HubViewport({
+  screen,
+  children
+}) {
+  const viewport = React.useRef(null);
+  const body = React.useRef(null);
+  const controls = React.useRef(null);
+  const [page, setPage] = useState({
+    index: 0,
+    total: 1
+  });
+  const fixed = screen === "summon";
+  const measure = React.useCallback(() => {
+    const view = viewport.current;
+    if (!view || fixed) return;
+    const height = view.clientHeight;
+    const fullHeight = height + (controls.current?.offsetHeight || 0);
+    const max = Math.max(0, view.scrollHeight - height);
+    const step = Math.max(1, height - Math.min(48, Math.floor(height / 4)));
+    const total = view.scrollHeight <= fullHeight + 1 ? 1 : Math.ceil(max / step) + 1;
+    const index = total === 1 ? 0 : Math.min(total - 1, max - view.scrollTop <= 1 ? total - 1 : Math.floor((view.scrollTop + 1) / step));
+    setPage(previous => previous.index === index && previous.total === total ? previous : {
+      index,
+      total
+    });
+  }, [fixed]);
+  React.useLayoutEffect(() => {
+    const view = viewport.current,
+      content = body.current;
+    if (!view || !content) return;
+    view.scrollTop = 0;
+    if (fixed) return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(view);
+    observer.observe(content);
+    measure();
+    return () => observer.disconnect();
+  }, [screen, fixed, measure]);
+  const go = index => {
+    const view = viewport.current;
+    if (!view) return;
+    const height = view.clientHeight;
+    const step = Math.max(1, height - Math.min(48, Math.floor(height / 4)));
+    view.scrollTop = index === page.total - 1 ? view.scrollHeight - height : index * step;
+    measure();
+  };
+  return React.createElement("div", {
+    className: "hub-viewport"
+  }, React.createElement("div", {
+    className: "hub-content",
+    ref: viewport,
+    onScroll: measure
+  }, React.createElement("div", {
+    className: "hub-screen",
+    ref: body,
+    key: screen
+  }, children)), !fixed && page.total > 1 && React.createElement("nav", {
+    className: "hub-pages",
+    "aria-label": "Pages de cet \xE9cran",
+    ref: controls
+  }, React.createElement("button", {
+    type: "button",
+    "aria-label": "Page pr\xE9c\xE9dente",
+    disabled: page.index === 0,
+    onClick: () => go(page.index - 1)
+  }, "\u2039"), React.createElement("span", {
+    "aria-live": "polite"
+  }, page.index + 1, " / ", page.total), React.createElement("button", {
+    type: "button",
+    "aria-label": "Page suivante",
+    disabled: page.index + 1 === page.total,
+    onClick: () => go(page.index + 1)
+  }, "\u203A")));
+}
 function GameHub({
   profile,
   screen,
@@ -3055,12 +3129,6 @@ function GameHub({
   children
 }) {
   useMusic("hub");
-  const content = React.useRef(null);
-  useEffect(() => {
-    content.current?.scrollTo({
-      top: 0
-    });
-  }, [screen]);
   const inboxCount = inboxEntries(profile).length;
   const player = experience(profile.playerXp || 0);
   return /*#__PURE__*/React.createElement("div", {
@@ -3097,13 +3165,7 @@ function GameHub({
     className: "hub-fullscreen",
     onClick: gameFullscreen,
     "aria-label": "Basculer le plein \xE9cran"
-  }, "\u26F6")), /*#__PURE__*/React.createElement("div", {
-    className: "hub-content",
-    ref: content
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "hub-screen",
-    key: screen
-  }, children)), /*#__PURE__*/React.createElement("nav", {
+  }, "\u26F6")), React.createElement(HubViewport, {screen}, children), /*#__PURE__*/React.createElement("nav", {
     className: "hub-nav",
     "aria-label": "Navigation du jeu"
   }, hubScreens.map(([id, label, icon]) => /*#__PURE__*/React.createElement("button", {
@@ -3372,15 +3434,15 @@ function EventHall({
   React.useLayoutEffect(() => {
     const list = rail.current;
     const card = Array.from(list?.children || []).find(child => child.getAttribute("data-hero") === target);
-    if (list && card) list.scrollTop += card.getBoundingClientRect().top - list.getBoundingClientRect().top;
+    if (list && card) list.scrollLeft += card.getBoundingClientRect().left - list.getBoundingClientRect().left;
   }, [target]);
   function scroll(direction) {
     const el = rail.current;
     if (!el?.children.length) return;
     const cards = Array.from(el.children);
-    const here = cards.reduce((a, b) => Math.abs(b.offsetTop - el.scrollTop) < Math.abs(a.offsetTop - el.scrollTop) ? b : a);
+    const here = cards.reduce((a, b) => Math.abs(b.offsetLeft - el.scrollLeft) < Math.abs(a.offsetLeft - el.scrollLeft) ? b : a);
     el.scrollTo({
-      top: cards[Math.max(0, Math.min(cards.length - 1, cards.indexOf(here) + direction))].offsetTop,
+      left: cards[Math.max(0, Math.min(cards.length - 1, cards.indexOf(here) + direction))].offsetLeft,
       behavior: "smooth"
     });
   }
@@ -4695,6 +4757,26 @@ function BestiaryMenu() {
     onClick: () => setSelected(null)
   }, "Fermer")));
 }
+function PortalPoster({
+  id
+}) {
+  const media = {
+    shibuya: "first-week-clean",
+    reality: "from-another-reality",
+    apocalyptic: "apocalyptic",
+    destiny: "destiny"
+  }[id];
+  if (!media) return null;
+  const poster = `./assets/bingo/${media}.webp`;
+  return matchMedia("(prefers-reduced-motion: reduce)").matches ? React.createElement("img", {
+    className: "portal-art",
+    src: poster,
+    alt: ""
+  }) : React.createElement(PortalVideo, {
+    src: `./assets/bingo/${media}.mp4`,
+    poster: poster
+  });
+}
 function PortalCarousel({
   portal,
   children
@@ -5250,20 +5332,7 @@ function App() {
     "aria-label": title
   }, /*#__PURE__*/React.createElement("div", {
     className: "portal-scene scene-" + id
-  }, id === "shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches && /*#__PURE__*/React.createElement(PortalVideo, {
-    src: "./assets/bingo/first-week-clean.mp4",
-    poster: "./assets/bingo/first-week-clean.webp"
-  }), id === "reality" && /*#__PURE__*/React.createElement(React.Fragment, null, !matchMedia("(prefers-reduced-motion: reduce)").matches && /*#__PURE__*/React.createElement(PortalVideo, {
-    src: "./assets/bingo/from-another-reality.mp4",
-    poster: "./assets/bingo/from-another-reality.webp"
-  })), (id === "apocalyptic" || id === "destiny") && (matchMedia("(prefers-reduced-motion: reduce)").matches ? /*#__PURE__*/React.createElement("img", {
-    className: "portal-art",
-    src: `./assets/bingo/${id}.webp`,
-    alt: ""
-  }) : /*#__PURE__*/React.createElement(PortalVideo, {
-    src: `./assets/bingo/${id}.mp4`,
-    poster: `./assets/bingo/${id}.webp`
-  })), (id === "partners" || id === "eosDawn" || id === "eosDusk") && /*#__PURE__*/React.createElement("div", {
+  }, React.createElement(PortalPoster, {id}), (id === "partners" || id === "eosDawn" || id === "eosDusk") && /*#__PURE__*/React.createElement("div", {
     className: "portal-duo"
   }, portalRoster(id).map(f => /*#__PURE__*/React.createElement(SpritePreview, {
     key: f.name,

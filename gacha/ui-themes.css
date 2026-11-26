@@ -1443,15 +1443,11 @@
   border:0!important;border-image:none;clip-path:none!important;box-shadow:none!important;
   background:#211525;
 }
-.game-hub .summon-workspace .scene-shibuya:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/first-week-clean.webp') center / cover; }
-.game-hub .summon-workspace .scene-reality:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/from-another-reality.webp') center / cover; }
-.game-hub .summon-workspace .scene-apocalyptic:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/apocalyptic.webp') center / cover; }
-.game-hub .summon-workspace .scene-destiny:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/destiny.webp') center / cover; }
 .game-hub .summon-workspace .portal-scene::after {
   content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(#150e19bb,transparent 24%,transparent 58%,#150e19ef);
 }
-.game-hub .summon-workspace .portal-art { object-fit:cover;object-position:center; }
+
 .game-hub .summon-workspace .portal-scene :is(h3,.portal-rates,.bingo-machine,.wish-commands,.portal-caption) { z-index:2; }
 .game-hub .summon-workspace .portal-scene h3 { max-width:70%;margin:0;font-size:clamp(20px,4vw,42px); }
 .game-hub .summon-workspace .portal-scene .bingo-machine {
@@ -1568,23 +1564,23 @@
 }
 
 @media (orientation:landscape) and (max-height:500px) {
-  .game-hub[data-screen="summon"] .hub-header { min-height:0!important;padding:2px 8px!important; }
-  .game-hub[data-screen="summon"] .hub-profile {
+  .game-hub .hub-header { min-height:0!important;padding:2px 8px!important; }
+  .game-hub .hub-profile {
     grid-template-columns:29px minmax(0,1fr)!important;min-height:34px!important;padding:2px 6px 2px 2px!important;
   }
-  .game-hub[data-screen="summon"] .hub-profile canvas { width:27px!important;height:27px!important; }
-  .game-hub[data-screen="summon"] .hub-profile-copy { gap:1px; }
-  .game-hub[data-screen="summon"] .hub-wallet { min-height:0!important;padding:2px 7px!important;gap:1px; }
-  .game-hub[data-screen="summon"] .hub-wallet>span { font-size:14px!important; }
-  .game-hub[data-screen="summon"] .hub-wallet svg { width:14px;height:14px; }
-  .game-hub[data-screen="summon"] .hub-header :is(.hub-inbox,.hub-news,.hub-fullscreen) { min-height:32px!important; }
-  .game-hub[data-screen="summon"] .hub-nav { margin:2px 6px 3px!important;padding:2px 4px!important; }
-  .game-hub[data-screen="summon"] .hub-nav button {
+  .game-hub .hub-profile canvas { width:27px!important;height:27px!important; }
+  .game-hub .hub-profile-copy { gap:1px; }
+  .game-hub .hub-wallet { min-height:0!important;padding:2px 7px!important;gap:1px; }
+  .game-hub .hub-wallet>span { font-size:14px!important; }
+  .game-hub .hub-wallet svg { width:14px;height:14px; }
+  .game-hub .hub-header :is(.hub-inbox,.hub-news,.hub-fullscreen) { min-height:32px!important; }
+  .game-hub .hub-nav { margin:2px 6px 3px!important;padding:2px 4px!important; }
+  .game-hub .hub-nav button {
     min-height:33px!important;padding:2px!important;gap:2px!important;
   }
-  .game-hub[data-screen="summon"] .hub-nav .hub-nav-orb { width:14px!important;height:14px!important; }
-  .game-hub[data-screen="summon"] .hub-nav .hub-nav-orb i { font-size:13px!important; }
-  .game-hub[data-screen="summon"] .hub-nav b { font-size:9px!important; }
+  .game-hub .hub-nav .hub-nav-orb { width:14px!important;height:14px!important; }
+  .game-hub .hub-nav .hub-nav-orb i { font-size:13px!important; }
+  .game-hub .hub-nav b { font-size:9px!important; }
   .game-hub .summon-workspace > section:has(.portal-list) { row-gap:3px; }
   .game-hub .summon-workspace .portal-scene h3 { font-size:clamp(16px,4.5dvh,25px); }
   .game-hub .summon-workspace .portal-caption { padding:3px 6px;font-size:clamp(9px,2.6dvh,12px); }
@@ -1616,4 +1612,95 @@
   }
   .game-hub .portal-thumbnail-art { height:16px; }
   .game-hub .portal-thumbnail-art canvas + canvas { display:none; }
+}
+
+
+/* Long menus use a viewport with explicit page controls instead of wheel or touch scrolling. */
+.game-hub .hub-viewport {
+  display:grid;grid-template-rows:minmax(0,1fr) auto;min-width:0;min-height:0;
+}
+.game-hub .hub-content { overflow:hidden;scroll-behavior:auto; }
+.game-hub .hub-viewport .hub-screen { display:flow-root; }
+:is(.game-hub,.raid-overlay) .hub-pages {
+  display:flex;justify-content:center;align-items:center;gap:10px;
+  min-height:42px;padding:2px 6px;color:#fff5e6;font-size:.75rem;
+}
+:is(.game-hub,.raid-overlay) .hub-pages button {
+  min-width:40px;min-height:38px;padding:0;
+  background:#211525;color:#fff5e6;border:1px solid #e96194;font-size:1.3rem;
+}
+.game-hub .hub-content :is(.quest-list,.wish-history-list,.chat-message-list,.chat-select-friends) {
+  max-height:none!important;overflow:visible!important;
+}
+.game-hub .event-rail {
+  display:flex;max-height:none;overflow-x:auto;overflow-y:hidden;touch-action:auto;
+  scroll-snap-type:x mandatory;overscroll-behavior-inline:contain;scrollbar-width:none;
+}
+.game-hub .event-rail>article { flex:0 0 min(100%,480px);scroll-snap-align:start; }
+
+@media (orientation:landscape) and (max-height:500px) {
+  :is(.game-hub,.raid-overlay) .hub-pages { min-height:34px; }
+  :is(.game-hub,.raid-overlay) .hub-pages button { min-height:30px; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) { margin-block:5px;padding:8px!important; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) > header { padding:5px 10px!important; }
+  .game-hub .hub-screen > :is(.hub-panel,.pvp-panel) h1 { margin-block:3px;font-size:clamp(17px,5dvh,26px); }
+  .raid-overlay .raid-battle { grid-template-rows:auto minmax(0,1fr) auto;gap:4px; }
+  .raid-battle .raid-arena { grid-template-rows:auto minmax(0,1fr) auto;padding:3px;gap:2px; }
+  .raid-boss-hud { gap:2px;padding:2px 5px;font-size:10px; }
+  .raid-squad { margin-top:0;padding:2px;font-size:9px; }
+  .raid-party-art { height:24px; }
+}
+
+/* Reserve separate rows for metadata and actions so the entire poster stays visible. */
+.game-hub .summon-workspace .portal-scene {
+  grid-template-rows:auto minmax(0,1fr) auto auto;
+}
+.game-hub .summon-workspace .portal-scene :is(h3,.portal-rates) {
+  position:relative;inset:auto;grid-area:1/1;align-self:center;
+  margin:3px 6px;
+}
+.game-hub .summon-workspace .portal-scene h3 { justify-self:start;max-width:70%; }
+.game-hub .summon-workspace .portal-scene .portal-rates { justify-self:end; }
+.game-hub .summon-workspace .portal-art {
+  grid-area:2/1;position:relative;inset:auto;min-width:0;min-height:0;object-fit:contain;object-position:center;background:#151017;
+}
+.game-hub .summon-workspace .portal-scene::after { display:none; }
+.game-hub .summon-workspace .portal-scene :is(.portal-duo,.portal-cast) {
+  grid-area:2/1;position:relative;inset:auto;height:100%;min-height:0;
+  margin:0;width:100%;padding:2px clamp(8px,7%,80px);
+}
+.game-hub .summon-workspace .portal-scene .sprite-preview { width:100%;min-width:0;min-height:0; }
+.game-hub .summon-workspace .portal-caption { grid-area:3/1; }
+.game-hub .summon-workspace .portal-scene .wish-commands { grid-area:4/1; }
+
+@media (orientation:landscape) and (max-height:380px) {
+  .game-hub .portal-stage { --wish-dock-width:clamp(140px,32%,210px); }
+  .game-hub .portal-stage .portal-next { right:calc(var(--wish-dock-width) + 6px); }
+  .game-hub .summon-workspace .portal-scene {
+    grid-template-columns:minmax(0,1fr) var(--wish-dock-width);
+    grid-template-rows:auto minmax(0,1fr) auto;
+  }
+  .game-hub .summon-workspace .portal-scene .wish-commands {
+    grid-area:1/2/4/3;align-content:center;
+    grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;
+    border-top:0;border-left:1px solid #ac416a;
+  }
+  .game-hub .summon-workspace .wish-commands .lobby-tools {
+    display:grid;grid-area:2/1/3/3;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;
+  }
+  .game-hub .summon-workspace .wish-commands .lobby-tools button { font-size:8px; }
+}
+
+
+.raid-overlay .raid-native:not(.raid-battle) {
+  display:grid;grid-template-rows:auto minmax(0,1fr) auto;overflow:hidden!important;gap:4px;
+}
+.raid-overlay .raid-hall-pages { min-height:0;overflow:hidden; }
+.raid-overlay .raid-hall-pages :is(.raid-native-boss-list,.raid-native-rooms,.raid-faction-list) {
+  max-height:none!important;overflow:visible!important;
+}
+@media (orientation:landscape) and (max-height:500px) {
+  .raid-overlay .raid-native:not(.raid-battle) { padding:4px 8px!important; }
+  .raid-overlay .raid-native:not(.raid-battle)>header { margin:0;padding:4px 7px!important; }
+  .raid-overlay .raid-native:not(.raid-battle)>header h1 { margin:2px 0;font-size:clamp(17px,5dvh,24px); }
 }
