@@ -4310,6 +4310,8 @@ function RoguelikeLaunch({
     className: "hub-panel roguelike-launch"
   }, /*#__PURE__*/React.createElement("h1", null, "Roguelike"), /*#__PURE__*/React.createElement("p", null, "Choisis ton duo et ses psychs dans Team, puis tente l\u2019ascension de 100 \xE9tages."), /*#__PURE__*/React.createElement("p", {
     className: "run-status"
+  }, "Chaque run g\xE9n\xE8re ses rencontres depuis une seed. Les PV sont conserv\xE9s, l\u2019ordre suit la Timeline CTB et une d\xE9faite met fin \xE0 la run."), /*#__PURE__*/React.createElement("p", {
+    className: "run-status"
   }, "Rebirth ", profile.rebirths, " \xB7 Bonus de raret\xE9 \xD7", (1 + Math.min(8, profile.rebirths) * .5).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR"), " · XP ×", rebirthXpMultiplier(profile.rebirths).toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")), /*#__PURE__*/React.createElement("div", {
     className: "roguelike-party"
   }, fighters.map(name => {
