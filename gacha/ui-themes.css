@@ -837,3 +837,97 @@
 .game-hub .hub-nav button { min-height:clamp(51px,8vh,66px)!important; padding-inline:2px; }
 .game-hub .hub-nav .hub-nav-orb i { font-size:clamp(19px,4vw,25px)!important; }
 .game-hub .hub-nav b { font-size:clamp(9px,2vw,13px)!important; }
+
+/* Each cutout has a textured backing and an inset print. The clipping stays on the decorative layers. */
+.game-hub {
+  --paper-fibres: url('./assets/ui/charcoal-paper-texture.png');
+  --paper-white: linear-gradient(166deg,#fffdf5ed,#f6ebd8d9 53%,#fffcf2ec),var(--paper-fibres) center/240px auto;
+  --paper-print-edge: polygon(0 4%,9% 1%,17% 4%,29% 2%,40% 0,52% 4%,66% 1%,78% 3%,89% 0,100% 4%,99% 52%,100% 94%,91% 98%,80% 96%,69% 100%,56% 97%,43% 99%,31% 96%,20% 100%,9% 96%,0 99%,1% 56%);
+  --paper-lift: drop-shadow(1px 2px 0 #a79a842f) drop-shadow(2px 5px 0 #08070b) drop-shadow(3px 7px 6px #0008);
+}
+.home-reapers-art {
+  clip-path:none;
+  border:0;
+  background:none;
+  filter:var(--paper-lift);
+}
+.home-reapers-art::before,.home-reapers-art::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  clip-path:var(--paper-edge);
+}
+.home-reapers-art::before { background:var(--paper-white); }
+.home-reapers-art::after {
+  inset:8px 7px 9px;
+  clip-path:var(--paper-print-edge);
+  background:linear-gradient(180deg,transparent 46%,#1b0d2494),url('./assets/ui/shibuya-collage-hero.png') center 54%/cover no-repeat;
+}
+
+.home-mode-banner {
+  overflow:visible!important;
+  filter:var(--paper-lift);
+  --banner-print: url('./assets/ui/event-banner-art.png');
+}
+.home-mode-roguelike { --banner-print:url('./assets/ui/roguelike-banner-art.png'); }
+.home-mode-banner::before {
+  border:0;
+  background:var(--paper-white)!important;
+}
+.home-mode-banner::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:6px 5px 7px;
+  clip-path:var(--paper-print-edge);
+  background:
+    linear-gradient(104deg,#fffaf0 0 45%,#fff5e8df 53%,transparent 65%),
+    var(--banner-print) right center/auto 100% no-repeat,
+    #fff7e7;
+  pointer-events:none;
+}
+
+.home-action-grid button { filter:var(--paper-lift); }
+.home-action-grid button::before {
+  background:var(--tab-ink);
+  border:0;
+}
+.home-action-grid button::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:1px 1px 5px;
+  clip-path:var(--paper-print-edge);
+  background:var(--paper-white);
+  pointer-events:none;
+}
+.game-hub .hub-nav { filter:var(--paper-lift); }
+.game-hub .hub-nav::before { background:var(--paper-white); }
+.game-hub :is(.hub-profile,.hub-wallet) { background:var(--paper-white)!important; }
+
+.game-hub .home-hero-play {
+  isolation:isolate;
+  border-color:transparent!important;
+  background:none!important;
+  box-shadow:none!important;
+  filter:var(--paper-lift);
+}
+.home-hero-play::before,.home-hero-play::after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:-3px;
+  clip-path:var(--paper-edge);
+  background:var(--paper-white);
+  pointer-events:none;
+}
+.home-hero-play::after {
+  inset:2px 3px 3px;
+  clip-path:var(--paper-print-edge);
+  background:linear-gradient(111deg,#ffb53ae8,#ff751fe5),var(--paper-fibres) center/210px auto;
+}
+
+.game-hub .hub-screen > :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) {
+  border-color:transparent!important;
+  background:linear-gradient(#fff8eb,#fff8eb) padding-box,var(--paper-white) border-box!important;
+}
