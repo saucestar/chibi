@@ -931,3 +931,57 @@
   border-color:transparent!important;
   background:linear-gradient(#fff8eb,#fff8eb) padding-box,var(--paper-white) border-box!important;
 }
+
+/* One continuous background from the profile tickets through the home posters. */
+.game-hub[data-screen="home"] {
+  --home-width:620px;
+  --home-gutter:clamp(10px,3vw,22px);
+  --home-gap:clamp(7px,1.3dvh,12px);
+}
+.game-hub.game-shell[data-screen="home"] {
+  background:#09080a var(--paper-fibres) center top/cover no-repeat!important;
+}
+.game-hub .hub-header {
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+.game-hub[data-screen="home"] .hub-header {
+  width:100%;
+  box-sizing:border-box;
+  max-width:var(--home-width);
+  justify-self:center;
+  min-height:0!important;
+  padding:8px var(--home-gutter) 4px!important;
+}
+.game-hub[data-screen="home"] .home-reapers-layout {
+  width:100%;
+  max-width:var(--home-width);
+  box-sizing:border-box;
+  align-content:start;
+  gap:var(--home-gap)!important;
+  padding:var(--home-gap) var(--home-gutter) calc(var(--home-gap) + 4px)!important;
+}
+.game-hub[data-screen="home"] .home-mode-banners {
+  margin:0!important;
+  gap:var(--home-gap)!important;
+}
+
+@media (orientation:portrait) {
+  .game-hub[data-screen="home"] .home-reapers-layout {
+    height:100%;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"hero" "modes" "actions";
+    grid-template-rows:minmax(176px,2.65fr) minmax(154px,1.85fr) minmax(60px,.7fr);
+  }
+  .game-hub[data-screen="home"] .home-reapers-hero { min-height:0!important; }
+  .game-hub[data-screen="home"] :is(.home-mode-banners,.home-action-grid) { align-self:stretch; }
+  .game-hub[data-screen="home"] .home-mode-banners { grid-template-rows:repeat(2,minmax(0,1fr)); }
+  .game-hub[data-screen="home"] .home-mode-banner { min-height:0!important; }
+  .game-hub[data-screen="home"] .home-action-grid button { min-height:0!important; }
+}
+@media (min-width:880px) and (min-height:570px) and (orientation:landscape) {
+  .game-hub[data-screen="home"] { --home-width:1100px; }
+  .game-hub[data-screen="home"] .home-mode-banners,
+  .game-hub[data-screen="home"] .home-action-grid { align-self:stretch; }
+}
