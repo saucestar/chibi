@@ -22,6 +22,7 @@
     ],
     "win": {
       "target": "nsis",
+      "signAndEditExecutable": false,
       "artifactName": "TWEWY-Reapers-Run-Setup-${version}.${ext}"
     },
     "nsis": {
