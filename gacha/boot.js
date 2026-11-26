@@ -27,8 +27,8 @@
   config().finally(async () => {
     try {
       await add('./admin.js?v=settings1').catch(() => {});
-      await add('./raid.js?v=fighter-animations1');
-      await add('./game.js?v=fighter-animations1');
+      await add('./raid.js?v=animation-timing1');
+      await add('./game.js?v=fighter-animations-timing1');
     }
     catch (error) { const root = document.getElementById('root'); if (root) root.textContent = 'Impossible de charger le jeu. Recharge la page.'; }
   });

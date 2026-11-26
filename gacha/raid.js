@@ -53,9 +53,9 @@
     if (!window.ChibiSocial?.ready()) return window.alert('Connecte-toi avec Discord pour ouvrir les Raids.');
     const overlay = document.createElement('div'); overlay.className = 'raid-overlay'; document.body.appendChild(overlay);
     let faction = null, factions = [], rooms = [], selected = null, stop = null, activeStop = null;
-    let partySprites = [], previousFrame = null, draftKey = '', draft = {}, sendingKey = '', syncActions = null;
+    let partySprites = [], previousFrame = null, draftKey = '', draft = {}, sendingKey = '', syncActions = null, impactTimer = 0;
     const clearSpriteTimers = () => overlay.querySelectorAll('canvas').forEach(canvas => { if (canvas._raidTimer) clearInterval(canvas._raidTimer); });
-    const clearBattleSprites = () => { clearSpriteTimers(); partySprites.forEach(unmount => unmount()); partySprites = []; };
+    const clearBattleSprites = () => { clearTimeout(impactTimer); clearSpriteTimers(); partySprites.forEach(unmount => unmount()); partySprites = []; };
     const close = () => { stop?.(); activeStop?.(); clearBattleSprites(); overlay.remove(); };
     overlay.onclick = event => { if (event.target === overlay) close(); };
     const renderHall = (notice = '') => {
@@ -133,6 +133,9 @@
       const damage = previous ? Math.max(0, previous.hp - result.hp) : 0;
       const playedRound = previous && (result.turn > previous.turn || (done && !previous.won && !previous.lost))
         ? room.actions?.[result.turn > previous.turn ? result.turn - 1 : result.turn] : null;
+      const impactDelay = damage && playedRound ? Math.max(0, ...result.ids.map(id =>
+        window.ChibiRaidSprites?.partyImpact?.(result.squads[id], playedRound[id]?.plans) || 0)) : 0;
+      const shownHp = impactDelay ? previous.hp : result.hp;
       previousFrame = { roomId, result };
       const bossName = txt(room.meta.bossName);
       const bossArt = window.ChibiGameCatalog.enemies.find(enemy => enemy.id === room.meta.bossId)?.sprite;
@@ -174,10 +177,10 @@
           <button type="button" class="raid-native-close" aria-label="Quitter l’arène">×</button>
         </header>
         <div class="arena raid-arena">
-          <div class="raid-boss-hud"><b>Boss · Niv. 200</b>${healthBar(result.hp, room.meta.bossHp, room.meta.bossName)}
-            <small>${pv(result.hp)} / ${pv(room.meta.bossHp)} PV</small></div>
+          <div class="raid-boss-hud"><b>Boss · Niv. 200</b>${healthBar(shownHp, room.meta.bossHp, room.meta.bossName)}
+            <small>${pv(shownHp)} / ${pv(room.meta.bossHp)} PV</small></div>
           <div class="raid-boss-actor" aria-hidden="true"><span class="raid-boss-sprite">${bossArt ? `<img src="${txt(bossArt)}" alt="">` : '☠'}</span>
-            ${damage ? `<b class="raid-damage">−${pv(damage)}</b>` : ''}</div>
+            ${damage ? `<b class="raid-damage"${impactDelay ? ' hidden' : ''}>−${pv(damage)}</b>` : ''}</div>
           <div class="raid-squads">${groups}</div>
         </div>
         <section class="raid-command" aria-label="Actions de raid">
@@ -188,6 +191,14 @@
       </section>`;
 
       overlay.querySelector('.raid-native-close').onclick = close;
+      if (impactDelay) impactTimer = setTimeout(() => {
+        const hud = overlay.querySelector('.raid-boss-hud');
+        if (!hud) return;
+        hud.querySelector('.raid-health').outerHTML = healthBar(result.hp, room.meta.bossHp, room.meta.bossName);
+        hud.querySelector('small').textContent = `${pv(result.hp)} / ${pv(room.meta.bossHp)} PV`;
+        const hit = overlay.querySelector('.raid-damage');
+        if (hit) hit.hidden = false;
+      }, impactDelay);
       mountBossSprite(overlay.querySelector('.raid-boss-sprite'), room.meta.bossId, true);
       overlay.querySelectorAll('[data-squad]').forEach(host => {
         const id = result.ids[Number(host.dataset.squad)];

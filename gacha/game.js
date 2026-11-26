@@ -857,6 +857,39 @@ function fighterClipState(combat, action, hpRatio, victory) {
   if (victory) return "win";
   return hpRatio <= .25 ? "dying" : "idle";
 }
+function fighterClipTiming(clip, state) {
+  if (!clip) return { duration: 0, impact: 0 };
+  const timing = {
+    atk: [20, 28, .45],
+    magic_atk: [12, 18, .67],
+    limit_atk: [27, 38, .59],
+    win: [16, 22, 0]
+  }[state];
+  if (!timing) return { duration: 0, impact: 0 };
+  const [baseFps, maxFps, fraction] = timing;
+  const fps = Math.min(maxFps, Math.max(baseFps, clip.frames / 3.2));
+  const duration = Math.round(1000 * clip.frames / fps);
+  const impactFrame = Math.round((clip.frames - 1) * fraction);
+  return { duration, impact: Math.round(1000 * impactFrame / fps) };
+}
+function fighterActionTiming(name, action) {
+  const state = fighterClipState(true, action, 1, false);
+  const clip = fighterAtlases[name]?.clips[state];
+  return fighterClipTiming(clip, state);
+}
+async function prepareFighterAction(name, action) {
+  const state = fighterClipState(true, action, 1, false);
+  const clip = fighterAtlases[name]?.clips[state];
+  if (!clip) return;
+  let timer;
+  try {
+    await Promise.race([fighterSheet(clip.src), new Promise(resolve => { timer = setTimeout(resolve, 240); })]);
+  } catch (_) {
+    // The legacy sprite remains available if the sheet cannot be loaded.
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function Sprite({
   fighter,
@@ -896,7 +929,7 @@ function Sprite({
       surface.style.top = ((fighter.frameHeight || 116) + visualHeight) / 2 - (height - 5) * scale + "px";
       context.imageSmoothingEnabled = false;
       const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const duration = { atk: 620, limit_atk: 650, magic_atk: 440, win: 1000 }[state];
+      const { duration } = fighterClipTiming(clip, state);
       const start = performance.now();
       let last = -1;
       function draw(time) {
@@ -3444,9 +3477,30 @@ function PvpBattle({
     [choosing, setChoosing] = useState(null),
     [targeting, setTargeting] = useState(null),
     [rating, setRating] = useState(null),
-    [replay, setReplay] = useState(null);
+    [replay, setReplay] = useState(null),
+    [replayImpact, setReplayImpact] = useState(null),
+    [replayHealth, setReplayHealth] = useState(null);
   const replayedRounds = React.useRef(new Set());
-  useEffect(() => service.watch(matchId, next => setRoom(next), () => setError("Connexion au combat interrompue.")), [matchId]);
+  const receivedRoom = React.useRef(null);
+  const startHealth = React.useRef(null);
+  useEffect(() => {
+    receivedRoom.current = null;
+    startHealth.current = null;
+    setReplayHealth(null);
+    return service.watch(matchId, next => {
+      const previous = receivedRoom.current;
+      const turn = next?.lastRoundLog?.turn;
+      if (next?.lastRoundLog?.events?.length && previous?.players && previous.turn === turn && previous.lastRoundLog?.turn !== turn) {
+        const values = Object.fromEntries(Object.entries(previous.players).map(([id, player]) => [
+          id, player.team.map(fighter => fighter.hp)
+        ]));
+        startHealth.current = { turn, values };
+        setReplayHealth({ turn, values });
+      }
+      receivedRoom.current = next;
+      setRoom(next);
+    }, () => setError("Connexion au combat interrompue."));
+  }, [matchId]);
   useEffect(() => {
     if (!room || room.status !== "active") return;
     const ids = [room.host, room.guest];
@@ -3466,12 +3520,31 @@ function PvpBattle({
     replayedRounds.current.add(`${matchId}:${log.turn}`);
     let cancelled = false;
     const play = async () => {
+      let health = startHealth.current?.turn === log.turn ? startHealth.current.values : null;
       for (const event of log.events) {
         if (cancelled) return;
+        const action = pvpSpriteAction(event, event.actorUid, event.actorIndex);
+        const timing = fighterActionTiming(event.actorName, action);
+        const impact = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : timing.impact;
+        if (impact) await prepareFighterAction(event.actorName, action);
+        if (cancelled) return;
         setReplay(event);
-        await new Promise(resolve => window.setTimeout(resolve, event.type === "attack" ? 680 : 480));
+        setReplayImpact(null);
+        if (impact) await new Promise(resolve => setTimeout(resolve, impact));
+        if (cancelled) return;
+        if (health?.[event.targetUid] && event.type === "attack") {
+          health = { ...health, [event.targetUid]: health[event.targetUid].map((hp, index) =>
+            index === event.targetIndex ? Math.max(0, hp - event.damage) : hp) };
+        } else if (health?.[event.actorUid] && event.type === "heal") {
+          health = { ...health, [event.actorUid]: health[event.actorUid].map((hp, index) =>
+            hp > 0 ? Math.min(room.players[event.actorUid].team[index].maxHp, hp + event.amount) : hp) };
+        }
+        if (health) setReplayHealth({ turn: log.turn, values: health });
+        setReplayImpact(event);
+        if (event.type === "attack" && event.damage) gameSound.effect("hit");
+        await new Promise(resolve => setTimeout(resolve, impact ? Math.max(280, timing.duration - impact) : event.type === "attack" ? 680 : 480));
       }
-      if (!cancelled) setReplay(null);
+      if (!cancelled) { setReplay(null); setReplayImpact(null); setReplayHealth(null); }
     };
     play();
     return () => { cancelled = true; };
@@ -3483,6 +3556,10 @@ function PvpBattle({
     mine = room.players[uid],
     enemy = room.players[rival],
     submitted = room.actions?.[uid]?.turn === room.turn;
+  const displayTeam = id => room.players[id].team.map((fighter, index) => ({
+    ...fighter,
+    hp: replayHealth?.turn === room.lastRoundLog?.turn ? replayHealth?.values[id]?.[index] ?? fighter.hp : fighter.hp
+  }));
   const living = mine.team.map((f, index) => ({
       f,
       index
@@ -3513,7 +3590,7 @@ function PvpBattle({
     fighter,
     index
   }))].filter(entry => entry.fighter.hp > 0).sort((a, b) => b.fighter.speed - a.fighter.speed || a.side.localeCompare(b.side));
-  const replayText = replay?.type === "attack" ? `${replay.actorName} · ${replay.pinName} · ${replay.evaded ? "Esquive !" : `−${replay.damage} PV`}` : replay?.type === "heal" ? `${replay.actorName} · ${replay.pinName} · +${replay.amount} PV` : replay ? `${replay.actorName} se protège.` : "";
+  const replayText = replayImpact?.type === "attack" ? `${replayImpact.actorName} · ${replayImpact.pinName} · ${replayImpact.evaded ? "Esquive !" : `−${replayImpact.damage} PV`}` : replayImpact?.type === "heal" ? `${replayImpact.actorName} · ${replayImpact.pinName} · +${replayImpact.amount} PV` : replay ? `${replay.actorName} · ${replay.pinName || "Défense"}` : "";
   const status = replayText || (submitted ? "Actions envoyées · attente de l’adversaire" : ready ? "Actions prêtes" : "Choisis une action par personnage");
   return /*#__PURE__*/React.createElement("main", {
     className: "game-shell combat-hud pvp-combat"
@@ -3536,7 +3613,7 @@ function PvpBattle({
     className: "squad-panel"
   }, /*#__PURE__*/React.createElement("div", {
     className: "section-label"
-  }, /*#__PURE__*/React.createElement("span", null, "PLAYER SQUAD"), /*#__PURE__*/React.createElement("b", null, "02 / 02")), mine.team.map((fighter, index) => {
+  }, /*#__PURE__*/React.createElement("span", null, "PLAYER SQUAD"), /*#__PURE__*/React.createElement("b", null, "02 / 02")), displayTeam(uid).map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("article", {
       className: `fighter-card ${fighter.hp <= 0 ? "down" : ""}`,
@@ -3601,10 +3678,10 @@ function PvpBattle({
     className: "turn-badge"
   }, "PVP \xB7 TURN ", String(room.turn).padStart(2, "0")), /*#__PURE__*/React.createElement("div", {
     className: "enemy-line enemies-count-2"
-  }, enemy.team.map((fighter, index) => {
+  }, displayTeam(rival).map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replay?.targetUid === rival && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
+      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replayImpact?.targetUid === rival && replayImpact?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
@@ -3619,13 +3696,13 @@ function PvpBattle({
       style: {
         width: `${100 * fighter.hp / fighter.maxHp}%`
       }
-    })), replay?.targetUid === rival && replay?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replay.evaded ? "miss" : ""}` }, replay.evaded ? "MISS" : `−${replay.damage}`), /*#__PURE__*/React.createElement("small", null, fighter.name));
+    })), replayImpact?.targetUid === rival && replayImpact?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replayImpact.evaded ? "miss" : ""}` }, replayImpact.evaded ? "MISS" : `−${replayImpact.damage}`), /*#__PURE__*/React.createElement("small", null, fighter.name));
   })), /*#__PURE__*/React.createElement("div", {
     className: "player-line"
-  }, mine.team.map((fighter, index) => {
+  }, displayTeam(uid).map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replay?.targetUid === uid && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
+      className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replayImpact?.targetUid === uid && replayImpact?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
@@ -3634,7 +3711,7 @@ function PvpBattle({
       victory: !replay && room.status === "finished" && room.winner === uid,
       action: pvpSpriteAction(replay, uid, index),
       actionKey: replay?.actorUid === uid && replay?.actorIndex === index ? replay : null
-    }), replay?.targetUid === uid && replay?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replay.evaded ? "miss" : ""}` }, replay.evaded ? "MISS" : `−${replay.damage}`), /*#__PURE__*/React.createElement("span", null, fighter.name));
+    }), replayImpact?.targetUid === uid && replayImpact?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replayImpact.evaded ? "miss" : ""}` }, replayImpact.evaded ? "MISS" : `−${replayImpact.damage}`), /*#__PURE__*/React.createElement("span", null, fighter.name));
   })), /*#__PURE__*/React.createElement("p", {
     className: "combat-status",
     role: "status"
@@ -3695,7 +3772,7 @@ function PvpBattle({
     onClick: () => setChoosing(index)
   }, /*#__PURE__*/React.createElement("b", null, fighter.name), /*#__PURE__*/React.createElement("span", null, fighter.hp <= 0 ? "K.O." : plans[index] ? planName(plans[index]) : "Choisir une action"), /*#__PURE__*/React.createElement("small", null, plans[index]?.kind === "psych" ? `${psychs[plans[index].pin || ""].cost} EN · Modifier` : plans[index] ? "0 EN · Modifier" : "Choisir")))), /*#__PURE__*/React.createElement("button", {
     className: "resolve-round",
-    disabled: submitted || !ready,
+    disabled: submitted || !ready || !!replay || !!replayHealth,
     onClick: () => service.submit(matchId, room.turn, plans).catch(() => setError("Envoi impossible."))
   }, submitted ? "En attente de l’adversaire…" : "Valider le tour")))), /*#__PURE__*/React.createElement("aside", {
     className: "route-panel pvp-opponent-panel"
@@ -3721,7 +3798,7 @@ function PvpBattle({
         width: `${100 * fighter.hp / fighter.maxHp}%`
       }
     }))));
-  }))), room.status === "finished" && /*#__PURE__*/React.createElement("div", {
+  }))), room.status === "finished" && !replay && !replayHealth && /*#__PURE__*/React.createElement("div", {
     className: "overlay"
   }, /*#__PURE__*/React.createElement("div", {
     className: "modal reward-modal"
@@ -5411,7 +5488,7 @@ function Battle({
     const performed = new Set(recovery?.performed || []);
     const drops = [];
     let xp = 0;
-    const pause = () => new Promise(resolve => setTimeout(resolve, 700));
+    const pause = (duration = 700) => new Promise(resolve => setTimeout(resolve, duration));
     const publish = () => {
       setTeam([...fighters]);
       setEnemies([...monsters]);
@@ -5457,6 +5534,7 @@ function Battle({
       if (!monsters.some(e => e.hp > 0) || !fighters.some(f => f.hp > 0)) break;
       const gains = {};
       const step = steps[index];
+      let recoveryDelay = 700;
       setQueueIndex(index);
       setHitFeedback(null);
       setImpact(null);
@@ -5492,13 +5570,24 @@ function Battle({
         const fighter = fighters.find(f => f.name === step.name);
         const plan = choices[step.name];
         if (fighter.hp <= 0) continue;
+        const kind = plan.kind === "psych" ? psychs[plan.pin].kind : plan.kind;
+        const animation = { physical: "shockwave", special: "pyro", burst: "burst", heal: "heal", guard: "guard", support: "guard" }[kind] || "pyro";
+        const timing = fighterActionTiming(fighter.name, animation);
+        const impactDelay = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : timing.impact;
+        if (impactDelay) await prepareFighterAction(fighter.name, animation);
+        if (token !== generation.current) return;
         timeline[step.key] = Math.round((timeline[step.key] || 0) + 10000 / Math.max(1, fighter.speed || 1) * ctbDelay(plan));
         performed.add(fighter.name);
         setActor(fighter.name);
+        setActiveAction(animation);
+        if (impactDelay) {
+          await pause(impactDelay);
+          if (token !== generation.current) return;
+          recoveryDelay = Math.max(280, timing.duration - impactDelay);
+        }
         if (plan.kind === "guard") {
           shields.set(fighter.name, Math.max(shields.get(fighter.name) || 0, .55));
           en = Math.min(3, en + 1);
-          setActiveAction("guard");
           setMessage(`${fighter.name} se protège jusqu’à la fin du tour · +1 EN`);
         } else if (plan.kind === "burst") {
           const partnerAlive = fighters.some(f => f.name !== fighter.name && f.hp > 0),
@@ -5508,7 +5597,12 @@ function Battle({
             ...e,
             hp: Math.max(0, e.hp - damage)
           } : e);
-          setActiveAction("burst");
+          const target = monsters.find(enemy => enemy.hp > 0) || monsters[0];
+          if (target) {
+            setImpact(target.id);
+            setHitFeedback({ side: "enemy", target: String(target.id), label: `${damage} dégâts` });
+          }
+          if (damage) gameSound.effect("hit");
           gains.bursts = 1;
           setMessage(`${fighter.name} · Sync Burst · ${damage} dégâts sur chaque ennemi !`);
         } else {
@@ -5516,14 +5610,12 @@ function Battle({
           if (pin.kind === "heal") {
             const amount = scaledPinEffect(pin, (fighter.mag || 1) * pin.power / 50 * (1 + passiveBonus(/^Cure Boost/, .3)));
             healParty(amount, fighter.name);
-            setActiveAction("heal");
             setMessage(`${fighter.name} · ${pin.name} · +${amount} PV au duo`);
           } else if (pin.kind === "guard" || pin.kind === "support") {
             fighters.filter(f => f.hp > 0).forEach(f => shields.set(f.name, Math.max(shields.get(f.name) || 0, pinShieldReduction(pin))));
             if (pin.kind === "support") {
               if (/Turbo|Supply/.test(pin.psych)) en = Math.min(3, en + scaledPinEffect(pin, 2));else if (/Cure Boost|Subconscious|Life/.test(pin.psych)) healParty(scaledPinEffect(pin, (fighter.mag || 1) / 2), fighter.name);else sync = Math.min(100, sync + scaledPinEffect(pin, 18));
             }
-            setActiveAction("guard");
             setMessage(`${fighter.name} · ${pin.name} · Duo protégé pour ce tour`);
           } else {
             const physical = pin.kind === "physical",
@@ -5554,7 +5646,6 @@ function Battle({
             sync = Math.min(100, sync + 18);
             setSelected(primary.id);
             setImpact(primary.id);
-            setActiveAction(physical ? "shockwave" : "pyro");
             setMessage((pinTargetMode(pin) === "aoe" ? `${fighter.name} · ${pin.name} · ${total} dégâts répartis sur tous les ennemis` : `${fighter.name} · ${pin.name} → ${primary.name} · ${primaryDamage} dégâts`) + (stab > 1 ? " · STAB ×1,2" : ""));
           }
         }
@@ -5585,7 +5676,7 @@ function Battle({
         performed: [...performed]
       }, gains);
       publish();
-      await pause();
+      await pause(recoveryDelay);
     }
     if (token !== generation.current) return;
     const unused = Object.entries(choices).reduce((sum, [name, plan]) => sum + (performed.has(name) ? 0 : planCost(plan)), 0);
@@ -6033,21 +6124,31 @@ function SaveBoundary() {
   }, status.message), /*#__PURE__*/React.createElement(App, null));
 }
 window.ChibiGameCatalog = { characters: characterRoster, bases, elements: characterElements, passives: characterPassives, badges: psychs, enemies: ffbeBestiary };
+function raidPlanAnimation(plan) {
+  const kind = plan?.kind === "guard" ? "guard" : psychs[plan?.pin]?.kind;
+  return { physical: "shockwave", special: "pyro", heal: "heal", guard: "guard" }[kind];
+}
 window.ChibiRaidSprites = {
   loadPage: ffbePage,
   enemies: enemyCatalog,
+  partyImpact(members, plans) {
+    if (!plans || matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
+    return Math.max(0, ...members.map(({ name, hp }, index) => {
+      const action = raidPlanAnimation(plans[index]);
+      return hp > 0 && (action === "shockwave" || action === "pyro") ? fighterActionTiming(name, action).impact : 0;
+    }));
+  },
   mountParty(host, members, victory, plans) {
     const root = ReactDOM.createRoot(host);
     const draw = round => root.render(members.map(({ name, hp, maxHp }, index) => {
       const fighter = characterRoster.find(character => character.name === name);
-      const plan = round?.[index];
-      const kind = plan?.kind === "guard" ? "guard" : psychs[plan?.pin]?.kind;
-      const action = { physical: "shockwave", special: "pyro", heal: "heal", guard: "guard" }[kind];
+      const action = raidPlanAnimation(round?.[index]);
       return React.createElement("span", { key: index, className: "raid-party-sprite" },
         fighter && (hp > 0 || fighterAtlases[name]) ? React.createElement(Sprite, { fighter, combat: true, hpRatio: hp / maxHp, victory, action }) : null);
     }));
     draw(plans);
-    const timer = plans && setTimeout(() => draw(null), 680);
+    const duration = Math.max(680, ...members.map(({name}, index) => fighterActionTiming(name, raidPlanAnimation(plans?.[index])).duration));
+    const timer = plans && setTimeout(() => draw(null), matchMedia("(prefers-reduced-motion: reduce)").matches ? 680 : duration);
     return () => { clearTimeout(timer); root.unmount(); };
   }
 };
