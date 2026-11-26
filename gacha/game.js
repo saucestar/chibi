@@ -3097,6 +3097,7 @@ function GameHub({
   }, hubScreens.map(([id, label, icon]) => /*#__PURE__*/React.createElement("button", {
     key: id,
     "aria-current": screen === id ? "page" : undefined,
+    "data-section-active": id === "menu" && ["collection","settings","bestiary","quests","journal","pvp"].includes(screen) || id === "home" && ["roguelike","events"].includes(screen) || undefined,
     onClick: () => navigate(id)
   }, /*#__PURE__*/React.createElement("span", {
     className: "hub-nav-orb",
@@ -3150,46 +3151,101 @@ function CharacterDossier({
     maximumFractionDigits: 3
   }), " %"), !reference && /*#__PURE__*/React.createElement("p", null, profile.copies[fighter.name] || 0, " / 5 doublons", profile.awakened.includes(fighter.name) ? " · Éveillé" : "")));
 }
+function Collection({
+  profile,
+  awaken,
+  openPortal,
+  openEvent
+}) {
+  const [tab, setTab] = useState("characters");
+  return React.createElement("section", {
+    className: "hub-panel collection-workspace"
+  }, React.createElement("h1", null, "Collection"), React.createElement("div", {
+    className: "hub-tabs noir-tabs",
+    role: "group",
+    "aria-label": "Parcourir la collection"
+  }, React.createElement("button", {
+    "aria-pressed": tab === "characters",
+    onClick: () => setTab("characters")
+  }, "Personnages"), React.createElement("button", {
+    "aria-pressed": tab === "badges",
+    onClick: () => setTab("badges")
+  }, "Badges")), tab === "characters" ? React.createElement(CharacterCollection, {
+    profile: profile,
+    awaken: awaken,
+    openPortal: openPortal,
+    openEvent: openEvent
+  }) : React.createElement(BadgeCatalogue, {
+    embedded: true,
+    owned: profile.pins,
+    copies: profile.pinCopies
+  }));
+}
 function CharacterCollection({
   profile,
-  awaken
+  awaken,
+  openPortal,
+  openEvent
 }) {
-  const [onlyOwned, setOnlyOwned] = useState(false),
-    [selected, setSelected] = useState(null),
-    roster = visibleCollectionRoster(),
-    ownedCount = roster.filter(f => profile.owned.includes(f.name)).length;
-  return /*#__PURE__*/React.createElement("section", {
-    className: "hub-panel character-collection"
-  }, /*#__PURE__*/React.createElement("h1", null, "Personnages"), /*#__PURE__*/React.createElement("p", null, ownedCount, " / ", roster.length, " d\xE9bloqu\xE9s"), /*#__PURE__*/React.createElement("div", {
-    className: "hub-tabs"
-  }, /*#__PURE__*/React.createElement("button", {
-    "aria-pressed": !onlyOwned,
-    onClick: () => setOnlyOwned(false)
-  }, "Tous"), /*#__PURE__*/React.createElement("button", {
-    "aria-pressed": onlyOwned,
-    onClick: () => setOnlyOwned(true)
-  }, "D\xE9bloqu\xE9s")), /*#__PURE__*/React.createElement("div", {
+  const [filter, setFilter] = useState("all"),
+    [query, setQuery] = useState(""),
+    [selected, setSelected] = useState(null);
+  const roster = visibleCollectionRoster(),
+    isOwned = name => profile.owned.includes(name);
+  const canAwaken = name => isOwned(name) && profile.copies[name] === 5 && !profile.awakened.includes(name);
+  const matches = roster.filter(fighter => [fighter.name, characterLabel(fighter.name)].some(name => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())) && (filter === "owned" ? isOwned(fighter.name) : filter === "missing" ? !isOwned(fighter.name) : filter === "awakening" ? canAwaken(fighter.name) : true));
+  const sources = selected ? Object.entries(portals).filter(([id]) => portalAvailable(id) && portalRoster(id).some(fighter => fighter.name === selected.name)) : [];
+  return React.createElement("section", {
+    className: "character-collection"
+  }, React.createElement("p", null, roster.filter(fighter => isOwned(fighter.name)).length, " / ", roster.length, " d\xE9bloqu\xE9s"), React.createElement("label", {
+    className: "collection-search"
+  }, "Rechercher un personnage", React.createElement("input", {
+    type: "search",
+    value: query,
+    onChange: event => setQuery(event.target.value)
+  })), React.createElement("div", {
+    className: "hub-tabs noir-tabs",
+    role: "group",
+    "aria-label": "Filtrer les personnages"
+  }, [["all", "Tous"], ["owned", "Débloqués"], ["missing", "Non obtenus"], ["awakening", "Éveil disponible"]].map(([id, label]) => React.createElement("button", {
+    key: id,
+    "aria-pressed": filter === id,
+    onClick: () => setFilter(id)
+  }, label))), !matches.length && React.createElement("p", {
+    role: "status"
+  }, "Aucun personnage trouv\xE9."), React.createElement("div", {
     className: "character-grid"
-  }, roster.filter(f => !onlyOwned || profile.owned.includes(f.name)).map(f => {
-    const owned = profile.owned.includes(f.name);
-    return /*#__PURE__*/React.createElement("button", {
-      key: f.name,
+  }, matches.map(fighter => {
+    const owned = isOwned(fighter.name);
+    return React.createElement("button", {
+      key: fighter.name,
       className: owned ? "" : "not-owned",
-      onClick: () => setSelected(f),
-      "aria-label": `Fiche de ${f.name}${owned ? "" : " · Non obtenu"}`
-    }, /*#__PURE__*/React.createElement(HudPortrait, {
-      fighter: f
-    }), /*#__PURE__*/React.createElement("b", null, characterLabel(f.name)), /*#__PURE__*/React.createElement("small", null, owned ? `Niv. ${experience(profile.xp[f.name] || 0).level} · ${ranks[profile.levels[f.name] || 0]}` : "Non obtenu"));
-  })), selected && /*#__PURE__*/React.createElement(WishDialog, {
+      onClick: () => setSelected(fighter),
+      "aria-label": `Fiche de ${characterLabel(fighter.name)}`
+    }, React.createElement(HudPortrait, {
+      fighter: fighter
+    }), React.createElement("b", null, characterLabel(fighter.name)), React.createElement("small", null, canAwaken(fighter.name) ? "Éveil disponible" : owned ? `Niv. ${experience(profile.xp[fighter.name] || 0).level} · ${ranks[profile.levels[fighter.name] || 0]}` : "Non obtenu"));
+  })), selected && React.createElement(WishDialog, {
     className: "character-sheet-dialog",
-    title: `Fiche · ${selected.name}`,
+    title: `Fiche · ${characterLabel(selected.name)}`,
     close: () => setSelected(null)
-  }, /*#__PURE__*/React.createElement(CharacterDossier, {
+  }, React.createElement(CharacterDossier, {
     fighter: selected,
     profile: profile
-  }), profile.copies[selected.name] === 5 && !profile.awakened.includes(selected.name) && /*#__PURE__*/React.createElement("button", {
+  }), canAwaken(selected.name) && React.createElement("button", {
     onClick: () => awaken(selected.name)
-  }, "\xC9veiller \xB7 +20 PV"), /*#__PURE__*/React.createElement("button", {
+  }, "\xC9veiller \xB7 +20 PV"), React.createElement("section", {
+    className: "recruitment-sources"
+  }, React.createElement("h3", null, "Sources d\u2019obtention"), sources.map(([id, title]) => React.createElement("button", {
+    key: id,
+    onClick: () => openPortal(id)
+  }, React.createElement("span", null, "Portail"), " ", React.createElement("strong", null, id === "shibuya" ? "First Week #1" : title), React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u203A"))), React.createElement("button", {
+    onClick: () => openEvent(selected.name)
+  }, React.createElement("span", null, "\xC9v\xE9nement"), " ", React.createElement("strong", null, characterLabel(selected.name)), React.createElement("span", {
+    "aria-hidden": "true"
+  }, "\u203A"))), React.createElement("button", {
     onClick: () => setSelected(null)
   }, "Retour \xE0 la collection")));
 }
@@ -3293,20 +3349,26 @@ function EventHall({
   profile,
   start,
   navigate,
-  abandon
+  abandon,
+  target
 }) {
   const rail = React.useRef(null),
     [confirm, setConfirm] = useState(false);
   const current = profile.eventRun,
     active = current?.run.status === "active" ? current : null;
   const ready = profile.equipped.filter(Boolean).length === 2 && profile.equipped.every(n => profile.loadout[n]?.length) && profile.equipped.some(n => profile.loadout[n]?.some(offensive));
+  React.useLayoutEffect(() => {
+    const list = rail.current;
+    const card = Array.from(list?.children || []).find(child => child.getAttribute("data-hero") === target);
+    if (list && card) list.scrollTop += card.getBoundingClientRect().top - list.getBoundingClientRect().top;
+  }, [target]);
   function scroll(direction) {
     const el = rail.current;
-    if (!el) return;
+    if (!el?.children.length) return;
     const cards = Array.from(el.children);
-    const here = cards.reduce((a, b) => Math.abs(b.offsetLeft - el.scrollLeft) < Math.abs(a.offsetLeft - el.scrollLeft) ? b : a);
+    const here = cards.reduce((a, b) => Math.abs(b.offsetTop - el.scrollTop) < Math.abs(a.offsetTop - el.scrollTop) ? b : a);
     el.scrollTo({
-      left: cards[Math.max(0, Math.min(cards.length - 1, cards.indexOf(here) + direction))].offsetLeft,
+      top: cards[Math.max(0, Math.min(cards.length - 1, cards.indexOf(here) + direction))].offsetTop,
       behavior: "smooth"
     });
   }
@@ -3341,7 +3403,9 @@ function EventHall({
     ref: rail,
     "aria-label": "\xC9v\xE9nements"
   }, visibleCollectionRoster().map(hero => /*#__PURE__*/React.createElement("article", {
-    key: hero.name
+    key: hero.name,
+    "data-hero": hero.name,
+    "data-selected": target === hero.name || undefined
   }, /*#__PURE__*/React.createElement("div", {
     className: "event-preview"
   }, /*#__PURE__*/React.createElement(SpritePreview, {
@@ -4538,21 +4602,36 @@ function RoguelikeLaunch({
   }, "Confirmer le Rebirth"))));
 }
 function HubMenu({
-  profile,
   navigate
 }) {
-  return /*#__PURE__*/React.createElement("section", {
-    className: "hub-panel"
-  }, /*#__PURE__*/React.createElement("h1", null, "Menu"), /*#__PURE__*/React.createElement("div", {
+  const groups = [{
+    label: "Activités",
+    links: [["roguelike", "Roguelike", "Lancer ou reprendre une run"], ["events", "Événement", "Défie les personnages"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"]]
+  }, {
+    label: "Progression",
+    links: [["leaderboard", "Classement", "Records des joueurs et progression Roguelike"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["collection", "Collection", "Personnages et badges"], ["team", "Team & psychs", "Duo, psychs et éveils"]]
+  }, {
+    label: "Communauté et options",
+    links: [["social", "Social", "Amis, profils et défis Casual"], ["settings", "Paramètres", "Musique et effets sonores"]]
+  }];
+  return React.createElement("section", {
+    className: "hub-panel menu-workspace"
+  }, React.createElement("h1", null, "Menu"), groups.map(({
+    label,
+    links
+  }) => React.createElement("section", {
+    className: "menu-group",
+    key: label
+  }, React.createElement("h2", null, label), React.createElement("div", {
     className: "hub-menu-links"
-  }, [["leaderboard", "Classement", "Records des joueurs et progression Roguelike"], ["social", "Social", "Amis, profils et défis Casual"], ["pvp", "PVP", "Casual normalisé et Ranked Elo"], ["settings", "Paramètres", "Musique et effets sonores"], ["bestiary", "Bestiaire", "Créatures, boss, types et comportements"], ["quests", "Quêtes", "Étages, collection, quotidiennes et missions PC"], ["journal", "Historique des vœux", "Résultats, coûts et soldes"], ["team", "Team & psychs", "Duo, psychs et éveils"], ["roguelike", "Roguelike", "Lancer ou reprendre une run"]].map(([id, title, desc]) => /*#__PURE__*/React.createElement("button", {
+  }, links.map(([id, title, desc]) => React.createElement("button", {
     key: id,
     onClick: () => navigate(id)
-  }, /*#__PURE__*/React.createElement("b", null, title), /*#__PURE__*/React.createElement("small", null, desc), /*#__PURE__*/React.createElement("span", {
+  }, React.createElement("b", null, title), React.createElement("small", null, desc), React.createElement("span", {
     "aria-hidden": "true"
-  }, "\u203A")))), /*#__PURE__*/React.createElement("section", {
+  }, "\u203A")))))), React.createElement("section", {
     className: "hub-help"
-  }, /*#__PURE__*/React.createElement("h2", null, "Guide du jeu"), /*#__PURE__*/React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), /*#__PURE__*/React.createElement("p", null, "Une attaque du m\xEAme type que son personnage re\xE7oit le STAB : sa puissance est multipli\xE9e par 1,2."), /*#__PURE__*/React.createElement("p", null, "La premi\xE8re invocation d\u2019un nouveau compte garantit un personnage. Ensuite, chaque v\u0153u a 10 % de chances d\u2019en donner un et le 100e le garantit."), /*#__PURE__*/React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
+  }, React.createElement("h2", null, "Guide du jeu"), React.createElement("p", null, "Forme une Team de 2 personnages et \xE9quipe jusqu\u2019\xE0 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l\u2019ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats."), React.createElement("p", null, "Une attaque du m\xEAme type que son personnage re\xE7oit le STAB : sa puissance est multipli\xE9e par 1,2."), React.createElement("p", null, "La premi\xE8re invocation d\u2019un nouveau compte garantit un personnage. Ensuite, chaque v\u0153u a 10 % de chances d\u2019en donner un et le 100e le garantit."), React.createElement("p", null, "Les psychs ne peuvent pas \xEAtre partag\xE9s entre partenaires. Les doublons font progresser le rang d\u2019un personnage jusqu\u2019\xE0 l\u2019\xE9toile, \xE0 5 doublons.")));
 }
 function BestiaryMenu() {
   const [filter, setFilter] = useState("known"),
@@ -4617,6 +4696,7 @@ function App() {
   const [result, setResult] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [portal, setPortal] = useState("shibuya");
+  const [eventTarget, setEventTarget] = useState(null);
   const [phase, setPhase] = useState("ready");
   const turning = React.useRef(false);
   const [screen, setScreen] = useState(gachaView ? "summon" : "home");
@@ -4625,6 +4705,7 @@ function App() {
   const navigate = next => {
     if (turning.current) return;
     setRateFighter(null);
+    setEventTarget(null);
     setPhase("ready");
     setScreen(next);
   };
@@ -4639,7 +4720,7 @@ function App() {
   useEffect(() => {
     const receive = event => {
       if (event.source !== window.parent || event.origin !== location.origin && !(location.protocol === "file:" && event.origin === "null") || event.data?.type !== "chibi:game-navigate" || navigationRef.current.party) return;
-      if (["home", "team", "summon", "leaderboard", "social", "profile", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
+      if (["home", "team", "summon", "collection", "leaderboard", "social", "profile", "quests", "journal", "bestiary", "menu"].includes(event.data.screen)) navigationRef.current.navigate(event.data.screen);
     };
     window.addEventListener("message", receive);
     if (window.parent !== window) window.parent.postMessage({
@@ -4973,6 +5054,7 @@ function App() {
     rebirth: () => setProfile(applyRebirth)
   }));
   if (screen === "events") return hub(/*#__PURE__*/React.createElement(EventHall, {
+    target: eventTarget,
     profile: profile,
     start: startEvent,
     navigate: navigate,
@@ -4994,7 +5076,6 @@ function App() {
     back: () => navigate("menu")
   }));
   if (screen === "menu") return hub(/*#__PURE__*/React.createElement(HubMenu, {
-    profile: profile,
     navigate: navigate
   }));
   if (screen === "bestiary") return hub(/*#__PURE__*/React.createElement(BestiaryMenu, null));
@@ -5008,15 +5089,27 @@ function App() {
     key: window.ChibiGameSync?.accountId || "local",
     profile: profile
   }));
-  if (screen === "leaderboard" || screen === "collection") return hub(/*#__PURE__*/React.createElement(Leaderboard, {
+  if (screen === "leaderboard") return hub(/*#__PURE__*/React.createElement(Leaderboard, {
     profile: profile
+  }));
+  if (screen === "collection") return hub(React.createElement(Collection, {
+    profile: profile,
+    awaken: awaken,
+    openPortal: id => {
+      navigate("summon");
+      setPortal(id);
+    },
+    openEvent: name => {
+      navigate("events");
+      setEventTarget(name);
+    }
   }));
   if (screen === "profile") return hub(/*#__PURE__*/React.createElement(PlayerProfile, {
     profile: profile,
     save: setProfile
   }));
   if (screen === "summon") return hub(/*#__PURE__*/React.createElement("main", {
-    className: "game-shell party-lobby"
+    className: "game-shell party-lobby summon-workspace"
   }, /*#__PURE__*/React.createElement("section", null, /*#__PURE__*/React.createElement("h1", null, "Invocations"), /*#__PURE__*/React.createElement("p", null, profile.coins, " pi\xE8ces \xB7 ", profile.owned.length, " / ", visibleCollectionRoster().length, " personnages disponibles \xB7 Garantie dans ", 100 - profile.wishStep, " ", profile.wishStep === 99 ? "vœu" : "vœux"), historyFull(profile) && /*#__PURE__*/React.createElement("p", {
     role: "status"
   }, "Synchronise l\u2019historique avant de continuer \xE0 invoquer. Tes r\xE9sultats sont conserv\xE9s."), /*#__PURE__*/React.createElement("div", {
@@ -5024,14 +5117,23 @@ function App() {
   }, /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("journal")
   }, "Historique des v\u0153ux"), /*#__PURE__*/React.createElement("button", {
-    onClick: () => navigate("team")
-  }, "Personnages"), /*#__PURE__*/React.createElement("button", {
+    onClick: () => navigate("collection")
+  }, "Collection"), /*#__PURE__*/React.createElement("button", {
     onClick: () => navigate("quests")
   }, "Qu\xEAtes")), /*#__PURE__*/React.createElement("p", {
     className: "daily-wishes"
   }, "V\u0153ux gratuits \xB7 ", /*#__PURE__*/React.createElement("b", null, availableFreeWishes(profile)), /*#__PURE__*/React.createElement("small", null, profile.eventWishes ? `${profile.eventWishes} Vœux Vague 2 + 3 quotidiens` : parisDay() >= freeWishNoStackDay ? "3 par jour · Renouvelés à minuit (Paris)" : "10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus")), /*#__PURE__*/React.createElement("div", {
+    className: "portal-selector noir-tabs",
+    role: "group",
+    "aria-label": "Choisir un portail"
+  }, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => React.createElement("button", {
+    key: id,
+    "aria-pressed": portal === id,
+    disabled: phase !== "ready",
+    onClick: () => setPortal(id)
+  }, id === "shibuya" ? "First Week #1" : title))), React.createElement("div", {
     className: "portal-list"
-  }, Object.entries(portals).filter(([id]) => portalAvailable(id)).map(([id, title]) => /*#__PURE__*/React.createElement("article", {
+  }, Object.entries(portals).filter(([id]) => id === portal && portalAvailable(id)).map(([id, title]) => React.createElement("article", {
     key: id,
     className: "portal-card",
     "aria-label": title

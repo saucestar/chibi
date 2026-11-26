@@ -1309,3 +1309,83 @@
     transform:rotateX(var(--hero-rotate-x,0deg)) rotateY(var(--hero-rotate-y,0deg)) translateZ(28px);
   }
 }
+
+/* Reapers Noir menus and recruitment. */
+.game-hub .collection-workspace > .badge-book {
+  width:100%;max-width:none;margin:0;padding:0;border:0;background:none;box-shadow:none;
+}
+.game-hub .collection-workspace > .badge-book > h2 { margin-top:1rem; }
+.game-hub .collection-search {
+  display:grid;gap:.35rem;margin:.75rem 0;color:#241520;font-weight:800;
+}
+.game-hub .collection-search input {
+  width:100%;min-height:44px;padding:.5rem .7rem;border:2px solid #271621;
+  border-radius:0;background:#fffaf0;color:#211522;font:inherit;
+}
+.game-hub :is(.hub-tabs,.portal-selector).noir-tabs {
+  display:flex;flex-wrap:wrap;gap:.45rem;margin:.75rem 0;
+}
+.game-hub :is(.hub-tabs,.portal-selector).noir-tabs button {
+  min-height:44px;padding:.45rem .7rem;border:2px solid #211522!important;border-radius:0!important;
+  background:#fff5e6!important;color:#251925!important;box-shadow:2px 3px #211522!important;
+  font:900 .75rem/1.25 Montserrat,Arial,sans-serif;
+}
+.game-hub :is(.hub-tabs,.portal-selector).noir-tabs button[aria-pressed=true] {
+  background:#a91750!important;color:#fffaf0!important;
+}
+.game-hub :is(.noir-tabs button,.collection-search input,.recruitment-sources button):focus-visible {
+  outline:3px solid #e65b96;outline-offset:3px;
+}
+.game-hub .summon-workspace .portal-list { display:block; }
+.game-hub .summon-workspace .portal-card { width:min(100%,560px);margin-inline:auto; }
+.game-hub .hub-nav button[data-section-active] { background:#a91750!important; }
+.game-hub .hub-nav button[data-section-active] :is(b,.hub-nav-orb i) { color:#fffaf0!important; }
+.game-hub .menu-group { margin-block:1rem 1.4rem; }
+.game-hub .menu-group h2 {
+  border-bottom:2px solid #a91750;padding-bottom:.35rem;font-size:1rem;text-transform:uppercase;
+}
+.game-hub .menu-group .hub-menu-links { margin-top:.5rem; }
+.game-hub .event-rail article[data-selected] { outline:3px solid #a91750;outline-offset:-4px; }
+.game-hub .wish-dialog {
+  border:3px solid #251925;border-radius:0;background:#fff5e6;color:#281825;
+  box-shadow:5px 6px #0a070a,inset 0 4px #a91750;
+}
+.game-hub .wish-dialog::backdrop { background:#0c080dde; }
+.game-hub .wish-dialog :is(.dossier-stats,.badge-info,.wish-history-filters) { color:#fff5e6;background:#261925; }
+.game-hub .wish-dialog .dossier-stats p { color:#fff5e6; }
+.game-hub .character-dossier .dossier-art { background:radial-gradient(ellipse at center,#7f2851,#251925 72%); }
+.game-hub .recruitment-sources { display:grid;gap:.5rem;margin:1rem 0; }
+.game-hub .recruitment-sources h3 { margin:0; }
+.game-hub .recruitment-sources button {
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:.5rem;
+  border:2px solid #251925;border-radius:0;background:#fff5e6;color:#251925;box-shadow:2px 3px #251925;
+  text-align:left;
+}
+.game-hub .recruitment-sources button > span:first-child { color:#8c1949;font-size:.72rem; }
+.game-hub .summon-workspace > section,
+.game-hub .game-shell.party-lobby:not(.summon-workspace) > section {
+  color:#271621;background:#fff5e6;border:3px solid #241523;border-radius:0;
+  box-shadow:4px 5px #09060b;
+}
+.game-hub .party-lobby > section > :is(h1,p),.game-hub .party-lobby .daily-wishes :is(b,small) {
+  color:#271621;text-shadow:none;
+}
+.game-hub .party-lobby .daily-wishes {
+  color:#271621;background:#f3e3d6;border:0;border-left:4px solid #a91750;border-radius:0;
+}
+.game-hub .party-lobby .lobby-tools button,
+.game-hub .wish-dialog button:not(.bingo-crank,.badge-slot) {
+  color:#251925;background:#fffaf0;border:2px solid #251925;border-radius:0;
+  box-shadow:2px 3px #251925;min-height:44px;
+}
+.game-hub .wish-dialog :is(.dialog-actions button,.rates-character-list button):enabled:focus-visible {
+  outline:3px solid #a91750;outline-offset:2px;
+}
+.game-hub .collection-workspace > .badge-book {
+  background:none!important;border:0!important;clip-path:none!important;box-shadow:none!important;
+}
+.game-hub .collection-workspace .dossier-stats :is(p,b,small,strong,dt,dd) { color:#fff5e6!important; }
+.game-hub .event-rail article::before { content:none; }
+.game-hub .event-rail .event-preview {
+  border-radius:0;background:radial-gradient(ellipse,#8d325d,#261723 76%);
+}

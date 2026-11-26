@@ -478,4 +478,13 @@ Termine ou abandonne la run sauvegardée avant le Rebirth.|Finish or abandon the
 Activer le Rebirth ?|Activate Rebirth?
 Les personnages non éveillés reviennent au rang E. Les badges sous les rangs Reaper et Ange sont retirés, à l’exception des psychs de base nécessaires. Les personnages éveillés, niveaux, monnaies et badges Reaper/Ange sont conservés.|Non-awakened characters return to E rank. Badges below Reaper and Angel are removed, except required starter psychs. Awakened characters, levels, currencies and Reaper/Angel badges are kept.
 Fermer|Close
+Parcourir la collection|Browse collection
+Rechercher un personnage|Search characters
+Filtrer les personnages|Filter characters
+Non obtenus|Unowned
+Éveil disponible|Ready to awaken
+Aucun personnage trouvé.|No characters found.
+Sources d’obtention|How to obtain
+Choisir un portail|Select a banner
+Communauté et options|Community and settings
 `.trim();

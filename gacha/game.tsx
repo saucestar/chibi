@@ -1120,7 +1120,7 @@ function GameHub({profile,screen,navigate,openNews,children}:{profile:Profile;sc
  return <div className="game-hub game-shell">
   <header className="hub-header"><button className="hub-brand" onClick={()=>navigate("home")} aria-label="Accueil du jeu">TWEWY <span>REAPERS’ RUN</span></button><div className="hub-wallet"><span aria-label={`${profile.coins} pièces`}><Icon name="coin"/>{profile.coins.toLocaleString(document.documentElement.lang === "en" ? "en-GB" : "fr-FR")}</span><small>✦ {profile.freeWishes} gratuits</small></div><button className="hub-news" onClick={openNews} aria-label="Consulter les nouveautés"><span aria-hidden="true">NEWS</span></button><button className="hub-fullscreen" onClick={gameFullscreen} aria-label="Basculer le plein écran">⛶</button></header>
   <div className="hub-content" ref={content}><div className="hub-screen" key={screen}>{children}</div></div>
-  <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} onClick={()=>navigate(id)}><span className="hub-nav-orb" aria-hidden="true"><i>{icon}</i></span><b>{label}</b></button>)}</nav>
+  <nav className="hub-nav" aria-label="Navigation du jeu">{hubScreens.map(([id,label,icon])=><button key={id} aria-current={screen===id?"page":undefined} data-section-active={id==="menu"&&["settings","bestiary","quests","journal","raid","pvp"].includes(screen)||id==="home"&&["roguelike","events"].includes(screen)||undefined} onClick={()=>navigate(id)}><span className="hub-nav-orb" aria-hidden="true"><i>{icon}</i></span><b>{label}</b></button>)}</nav>
  </div>;
 }
 function CharacterDossier({fighter,profile,base=false,rate}:{fighter:Fighter;profile:Profile;base?:boolean;rate?:number}) {
@@ -1154,12 +1154,47 @@ function TeamCharacters({profile}:{profile:Profile}) {
    </article>;})}
  </section>;
 }
-function CharacterCollection({profile,awaken}:{profile:Profile;awaken:(name:string)=>void}) {
- const [onlyOwned,setOnlyOwned]=useState(false),[selected,setSelected]=useState<Fighter|null>(null),roster=visibleCollectionRoster(),ownedCount=roster.filter(f=>profile.owned.includes(f.name)).length;
- return <section className="hub-panel character-collection"><h1>Personnages</h1><p>{ownedCount} / {roster.length} débloqués</p>
-  <div className="hub-tabs"><button aria-pressed={!onlyOwned} onClick={()=>setOnlyOwned(false)}>Tous</button><button aria-pressed={onlyOwned} onClick={()=>setOnlyOwned(true)}>Débloqués</button></div>
-  <div className="character-grid">{roster.filter(f=>!onlyOwned||profile.owned.includes(f.name)).map(f=>{const owned=profile.owned.includes(f.name);return <button key={f.name} className={owned?"":"not-owned"} onClick={()=>setSelected(f)} aria-label={`Fiche de ${f.name}${owned?"":" · Non obtenu"}`}><HudPortrait fighter={f}/><b>{f.name}</b><small>{owned?`Niv. ${experience(profile.xp[f.name]||0).level} · ${ranks[profile.levels[f.name]||0]}`:"Non obtenu"}</small></button>;})}</div>
-  {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}><CharacterDossier fighter={selected} profile={profile}/>{profile.copies[selected.name]===5&&!profile.awakened.includes(selected.name)&&<button onClick={()=>awaken(selected.name)}>Éveiller · +20 PV</button>}<button onClick={()=>setSelected(null)}>Retour à la collection</button></WishDialog>}
+function Collection({profile,awaken,openPortal,openEvent}:{profile:Profile;awaken:(name:string)=>void;openPortal:(id:string)=>void;openEvent:(name:string)=>void}) {
+ const [tab,setTab]=useState<"characters"|"badges">("characters");
+ return <section className="hub-panel collection-workspace"><h1>Collection</h1>
+  <div className="hub-tabs noir-tabs" role="group" aria-label="Parcourir la collection">
+   <button aria-pressed={tab==="characters"} onClick={()=>setTab("characters")}>Personnages</button>
+   <button aria-pressed={tab==="badges"} onClick={()=>setTab("badges")}>Badges</button>
+  </div>
+  {tab==="characters"?<CharacterCollection profile={profile} awaken={awaken} openPortal={openPortal} openEvent={openEvent}/>:<BadgeCatalogue embedded owned={profile.pins} copies={profile.pinCopies}/>}
+ </section>;
+}
+function CharacterCollection({profile,awaken,openPortal,openEvent}:{profile:Profile;awaken:(name:string)=>void;openPortal:(id:string)=>void;openEvent:(name:string)=>void}) {
+ const [filter,setFilter]=useState("all"),[query,setQuery]=useState(""),[selected,setSelected]=useState<Fighter|null>(null);
+ const roster=visibleCollectionRoster(),isOwned=(name:string)=>profile.owned.includes(name);
+ const canAwaken=(name:string)=>isOwned(name)&&profile.copies[name]===5&&!profile.awakened.includes(name);
+ const matches=roster.filter(fighter=>fighter.name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())&&(
+   filter==="owned"?isOwned(fighter.name):filter==="missing"?!isOwned(fighter.name):filter==="awakening"?canAwaken(fighter.name):true));
+ const sources=selected?Object.entries(portals).filter(([id])=>portalAvailable(id)&&portalRoster(id).some(fighter=>fighter.name===selected.name)):[];
+ return <section className="character-collection">
+  <p>{roster.filter(fighter=>isOwned(fighter.name)).length} / {roster.length} débloqués</p>
+  <label className="collection-search">Rechercher un personnage<input type="search" value={query} onChange={event=>setQuery(event.target.value)}/></label>
+  <div className="hub-tabs noir-tabs" role="group" aria-label="Filtrer les personnages">
+   {[["all","Tous"],["owned","Débloqués"],["missing","Non obtenus"],["awakening","Éveil disponible"]].map(([id,label])=>
+    <button key={id} aria-pressed={filter===id} onClick={()=>setFilter(id)}>{label}</button>)}
+  </div>
+  {!matches.length&&<p role="status">Aucun personnage trouvé.</p>}
+  <div className="character-grid">{matches.map(fighter=>{
+   const owned=isOwned(fighter.name);
+   return <button key={fighter.name} className={owned?"":"not-owned"} onClick={()=>setSelected(fighter)} aria-label={`Fiche de ${fighter.name}`}>
+    <HudPortrait fighter={fighter}/><b>{fighter.name}</b>
+    <small>{canAwaken(fighter.name)?"Éveil disponible":owned?`Niv. ${experience(profile.xp[fighter.name]||0).level} · ${ranks[profile.levels[fighter.name]||0]}`:"Non obtenu"}</small>
+   </button>;
+  })}</div>
+  {selected&&<WishDialog className="character-sheet-dialog" title={`Fiche · ${selected.name}`} close={()=>setSelected(null)}>
+   <CharacterDossier fighter={selected} profile={profile}/>
+   {canAwaken(selected.name)&&<button onClick={()=>awaken(selected.name)}>Éveiller · +20 PV</button>}
+   <section className="recruitment-sources"><h3>Sources d’obtention</h3>
+    {sources.map(([id,title])=><button key={id} onClick={()=>openPortal(id)}><span>Portail</span> <strong>{id==="shibuya"?"First Week #1":title}</strong><span aria-hidden="true">›</span></button>)}
+    <button onClick={()=>openEvent(selected.name)}><span>Événement</span> <strong>{selected.name}</strong><span aria-hidden="true">›</span></button>
+   </section>
+   <button onClick={()=>setSelected(null)}>Retour à la collection</button>
+  </WishDialog>}
  </section>;
 }
 type EventPrize="character"|"pin"|"none";
@@ -1197,22 +1232,27 @@ function eventCheckpoint(p:Profile,snapshot:RunSave,gains:RunGains={}):Profile{
   }
   return advanceDailyProgress({...next,eventRun:{...active,run:snapshot,prize}},gains);
 }
-function EventHall({profile,start,navigate,abandon}:{profile:Profile;start:(name:string)=>void;navigate:(screen:GameScreen)=>void;abandon:()=>void}){
+function EventHall({profile,start,navigate,abandon,target}:{profile:Profile;start:(name:string)=>void;navigate:(screen:GameScreen)=>void;abandon:()=>void;target:string|null}){
  const rail=React.useRef<HTMLDivElement>(null),[confirm,setConfirm]=useState(false);
  const current=profile.eventRun,active=current?.run.status==="active"?current:null;
  const ready=profile.equipped.filter(Boolean).length===2 && profile.equipped.every(n=>profile.loadout[n]?.length) && profile.equipped.some(n=>profile.loadout[n]?.some(offensive));
+ React.useLayoutEffect(()=>{
+   const list=rail.current;
+   const card=Array.from(list?.children||[]).find(child=>child.getAttribute("data-hero")===target);
+   if(list&&card)list.scrollTop+=card.getBoundingClientRect().top-list.getBoundingClientRect().top;
+ },[target]);
  function scroll(direction:number){
-   const el=rail.current;if(!el)return;
+   const el=rail.current;if(!el?.children.length)return;
    const cards=Array.from(el.children) as HTMLElement[];
-   const here=cards.reduce((a,b)=>Math.abs(b.offsetLeft-el.scrollLeft)<Math.abs(a.offsetLeft-el.scrollLeft)?b:a);
-   el.scrollTo({left:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetLeft,behavior:"smooth"});
+   const here=cards.reduce((a,b)=>Math.abs(b.offsetTop-el.scrollTop)<Math.abs(a.offsetTop-el.scrollTop)?b:a);
+   el.scrollTo({top:cards[Math.max(0,Math.min(cards.length-1,cards.indexOf(here)+direction))].offsetTop,behavior:"smooth"});
  }
  return <section className="hub-panel event-hall"><header><h1>Événement</h1><div><button aria-label="Précédent" onClick={()=>scroll(-1)}>‹</button><button aria-label="Suivant" onClick={()=>scroll(1)}>›</button></div></header>
  <p>2 vagues niveau 100 puis un boss niveau 200</p>
  {active&&<div className="event-resume"><button onClick={()=>start(active.boss)}>Reprendre · {active.boss} · {active.run.wave}/3</button><button onClick={()=>setConfirm(true)}>Abandonner</button></div>}
  {confirm&&<WishDialog title="Abandonner cet événement ?" close={()=>setConfirm(false)}><button onClick={()=>setConfirm(false)}>Annuler</button><button onClick={()=>{abandon();setConfirm(false);}}>Confirmer</button></WishDialog>}
  {!ready&&!active&&<button onClick={()=>navigate("team")}>Préparer le duo</button>}
- <div className="event-rail" ref={rail} aria-label="Événements">{visibleCollectionRoster().map(hero=><article key={hero.name}>
+ <div className="event-rail" ref={rail} aria-label="Événements">{visibleCollectionRoster().map(hero=><article key={hero.name} data-hero={hero.name} data-selected={target===hero.name||undefined}>
  <div className="event-preview"><SpritePreview fighter={hero} maximumScale={2.4}/></div><h2>{hero.name}</h2><TypeChips elements={characterElements[hero.name]}/>
  <p><b>5 %</b> · {signaturePins[hero.name].name}<br/><b>1 %</b> · {hero.name}</p>
  <button disabled={active?active.boss!==hero.name:!ready} onClick={()=>start(hero.name)}>{active?.boss===hero.name?"Reprendre":"Défier"}</button>
@@ -1461,8 +1501,13 @@ function RoguelikeLaunch({profile,navigate,start,resume,abandon,rebirth}:{profil
   {rebirthConfirm&&<WishDialog title="Activer le Rebirth ?" close={()=>setRebirthConfirm(false)}><p>Les personnages non éveillés reviennent au rang E. Les badges sous les rangs Reaper et Ange sont retirés, à l’exception des psychs de base nécessaires. Les personnages éveillés, niveaux, monnaies et badges Reaper/Ange sont conservés.</p><div className="dialog-actions"><button onClick={()=>setRebirthConfirm(false)}>Annuler</button><button onClick={()=>{rebirth();setRebirthConfirm(false);}}>Confirmer le Rebirth</button></div></WishDialog>}
  </section>;
 }
-function HubMenu({profile,navigate,quit}:{profile:Profile;navigate:(screen:GameScreen)=>void;quit:()=>void}) {
- return <section className="hub-panel"><h1>Menu</h1><div className="hub-menu-links">{[["social","Social","Amis, profils et défis Casual"],["pvp","PVP","Casual normalisé et Ranked Elo"],["settings","Paramètres","Musique et effets sonores"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"],["roguelike","Roguelike","Lancer ou reprendre une run"],["raid","Raid","Boss niveau 200 · Réservé aux factions"]].map(([id,title,desc])=><button key={id} onClick={()=>navigate(id as GameScreen)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span>)}</div><button className="quit-game" onClick={quit}><b>Quitter le jeu</b><small>Retour à l’application mobile</small><span aria-hidden="true">↩</span></button><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
+function HubMenu({navigate,quit}:{navigate:(screen:GameScreen)=>void;quit:()=>void}) {
+ const groups:{label:string;links:[GameScreen,string,string][]}[]=[
+  {label:"Activités",links:[["roguelike","Roguelike","Lancer ou reprendre une run"],["events","Événement","Défie les personnages"],["raid","Raid","Boss niveau 200 · Réservé aux factions"],["pvp","PVP","Casual normalisé et Ranked Elo"]]},
+  {label:"Progression",links:[["quests","Quêtes","Étages, collection, quotidiennes et missions PC"],["journal","Historique des vœux","Résultats, coûts et soldes"],["bestiary","Bestiaire","Créatures, boss, types et comportements"],["collection","Collection","Personnages et badges"],["team","Team & psychs","Duo, psychs et éveils"]]},
+  {label:"Communauté et options",links:[["social","Social","Amis, profils et défis Casual"],["settings","Paramètres","Musique et effets sonores"]]}
+ ];
+ return <section className="hub-panel menu-workspace"><h1>Menu</h1>{groups.map(({label,links})=><section className="menu-group" key={label}><h2>{label}</h2><div className="hub-menu-links">{links.map(([id,title,desc])=><button key={id} onClick={()=>navigate(id)}><b>{title}</b><small>{desc}</small><span aria-hidden="true">›</span></button>)}</div></section>)}<button className="quit-game" onClick={quit}><b>Quitter le jeu</b><small>Retour à l’application mobile</small><span aria-hidden="true">↩</span></button><section className="hub-help"><h2>Guide du jeu</h2><p>Forme une Team de 2 personnages et équipe jusqu’à 3 psychs chacun. Choisis toutes les actions, puis lance le tour : les portraits en haut indiquent l’ordre de vitesse. Touche 2 fois un ennemi pour consulter ses stats.</p><p>Une attaque du même type que son personnage reçoit le STAB : sa puissance est multipliée par 1,2.</p><p>La première invocation d’un nouveau compte garantit un personnage. Ensuite, chaque vœu a 10 % de chances d’en donner un et le 100e le garantit.</p><p>Les psychs ne peuvent pas être partagés entre partenaires. Les doublons font progresser le rang d’un personnage jusqu’à l’étoile, à 5 doublons.</p></section></section>;
 }
 
 function BestiaryMenu(){
@@ -1490,12 +1535,13 @@ function App() {
   const [result, setResult] = useState<Wish[]>([]);
   const [quantity,setQuantity]=useState(1);
   const [portal,setPortal]=useState("shibuya");
+  const [eventTarget,setEventTarget]=useState<string|null>(null);
   const [phase, setPhase] = useState<"ready" | "rates" | "confirm" | "crank" | "spin" | "drop" | "reveal">("ready");
   const turning = React.useRef(false);
   const [screen,setScreen]=useState<GameScreen>(gachaView?"summon":"home");
   const [newsOpen,setNewsOpen]=useState(true);
   const [rateFighter,setRateFighter]=useState<string|null>(null);
-  const navigate=(next:GameScreen)=>{if(turning.current)return;setRateFighter(null);setPhase("ready");setScreen(next);};
+  const navigate=(next:GameScreen)=>{if(turning.current)return;setRateFighter(null);setEventTarget(null);setPhase("ready");setScreen(next);};
   const navigationRef=React.useRef({party,navigate});navigationRef.current={party,navigate};
   useEffect(()=>{
    const receive=(event:MessageEvent)=>{if(event.source!==window.parent||(event.origin!==location.origin&&!(location.protocol==="file:"&&event.origin==="null"))||event.data?.type!=="chibi:game-navigate"||navigationRef.current.party)return;
@@ -1632,23 +1678,26 @@ function App() {
   const hub=(content:React.ReactNode)=><GameHub profile={profile} screen={screen} navigate={navigate} openNews={()=>setNewsOpen(true)}>{<>{content}{newsOpen&&<LaunchNews navigate={navigate} close={()=>setNewsOpen(false)}/>}</>}</GameHub>;
   if(screen==="home")return hub(<HubHome profile={profile} navigate={navigate}/>);
   if(screen==="roguelike")return hub(<RoguelikeLaunch profile={profile} navigate={navigate} start={startRun} resume={resume} abandon={()=>setProfile(p=>p.run?.status==="active"?{...p,run:{...p.run,status:"abandoned",seq:p.run.seq+1,pending:null,updatedAt:Date.now()}}:p)} rebirth={()=>setProfile(applyRebirth)}/>);
-  if(screen==="events")return hub(<EventHall profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);
+  if(screen==="events")return hub(<EventHall target={eventTarget} profile={profile} start={startEvent} navigate={navigate} abandon={()=>setProfile(p=>p.eventRun?.run.status==="active"?eventCheckpoint(p,{...p.eventRun.run,status:"abandoned",pending:null,seq:p.eventRun.run.seq+1,updatedAt:Date.now()}):p)}/>);
   if(screen==="raid")return hub(<RaidHall profile={profile} navigate={navigate}/>);
   if(screen==="pvp")return hub(<PvpLobby profile={profile}/>);
   if(screen==="social")return hub(<SocialHub profile={profile}/>);
   if(screen==="settings")return hub(<AudioSettings back={()=>navigate("menu")}/>);
-  if(screen==="menu")return hub(<HubMenu profile={profile} navigate={navigate} quit={()=>window.parent!==window&&window.parent.postMessage({type:"chibi:game-exit"},"*")}/>);
+  if(screen==="menu")return hub(<HubMenu navigate={navigate} quit={()=>window.parent!==window&&window.parent.postMessage({type:"chibi:game-exit"},"*")}/>);
   if(screen==="bestiary")return hub(<BestiaryMenu/>);
   if(screen==="quests")return hub(<QuestMenu embedded profile={profile} save={setProfile}/>);
   if(screen==="journal")return hub(<WishHistory embedded key={window.ChibiGameSync?.accountId||"local"} profile={profile}/>);
-  if(screen==="collection")return hub(<><CharacterCollection profile={profile} awaken={awaken}/><BadgeCatalogue embedded owned={profile.pins} copies={profile.pinCopies}/></>);
-  if (screen==="summon") return hub(<main className="game-shell party-lobby"><section>
+  if(screen==="collection")return hub(<Collection profile={profile} awaken={awaken} openPortal={id=>{navigate("summon");setPortal(id);}} openEvent={name=>{navigate("events");setEventTarget(name);}}/>);
+  if (screen==="summon") return hub(<main className="game-shell party-lobby summon-workspace"><section>
     <h1>Invocations</h1>
     <p>{profile.coins} pièces · {profile.owned.length} / {visibleCollectionRoster().length} personnages disponibles · Garantie dans {100-profile.wishStep} {profile.wishStep===99?"vœu":"vœux"}</p>
     {historyFull(profile)&&<p role="status">Synchronise l’historique avant de continuer à invoquer. Tes résultats sont conservés.</p>}
     <div className="lobby-tools"><button onClick={()=>navigate("journal")}>Historique des vœux</button><button onClick={()=>navigate("collection")}>Collection</button><button onClick={()=>navigate("quests")}>Quêtes</button></div>
     <p className="daily-wishes">Vœux gratuits · <b>{profile.freeWishes}</b><small>{parisDay()>=freeWishNoStackDay?"3 par jour · Renouvelés à minuit (Paris)":"10 de départ + 3 par jour · Cumul jusqu’au 24/11 inclus"}</small></p>
-    <div className="portal-list">{Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
+    <div className="portal-selector noir-tabs" role="group" aria-label="Choisir un portail">
+     {Object.entries(portals).filter(([id])=>portalAvailable(id)).map(([id,title])=><button key={id} aria-pressed={portal===id} disabled={phase!=="ready"} onClick={()=>setPortal(id)}>{id==="shibuya"?"First Week #1":title}</button>)}
+    </div>
+    <div className="portal-list">{Object.entries(portals).filter(([id])=>id===portal&&portalAvailable(id)).map(([id,title])=><article key={id} className="portal-card" aria-label={title}>
       <div className={"portal-scene scene-"+id}>
         {id==="shibuya" && !matchMedia("(prefers-reduced-motion: reduce)").matches &&
           <PortalVideo src="./assets/bingo/first-week-clean.mp4" poster="./assets/bingo/first-week-clean.webp"/>}
