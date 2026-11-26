@@ -1360,7 +1360,6 @@
   text-align:left;
 }
 .game-hub .recruitment-sources button > span:first-child { color:#8c1949;font-size:.72rem; }
-.game-hub .summon-workspace > section,
 .game-hub .game-shell.party-lobby:not(.summon-workspace) > section {
   color:#271621;background:#fff5e6;border:3px solid #241523;border-radius:0;
   box-shadow:4px 5px #09060b;
@@ -1391,6 +1390,20 @@
 /* Full-size portal posters share a single horizontal scroll area. */
 .game-hub .summon-workspace > section:has(.portal-list) {
   max-width:1440px;padding:clamp(8px,1.5vw,22px);
+  border:0;background:#151017;color:#fff5e6;box-shadow:none;
+}
+.game-hub .summon-workspace > section:has(.portal-list) > :is(h1,p) {
+  color:#fff5e6;text-shadow:none;
+}
+.game-hub .summon-workspace > section > h1:first-child::after {
+  background:#e43b80;box-shadow:none;
+}
+.game-hub .summon-workspace .daily-wishes {
+  background:#291c29;color:#fff5e6;border-color:#e43b80;
+}
+.game-hub .summon-workspace .daily-wishes :is(b,small) { color:#fff5e6; }
+.game-hub .summon-workspace .lobby-tools button {
+  background:#261925;color:#fff5e6;border-color:#a96989;box-shadow:none;
 }
 .game-hub .portal-carousel { position:relative;min-width:0;margin:.75rem 0; }
 .game-hub .portal-carousel .portal-arrow {
@@ -1425,27 +1438,46 @@
 .game-hub .summon-workspace .portal-card:hover { transform:none; }
 .game-hub .portal-carousel :is(.portal-list,button):focus-visible { outline:3px solid #a91750;outline-offset:2px; }
 .game-hub .summon-workspace .portal-scene {
-  aspect-ratio:auto;height:clamp(340px,72dvh,820px);
+  aspect-ratio:auto;height:clamp(380px,72dvh,820px);
+  grid-template-rows:minmax(0,1fr) auto auto;
   border:0!important;border-image:none;clip-path:none!important;box-shadow:none!important;
-  background:var(--portal-backdrop,#211525) center / cover;
+  background:#211525;
 }
-.game-hub .summon-workspace .scene-shibuya { --portal-backdrop:#211525 url('./assets/bingo/first-week-clean.webp'); }
-.game-hub .summon-workspace .scene-reality { --portal-backdrop:#211525 url('./assets/bingo/from-another-reality.webp'); }
-.game-hub .summon-workspace .scene-apocalyptic { --portal-backdrop:#211525 url('./assets/bingo/apocalyptic.webp'); }
-.game-hub .summon-workspace .scene-destiny { --portal-backdrop:#211525 url('./assets/bingo/destiny.webp'); }
+.game-hub .summon-workspace .scene-shibuya:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/first-week-clean.webp') center / cover; }
+.game-hub .summon-workspace .scene-reality:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/from-another-reality.webp') center / cover; }
+.game-hub .summon-workspace .scene-apocalyptic:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/apocalyptic.webp') center / cover; }
+.game-hub .summon-workspace .scene-destiny:not(:has(.portal-art)) { background:#211525 url('./assets/bingo/destiny.webp') center / cover; }
 .game-hub .summon-workspace .portal-scene::after {
   content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(#150e19bb,transparent 24%,transparent 58%,#150e19ef);
 }
-.game-hub .summon-workspace .portal-art { object-fit:contain; }
+.game-hub .summon-workspace .portal-art { object-fit:cover;object-position:center; }
 .game-hub .summon-workspace .portal-scene :is(h3,.portal-rates,.bingo-machine,.wish-commands,.portal-caption) { z-index:2; }
 .game-hub .summon-workspace .portal-scene h3 { max-width:70%;margin:0;font-size:clamp(20px,4vw,42px); }
 .game-hub .summon-workspace .portal-scene .bingo-machine {
-  width:clamp(62px,15%,125px);left:50%;transform:translateX(-50%);
+  position:relative;inset:auto;justify-self:center;align-self:end;
+  width:clamp(58px,12%,108px);margin-bottom:10px;
 }
-.game-hub .summon-workspace .portal-scene .wish-option { flex-basis:min(32%,170px); }
+.game-hub .summon-workspace .portal-scene .wish-commands {
+  position:relative;inset:auto;grid-area:2/1;
+  justify-content:flex-end;gap:10px;padding:10px clamp(10px,2vw,24px);
+  background:#211525;border-top:1px solid #ac416a;pointer-events:auto;
+}
+.game-hub .summon-workspace .portal-scene .wish-option { flex:0 1 155px;gap:4px; }
+.game-hub .summon-workspace .portal-caption { grid-row:3;background:#171019!important; }
+.game-hub .summon-workspace .portal-scene :is(.portal-rates,.wish-commands button) {
+  color:#251925;background:#fff5e6;border:2px solid #211525;border-radius:0;
+  box-shadow:2px 3px #a91750;text-shadow:none;min-height:44px;font-weight:900;
+}
+.game-hub .summon-workspace .portal-scene .wish-option:last-child button:enabled {
+  color:#fff5e6;background:#a91750;border-color:#eb7baa;
+}
+.game-hub .summon-workspace .portal-scene .wish-commands button:disabled {
+  color:#eadbe4;background:#392b39;border-color:#77576a;box-shadow:none;opacity:1;
+}
 @media (max-width:520px) {
-  .game-hub .summon-workspace .portal-scene { height:clamp(320px,64dvh,560px); }
+  .game-hub .summon-workspace .portal-scene { height:clamp(360px,68dvh,560px); }
+  .game-hub .summon-workspace .portal-scene .wish-option { flex:1; }
 }
 
 .game-hub .wish-dialog :is(.dossier-stats,.badge-info) :is(b,small,strong,dt,dd,p),
@@ -1455,7 +1487,6 @@
 }
 .game-hub .hub-panel .badge-info { background:#261925; }
 .game-hub .party-lobby :is(.equipment-count,.equipment-help) { color:#271621;text-shadow:none; }
-.game-hub .summon-workspace .wish-commands button:enabled { color:#fff8ea; }
 
 /* The profile dialog uses dark tiles inside a light hub panel. */
 .game-hub .social-profile-dialog .social-record b,
