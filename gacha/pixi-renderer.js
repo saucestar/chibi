@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const active = new WeakMap();
+  const menuActive = new WeakMap();
   const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   async function mount(arena) {
@@ -83,6 +84,75 @@
   function scan(root) {
     (root || document).querySelectorAll?.('.arena, .pvp-battlefield').forEach(mount);
   }
+
+  async function mountMenu(hub) {
+    if (!window.PIXI || menuActive.has(hub)) return;
+    try {
+      const app = new PIXI.Application();
+      await app.init({
+        resizeTo: hub,
+        backgroundAlpha: 0,
+        antialias: true,
+        autoDensity: true,
+        resolution: Math.min(window.devicePixelRatio || 1, 2),
+        preference: 'webgl'
+      });
+      const canvas = app.canvas;
+      canvas.className = 'pixi-menu-fx';
+      canvas.setAttribute('aria-hidden', 'true');
+      hub.prepend(canvas);
+      const decor = new PIXI.Container();
+      const pulses = new PIXI.Container();
+      app.stage.addChild(decor, pulses);
+      const motes = Array.from({ length: 34 }, (_, index) => ({
+        x: ((index * 43) % 100) / 100,
+        y: ((index * 71) % 100) / 100,
+        size: 1 + index % 3,
+        speed: .04 + index % 5 * .012,
+        phase: index * .65,
+        color: index % 3 === 0 ? 0xff2d79 : index % 3 === 1 ? 0xff9a26 : 0x6d8cff
+      }));
+      motes.forEach(mote => {
+        const dot = new PIXI.Graphics();
+        dot.circle(0, 0, mote.size);
+        dot.fill({ color: mote.color, alpha: .22 });
+        dot.__mote = mote;
+        decor.addChild(dot);
+      });
+      let elapsed = 0;
+      app.ticker.add(ticker => {
+        elapsed += ticker.deltaTime / 60;
+        const width = app.renderer.width / app.renderer.resolution;
+        const height = app.renderer.height / app.renderer.resolution;
+        decor.children.forEach(dot => {
+          const mote = dot.__mote;
+          dot.position.set(mote.x * width + Math.sin(elapsed * mote.speed + mote.phase) * 16, mote.y * height + Math.cos(elapsed * mote.speed + mote.phase) * 9);
+          dot.alpha = .12 + Math.sin(elapsed * .8 + mote.phase) * .08;
+        });
+        pulses.children.slice().forEach(pulse => {
+          pulse.__life -= ticker.deltaTime / 36;
+          pulse.scale.set(1 + (1 - pulse.__life) * 3.8);
+          pulse.alpha = Math.max(0, pulse.__life) * .75;
+          if (pulse.__life <= 0) { pulses.removeChild(pulse); pulse.destroy(); }
+        });
+      });
+      const pulse = event => {
+        const target = event.target.closest?.('button');
+        if (!target || !hub.contains(target)) return;
+        const bounds = hub.getBoundingClientRect();
+        const ring = new PIXI.Graphics();
+        ring.circle(0, 0, 13);
+        ring.stroke({ color: target.closest('.hub-nav') ? 0xff2d79 : 0xffcc63, width: 2, alpha: .85 });
+        ring.position.set(event.clientX - bounds.left, event.clientY - bounds.top);
+        ring.__life = 1;
+        pulses.addChild(ring);
+      };
+      hub.addEventListener('pointerdown', pulse, { passive: true });
+      menuActive.set(hub, { app, pulse });
+    } catch (_) {
+      /* Menus retain their full DOM treatment if the GPU path is unavailable. */
+    }
+  }
   function cleanup(node) {
     const instance = active.get(node);
     if (!instance) return;
@@ -90,14 +160,17 @@
     instance.app.destroy(true, { children: true, texture: false, textureSource: false });
     active.delete(node);
   }
-  window.ShinigamiPixi = { mount, scan };
+  window.ShinigamiPixi = { mount, mountMenu, scan };
   document.addEventListener('DOMContentLoaded', () => {
     scan();
+    document.querySelectorAll('.game-hub').forEach(mountMenu);
     new MutationObserver(records => records.forEach(record => {
       record.addedNodes.forEach(node => {
         if (node.nodeType !== 1) return;
         if (node.matches?.('.arena, .pvp-battlefield')) mount(node);
+        if (node.matches?.('.game-hub')) mountMenu(node);
         scan(node);
+        node.querySelectorAll?.('.game-hub').forEach(mountMenu);
       });
       record.removedNodes.forEach(node => node.nodeType === 1 && cleanup(node));
     })).observe(document.body, { childList: true, subtree: true });

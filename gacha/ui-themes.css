@@ -453,3 +453,10 @@
 .pixi-combat-fx { position:absolute!important;inset:0;z-index:0;width:100%!important;height:100%!important;pointer-events:none;mix-blend-mode:screen; }
 .arena>:not(.pixi-combat-fx),.pvp-battlefield>:not(.pixi-combat-fx) { position:relative;z-index:1; }
 @media (prefers-reduced-motion:reduce) { .pixi-combat-fx { display:none!important; } }
+
+/* Menu renderer: GPU texture and feedback stay behind every interactive surface. */
+.game-hub { position:relative;isolation:isolate;overflow:hidden; }
+.pixi-menu-fx { position:absolute!important;inset:0;z-index:0;width:100%!important;height:100%!important;pointer-events:none;mix-blend-mode:screen;opacity:.72; }
+.game-hub>:not(.pixi-menu-fx) { position:relative;z-index:1; }
+.game-hub .hub-panel,.game-hub .pvp-panel,.game-hub .social-panel,.game-hub .raid-native { backdrop-filter:blur(1px); }
+@media (prefers-reduced-motion:reduce) { .pixi-menu-fx { display:none!important; } }
