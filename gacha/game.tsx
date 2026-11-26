@@ -1154,22 +1154,30 @@ function fitHubPanel(area:HTMLElement) {
   const fit = () => {
     if (!media.matches) {
       panel.style.removeProperty("--panel-scale");
+      panel.style.removeProperty("--panel-height");
       return;
     }
-    const bounds = area.getBoundingClientRect();
-    if (!bounds.height) return;
+    const height = area.clientHeight;
+    if (!height) return;
+    // Measure the intrinsic rows first. Container units inside CSS zoom can
+    // change coordinate systems on WebKit and inflate the very rows being fitted.
+    panel.style.setProperty("--panel-height", "0px");
     const fits = (scale:number) => {
       panel.style.setProperty("--panel-scale", String(scale));
-      return area.scrollHeight <= area.clientHeight && area.scrollWidth <= area.clientWidth;
+      return area.scrollHeight <= height + 1 && area.scrollWidth <= area.clientWidth + 1;
     };
-    if (fits(1)) return;
-    let low = 0.25, high = 1;
-    for (let step = 0; step < 7; step++) {
-      const mid = (low + high) / 2;
-      if (fits(mid)) low = mid;
-      else high = mid;
+    let scale = 1;
+    if (!fits(scale)) {
+      let low = 0.25, high = 1;
+      for (let step = 0; step < 7; step++) {
+        const mid = (low + high) / 2;
+        if (fits(mid)) low = mid;
+        else high = mid;
+      }
+      scale = low;
+      panel.style.setProperty("--panel-scale", String(scale));
     }
-    fits(low);
+    panel.style.setProperty("--panel-height", Math.floor(height / scale) + "px");
   };
   fit();
   const resize = new ResizeObserver(fit);
