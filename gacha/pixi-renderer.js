@@ -175,8 +175,28 @@
         ring.__life = 1;
         pulses.addChild(ring);
       };
-      hub.addEventListener('pointerdown', pulse, { passive: true });
-      menuActive.set(hub, { app, pulse, sizeObserver, routeObserver });
+      const input = new AbortController();
+      const passive = { passive: true, signal: input.signal };
+      const updateDepth = event => {
+        const hero = event.target.closest?.('.home-reapers-hero');
+        if (!hero || event.pointerType === 'touch') return;
+        const bounds = hero.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) return;
+        const x = (event.clientX - bounds.left) / bounds.width - .5;
+        const y = (event.clientY - bounds.top) / bounds.height - .5;
+        hero.style.setProperty('--hero-rotate-x', `${-y * 5}deg`);
+        hero.style.setProperty('--hero-rotate-y', `${x * 7}deg`);
+      };
+      const resetDepth = event => {
+        const hero = event.target.closest?.('.home-reapers-hero');
+        if (!hero || hero.contains(event.relatedTarget)) return;
+        hero.style.removeProperty('--hero-rotate-x');
+        hero.style.removeProperty('--hero-rotate-y');
+      };
+      hub.addEventListener('pointerdown', pulse, passive);
+      hub.addEventListener('pointermove', updateDepth, passive);
+      hub.addEventListener('pointerout', resetDepth, passive);
+      menuActive.set(hub, { app, input, sizeObserver, routeObserver });
     } catch (_) {
       /* Menus retain their full DOM treatment if the GPU path is unavailable. */
     } finally {
@@ -187,7 +207,7 @@
     if (node.isConnected) return;
     const menu = menuActive.get(node);
     if (menu) {
-      node.removeEventListener('pointerdown', menu.pulse);
+      menu.input.abort();
       menu.sizeObserver.disconnect();
       menu.routeObserver.disconnect();
       menu.app.destroy(true, { children: true });

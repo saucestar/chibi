@@ -43,6 +43,7 @@
   }
   new MutationObserver(mountMode).observe(document.getElementById('root'), { childList: true, subtree: true });
   function open() {
+    if (document.querySelector('.raid-overlay')) return;
     if (!window.ChibiSocial?.ready()) return window.alert('Connecte-toi avec Discord pour ouvrir les Raids.');
     const overlay = document.createElement('div'); overlay.className = 'raid-overlay'; document.body.appendChild(overlay);
     let faction = null, factions = [], rooms = [], selected = null, stop = null, activeStop = null;
@@ -121,4 +122,5 @@
     refreshFaction().then(() => renderHall()).catch(err => renderHall(err.message || 'La liste des Raids est inaccessible.'));
     renderHall();
   }
+  window.ChibiRaid = { open };
 })();

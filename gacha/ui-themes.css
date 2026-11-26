@@ -869,7 +869,7 @@
   filter:var(--paper-lift);
   --banner-print: url('./assets/ui/event-banner-art.png');
 }
-.home-mode-roguelike { --banner-print:url('./assets/ui/roguelike-banner-art.png'); }
+.home-mode-raid { --banner-print:url('./assets/ui/roguelike-banner-art.png'); }
 .home-mode-banner::before {
   border:0;
   background:var(--paper-white)!important;
@@ -881,7 +881,7 @@
   inset:6px 5px 7px;
   clip-path:var(--paper-print-edge);
   background:
-    linear-gradient(104deg,#fffaf0 0 45%,#fff5e8df 53%,transparent 65%),
+    linear-gradient(104deg,#fff9eb 0 57%,#fff9ebef 63%,transparent 78%),
     var(--banner-print) right center/auto 100% no-repeat,
     #fff7e7;
   pointer-events:none;
@@ -984,4 +984,70 @@
   .game-hub[data-screen="home"] { --home-width:1100px; }
   .game-hub[data-screen="home"] .home-mode-banners,
   .game-hub[data-screen="home"] .home-action-grid { align-self:stretch; }
+}
+
+.game-hub :is(.hub-nav button,.home-action-grid button,.home-hero-play),
+.game-hub :is(.team-workspace-tabs,.social-tabs) button,
+.raid-overlay .raid-native button {
+  text-align:center;
+  justify-items:center;
+}
+.game-hub .home-hero-play {
+  align-content:center;
+  padding:8px 12px!important;
+  line-height:1;
+}
+.game-hub .home-hero-play>b { line-height:1; }
+.game-hub .home-mode-banner>div {
+  justify-self:stretch;
+  text-align:left;
+}
+.game-hub .home-mode-banner>div>small {
+  background:#992047!important;
+  color:#fffaf2!important;
+}
+.game-hub .home-mode-raid>div>small { background:#28437e!important; }
+.game-hub .home-mode-raid>span { color:#28437e!important; }
+.game-hub .home-mode-banner i {
+  display:grid;
+  place-items:center;
+  width:28px;
+  height:32px;
+  background:#fff9eb;
+  color:#20141e!important;
+  text-shadow:none;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel) button:is(.primary,[aria-pressed=true]) {
+  background:#8c1948!important;
+  color:#fffaf2!important;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel) button:is(.primary,[aria-pressed=true]) :is(b,strong,small,p,em) {
+  color:inherit!important;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel) button:disabled,
+.raid-overlay .raid-native button:disabled {
+  opacity:1!important;
+  color:#564c5b!important;
+  background:#e6e0df!important;
+  box-shadow:none!important;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel) button:disabled :is(b,strong,small,p,em) {
+  color:inherit!important;
+}
+.raid-overlay .raid-native>header {
+  background:#2e1738;
+  color:#fff8ed;
+  padding:12px 16px;
+}
+.raid-overlay .raid-native>header :is(small,p) { color:#fff1de!important; }
+
+@media (prefers-reduced-motion:no-preference) {
+  .home-reapers-hero { perspective:680px; }
+  .home-reapers-art,.home-reapers-cast { transition:transform .35s cubic-bezier(.18,.8,.26,1); }
+  .home-reapers-art {
+    transform:rotateX(var(--hero-rotate-x,0deg)) rotateY(var(--hero-rotate-y,0deg)) translateZ(-12px) scale(1.018);
+  }
+  .home-reapers-cast {
+    transform:rotateX(var(--hero-rotate-x,0deg)) rotateY(var(--hero-rotate-y,0deg)) translateZ(28px);
+  }
 }
