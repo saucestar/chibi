@@ -621,3 +621,72 @@
   .game-hub .hub-nav { margin:10px 10px 8px!important;border-width:3px!important; }.game-hub .hub-nav button { min-height:45px!important; }
 }
 @media (prefers-reduced-motion:reduce) { .pixi-menu-fx { display:none!important; } }
+
+/* Compact mobile proportions — mirrors the reference strips instead of a desktop panel scaled down. */
+@media (max-width:560px) {
+  .game-hub .hub-header {
+    min-height:55px!important;
+    grid-template-columns:minmax(0,1fr) auto auto!important;
+    gap:7px!important;
+    padding:7px 13px!important;
+    box-shadow:0 5px 15px #0009!important;
+  }
+  .game-hub .hub-profile {
+    min-height:38px!important;
+    padding:0!important;
+    grid-template-columns:38px minmax(0,1fr)!important;
+    gap:6px!important;
+    transform:rotate(-1.1deg)!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+  .game-hub .hub-profile canvas { width:38px!important;height:38px!important;border:2px solid #fff2dc!important;box-shadow:2px 2px 0 #e82f72!important; }
+  .game-hub .hub-profile b { font-size:10px!important; }.game-hub .hub-profile small { font-size:7px!important; }
+  .game-hub .hub-wallet { min-width:63px!important;min-height:37px!important;padding:3px 5px!important;box-shadow:2px 3px 0 #e82f72!important; }
+  .game-hub .hub-wallet>span { font-size:16px!important; }.game-hub .hub-wallet small { font-size:6px!important; }
+  .game-hub .hub-header .hub-news { min-width:43px!important;min-height:37px!important;box-shadow:3px 3px 0 #09070a!important; }
+  .game-hub .hub-header .hub-news span { font-size:7px!important; }
+  .game-hub .hub-header .hub-inbox,.game-hub .hub-header .hub-fullscreen { display:none!important; }
+
+  .game-hub .home-reapers-layout { gap:13px!important;padding:10px 11px 13px!important; }
+  .home-reapers-hero { min-height:224px!important;border-width:5px!important; }
+  .home-reapers-cast { inset:14px 12% 65px!important;gap:10px!important; }
+  .home-reapers-cast>.sprite-preview { width:41%!important;height:137px!important; }
+  .home-hero-play {
+    bottom:11px!important;
+    width:min(68%,274px)!important;
+    min-height:48px!important;
+    padding:7px 12px 9px!important;
+    border-width:3px!important;
+    box-shadow:4px 4px 0 #10070d!important;
+  }
+  .home-hero-play>b { font-size:25px!important; }.home-hero-play>span { font-size:17px!important; }
+
+  .home-mode-banners { gap:11px!important;margin-top:0!important; }
+  .home-mode-banner { min-height:88px!important;padding:10px 42% 9px 11px!important;border-width:3px!important;box-shadow:0 5px 0 #050407,0 10px 17px #0008!important; }
+  .home-mode-banner>span { width:27px!important;height:27px!important;font-size:21px!important; }
+  .home-mode-banner small { padding:2px 4px!important;font-size:6px!important; }.home-mode-banner b { margin:2px 0!important;font-size:18px!important; }.home-mode-banner p { max-width:145px;font-size:8px!important; }.home-mode-banner i { right:8px;font-size:29px!important; }
+
+  .home-action-grid { gap:7px!important; }
+  .home-action-grid button { min-height:66px!important;padding:6px 3px 8px!important;border-width:3px!important;box-shadow:0 4px 0 #050407!important; }
+  .home-action-grid button>span { font-size:19px!important; }.home-action-grid b { font-size:9px!important; }
+  .game-hub .hub-nav { margin:7px 9px 6px!important;padding:4px!important;border-width:3px!important;box-shadow:0 4px 0 #050407!important; }
+  .game-hub .hub-nav button { min-height:39px!important; }.game-hub .hub-nav .hub-nav-orb i { font-size:16px!important; }.game-hub .hub-nav b { font-size:7px!important; }
+}
+
+/* Readability guardrail: torn paper frames decorate surfaces but never mask game content. */
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) {
+  clip-path:none!important;
+  overflow:visible!important;
+  border-radius:3px!important;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) :is(header,section,article,form,ul,ol) {
+  min-width:0;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) :is(button,input,select,textarea) {
+  max-width:100%;
+}
+.game-hub :is(.hub-panel,.pvp-panel,.social-panel,.raid-native) :is(h1,h2,h3,p,small,b,strong,span) {
+  overflow-wrap:anywhere;
+}
