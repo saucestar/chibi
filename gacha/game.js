@@ -872,6 +872,17 @@ function fighterClipTiming(clip, state) {
   const impactFrame = Math.round((clip.frames - 1) * fraction);
   return { duration, impact: Math.round(1000 * impactFrame / fps) };
 }
+function fighterAtlasPlacement(atlas, clip, width, frameHeight, visualHeight) {
+  const scale = visualHeight / atlas.idleHeight;
+  const [idleWidth, idleHeight] = atlas.idleCell;
+  const [idleX, idleY] = atlas.clips.idle.pivot;
+  const [x, y] = clip.pivot;
+  return {
+    scale,
+    left: (idleX - idleWidth / 2 + width / 2 - x) * scale,
+    top: (frameHeight + visualHeight) / 2 + (idleY - (idleHeight - 5) - y) * scale
+  };
+}
 function fighterActionTiming(name, action) {
   const state = fighterClipState(true, action, 1, false);
   const clip = fighterAtlases[name]?.clips[state];
@@ -921,12 +932,13 @@ function Sprite({
       const context = surface.getContext("2d");
       if (!context) return;
       const width = image.width / clip.columns, height = image.height / clip.rows;
-      const scale = visualHeight / atlas.idleHeight;
+      const { scale, left, top } = fighterAtlasPlacement(atlas, clip, width, fighter.frameHeight || 116, visualHeight);
       surface.width = width;
       surface.height = height;
       surface.style.width = width * scale + "px";
       surface.style.height = height * scale + "px";
-      surface.style.top = ((fighter.frameHeight || 116) + visualHeight) / 2 - (height - 5) * scale + "px";
+      surface.style.left = `calc(50% + ${left}px)`;
+      surface.style.top = top + "px";
       context.imageSmoothingEnabled = false;
       const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
       const { duration } = fighterClipTiming(clip, state);
@@ -947,7 +959,7 @@ function Sprite({
     }).catch(() => {});
     return () => { current = false; cancelAnimationFrame(request); };
   }, [atlas, clip, state, actionKey, visualHeight, fighter.frameHeight]);
-  const showAtlas = clip && loaded === clip.src;
+  const showAtlas = clip && loaded !== null;
   return /*#__PURE__*/React.createElement("div", {
     className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""} ${showAtlas ? "fighter-atlas-active" : ""}`,
     style: {
