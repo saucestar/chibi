@@ -25,7 +25,11 @@
     } catch (_) { window.ChibiAdminGameConfig = null; }
   }
   config().finally(async () => {
-    try { await add('./game.js?v=shinigamis-poster3'); await add('./admin.js?v=admin-claim-refresh1'); await add('./raid.js?v=raid-mission2'); }
+    try {
+      await add('./admin.js?v=settings1').catch(() => {});
+      await add('./game.js?v=settings1');
+      await add('./raid.js?v=raid-mission2');
+    }
     catch (error) { const root = document.getElementById('root'); if (root) root.textContent = 'Impossible de charger le jeu. Recharge la page.'; }
   });
 })();

@@ -814,7 +814,8 @@
 .home-action-grid b { font-size:clamp(10px,2.5vw,16px)!important; }
 .game-hub .portal-scene { border-image:linear-gradient(120deg,#fff3d9,#ec397b,#fff3d9) 1; }
 
-body:has(.game-hub)>.admin-launch { bottom:calc(80px + env(safe-area-inset-bottom, 0px)); }
+.settings-admin-slot:empty { display:none; }
+.settings-admin-slot button { width:100%; }
 .pixi-menu-fx { z-index:3; opacity:1; mix-blend-mode:normal; }
 
 @media (min-width:880px) and (min-height:570px) {
@@ -826,5 +827,13 @@ body:has(.game-hub)>.admin-launch { bottom:calc(80px + env(safe-area-inset-botto
   .game-hub .hub-profile { grid-template-columns:34px minmax(0,1fr)!important; }
   .game-hub .hub-profile canvas { width:34px!important; height:34px!important; }
   .game-hub .hub-header .hub-inbox[data-unread=true] { min-width:30px!important; }
-  .game-hub .hub-nav { margin-bottom:max(6px,env(safe-area-inset-bottom, 0px))!important; }
 }
+
+.game-hub .hub-nav {
+  margin:6px max(3px,env(safe-area-inset-right,0px)) max(3px,env(safe-area-inset-bottom,0px)) max(3px,env(safe-area-inset-left,0px))!important;
+  padding:10px 5px!important;
+  gap:2px;
+}
+.game-hub .hub-nav button { min-height:clamp(51px,8vh,66px)!important; padding-inline:2px; }
+.game-hub .hub-nav .hub-nav-orb i { font-size:clamp(19px,4vw,25px)!important; }
+.game-hub .hub-nav b { font-size:clamp(9px,2vw,13px)!important; }

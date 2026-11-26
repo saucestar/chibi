@@ -2228,6 +2228,8 @@ const gameSound = (() => {
 function AudioSettings({
   back
 }) {
+  const adminSlot = React.useRef(null);
+  useEffect(() => window.ChibiAdmin?.mountLauncher(adminSlot.current), []);
   const [values, setValues] = useState({
     ...gameSound.volumes
   });
@@ -2254,7 +2256,7 @@ function AudioSettings({
     onKeyUp: event => {
       if (channel === "sfx" && /^(Arrow|Home|End|Page)/.test(event.key)) gameSound.preview();
     }
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), /*#__PURE__*/React.createElement("div", { className: "settings-admin-slot", ref: adminSlot }), /*#__PURE__*/React.createElement("button", {
     onClick: back
   }, "Retour au menu"));
 }

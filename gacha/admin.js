@@ -1,17 +1,33 @@
 /* Private, role-checked game data editor. Writes only the admin-owned gameConfig node. */
 (function () {
   'use strict';
-  const boot = async () => {
-    const user = window.firebase?.auth?.().currentUser;
-    if (!user) return;
-    let claims;
-    try { claims = (await user.getIdTokenResult()).claims; } catch (_) { return; }
-    if (claims.admin !== true) return;
+  function mountLauncher(container) {
+    if (!window.firebase?.apps?.length) return;
+    const auth = firebase.auth();
     const button = document.createElement('button');
-    button.className = 'admin-launch'; button.type = 'button'; button.textContent = 'ADMIN'; button.setAttribute('aria-label', 'Ouvrir les outils administrateur');
-    document.body.appendChild(button);
+    button.type = 'button';
+    button.textContent = 'Administration';
+    let revision = 0;
+    const unsubscribe = auth.onIdTokenChanged(async user => {
+      const check = ++revision;
+      button.remove();
+      if (!user) return;
+      try {
+        const { claims } = await user.getIdTokenResult();
+        if (check === revision && auth.currentUser?.uid === user.uid && claims.admin === true) {
+          container.appendChild(button);
+        }
+      } catch (_) {
+        // Keep the launcher hidden when the role cannot be verified.
+      }
+    });
     button.addEventListener('click', open);
-  };
+    return () => {
+      revision++;
+      unsubscribe();
+      button.remove();
+    };
+  }
   function open() {
     const catalog = window.ChibiGameCatalog;
     if (!catalog) return;
@@ -58,6 +74,5 @@
     shade.appendChild(panel); document.body.appendChild(shade); render();
     shade.addEventListener('click', event => { if (event.target === shade) shade.remove(); });
   }
-  const ready = () => boot().catch(() => {});
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready, { once: true }); else ready();
+  window.ChibiAdmin = { mountLauncher };
 })();
