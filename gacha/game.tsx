@@ -1524,24 +1524,58 @@ function BestiaryMenu(){
 
 function PortalCarousel({portal,children}:{portal:string;children:React.ReactNode}) {
  const rail=React.useRef<HTMLDivElement>(null);
+ const drag=React.useRef<{id:number;x:number;left:number;moved:boolean}|null>(null);
+ const scrollToCard=(list:HTMLDivElement,card:HTMLElement)=>{
+  list.scrollTo({left:card.offsetLeft,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+ };
  React.useLayoutEffect(()=>{
   const list=rail.current;
   const card=list?.querySelector<HTMLElement>(`[data-portal="${portal}"]`);
-  if(list&&card) list.scrollLeft=card.offsetLeft;
+  if(list&&card)list.scrollLeft=card.offsetLeft;
  },[portal]);
  const move=(direction:number)=>{
   const list=rail.current;
   if(!list)return;
   const cards=Array.from(list.querySelectorAll<HTMLElement>(".portal-card"));
   const target=direction>0?cards.find(card=>card.offsetLeft>list.scrollLeft+4):cards.reverse().find(card=>card.offsetLeft<list.scrollLeft-4);
-  if(target)list.scrollTo({left:target.offsetLeft,behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
+  if(target)scrollToCard(list,target);
+ };
+ const startDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
+  if(event.pointerType!=="mouse"||event.button!==0||(event.target as Element).closest("button,a,input"))return;
+  const list=event.currentTarget;
+  drag.current={id:event.pointerId,x:event.clientX,left:list.scrollLeft,moved:false};
+  list.setPointerCapture(event.pointerId);
+ };
+ const dragPortal=(event:React.PointerEvent<HTMLDivElement>)=>{
+  const state=drag.current;
+  if(!state||state.id!==event.pointerId)return;
+  const distance=state.x-event.clientX;
+  if(!state.moved&&Math.abs(distance)<6)return;
+  state.moved=true;
+  const list=event.currentTarget;
+  list.dataset.dragging="true";
+  list.scrollLeft=state.left+distance;
+ };
+ const endDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
+  const state=drag.current;
+  if(!state||state.id!==event.pointerId)return;
+  drag.current=null;
+  const list=event.currentTarget;
+  const distance=list.scrollLeft-state.left;
+  delete list.dataset.dragging;
+  if(!state.moved)return;
+  const width=list.clientWidth;
+  const index=Math.round(state.left/width);
+  const step=Math.abs(distance)>Math.min(72,width*.17)?Math.sign(distance):0;
+  const cards=list.querySelectorAll<HTMLElement>(".portal-card");
+  const target=cards[Math.max(0,Math.min(cards.length-1,index+step))];
+  if(target)scrollToCard(list,target);
  };
  return <div className="portal-carousel">
-  <div className="portal-carousel-controls">
-   <button type="button" aria-label="Portail précédent" onClick={()=>move(-1)}>‹</button>
-   <button type="button" aria-label="Portail suivant" onClick={()=>move(1)}>›</button>
-  </div>
-  <div className="portal-list" ref={rail} tabIndex={0} role="region" aria-label="Portails d’invocation">{children}</div>
+  <button className="portal-arrow portal-previous" type="button" aria-label="Portail précédent" onClick={()=>move(-1)}>‹</button>
+  <div className="portal-list" ref={rail} tabIndex={0} role="region" aria-label="Portails d’invocation"
+   onPointerDown={startDrag} onPointerMove={dragPortal} onPointerUp={endDrag} onPointerCancel={endDrag} onLostPointerCapture={endDrag}>{children}</div>
+  <button className="portal-arrow portal-next" type="button" aria-label="Portail suivant" onClick={()=>move(1)}>›</button>
  </div>;
 }
 

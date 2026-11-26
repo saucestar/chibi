@@ -1389,13 +1389,30 @@
 }
 
 /* Full-size portal posters share a single horizontal scroll area. */
-.game-hub .portal-carousel { min-width:0;margin:.75rem 0; }
-.game-hub .portal-carousel-controls { display:flex;justify-content:flex-end;gap:8px; }
-.game-hub .portal-carousel-controls button {
-  width:44px;height:44px;padding:0;border:2px solid #251925;border-radius:0;
+.game-hub .summon-workspace > section:has(.portal-list) {
+  max-width:1440px;padding:clamp(8px,1.5vw,22px);
+}
+.game-hub .portal-carousel { position:relative;min-width:0;margin:.75rem 0; }
+.game-hub .portal-carousel .portal-arrow {
+  position:absolute;top:50%;z-index:4;transform:translateY(-50%);
+  width:clamp(44px,6vw,68px);height:clamp(44px,7vw,84px);padding:0;border:2px solid #fff5e6;border-radius:0;
   background:#251925;color:#fff5e6;box-shadow:2px 3px #a91750;
   font:900 1.6rem/1 Arial,sans-serif;
 }
+.game-hub .portal-carousel .portal-previous { left:8px; }
+.game-hub .portal-carousel .portal-next { right:8px; }
+.game-hub .portal-carousel .portal-arrow:not(:disabled):hover { transform:translateY(-50%); }
+@media (min-width:720px) {
+  .game-hub .portal-carousel { padding-inline:clamp(58px,8vw,100px); }
+  .game-hub .portal-carousel .portal-previous { left:0; }
+  .game-hub .portal-carousel .portal-next { right:0; }
+}
+@media (pointer:fine) {
+  .game-hub .portal-carousel .portal-list { cursor:grab;user-select:none; }
+  .game-hub .portal-carousel .portal-list button { cursor:pointer; }
+  .game-hub .portal-carousel .portal-list img { -webkit-user-drag:none; }
+}
+.game-hub .portal-carousel .portal-list[data-dragging] { cursor:grabbing;scroll-snap-type:none; }
 .game-hub .summon-workspace .portal-list {
   position:relative;display:flex;min-width:0;max-width:100%;margin:.7rem 0 0;
   gap:0!important;padding:0;overflow-x:auto;overscroll-behavior-inline:contain;
@@ -1408,7 +1425,7 @@
 .game-hub .summon-workspace .portal-card:hover { transform:none; }
 .game-hub .portal-carousel :is(.portal-list,button):focus-visible { outline:3px solid #a91750;outline-offset:2px; }
 .game-hub .summon-workspace .portal-scene {
-  aspect-ratio:auto;height:clamp(320px,65dvh,640px);
+  aspect-ratio:auto;height:clamp(340px,72dvh,820px);
   border:0!important;border-image:none;clip-path:none!important;box-shadow:none!important;
   background:var(--portal-backdrop,#211525) center / cover;
 }
@@ -1428,7 +1445,7 @@
 }
 .game-hub .summon-workspace .portal-scene .wish-option { flex-basis:min(32%,170px); }
 @media (max-width:520px) {
-  .game-hub .summon-workspace .portal-scene { height:clamp(300px,57dvh,490px); }
+  .game-hub .summon-workspace .portal-scene { height:clamp(320px,64dvh,560px); }
 }
 
 .game-hub .wish-dialog :is(.dossier-stats,.badge-info) :is(b,small,strong,dt,dd,p),

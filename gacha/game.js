@@ -4700,6 +4700,13 @@ function PortalCarousel({
   children
 }) {
   const rail = React.useRef(null);
+  const drag = React.useRef(null);
+  const scrollToCard = (list, card) => {
+    list.scrollTo({
+      left: card.offsetLeft,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+    });
+  };
   React.useLayoutEffect(() => {
     const list = rail.current;
     const card = list?.querySelector(`[data-portal="${portal}"]`);
@@ -4710,30 +4717,69 @@ function PortalCarousel({
     if (!list) return;
     const cards = Array.from(list.querySelectorAll(".portal-card"));
     const target = direction > 0 ? cards.find(card => card.offsetLeft > list.scrollLeft + 4) : cards.reverse().find(card => card.offsetLeft < list.scrollLeft - 4);
-    if (target) list.scrollTo({
-      left: target.offsetLeft,
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
-    });
+    if (target) scrollToCard(list, target);
+  };
+  const startDrag = event => {
+    if (event.pointerType !== "mouse" || event.button !== 0 || event.target.closest("button,a,input")) return;
+    const list = event.currentTarget;
+    drag.current = {
+      id: event.pointerId,
+      x: event.clientX,
+      left: list.scrollLeft,
+      moved: false
+    };
+    list.setPointerCapture(event.pointerId);
+  };
+  const dragPortal = event => {
+    const state = drag.current;
+    if (!state || state.id !== event.pointerId) return;
+    const distance = state.x - event.clientX;
+    if (!state.moved && Math.abs(distance) < 6) return;
+    state.moved = true;
+    const list = event.currentTarget;
+    list.dataset.dragging = "true";
+    list.scrollLeft = state.left + distance;
+  };
+  const endDrag = event => {
+    const state = drag.current;
+    if (!state || state.id !== event.pointerId) return;
+    drag.current = null;
+    const list = event.currentTarget;
+    const distance = list.scrollLeft - state.left;
+    delete list.dataset.dragging;
+    if (!state.moved) return;
+    const
+      width = list.clientWidth;
+    const index = Math.round(state.left / width);
+    const step = Math.abs(distance) > Math.min(72, width * .17) ? Math.sign(distance) : 0;
+    const cards = list.querySelectorAll(".portal-card");
+    const target = cards[Math.max(0, Math.min(cards.length - 1, index + step))];
+    if (target) scrollToCard(list, target);
   };
   return React.createElement("div", {
     className: "portal-carousel"
-  }, React.createElement("div", {
-    className: "portal-carousel-controls"
   }, React.createElement("button", {
+    className: "portal-arrow portal-previous",
     type: "button",
     "aria-label": "Portail pr\xE9c\xE9dent",
     onClick: () => move(-1)
-  }, "\u2039"), React.createElement("button", {
-    type: "button",
-    "aria-label": "Portail suivant",
-    onClick: () => move(1)
-  }, "\u203A")), React.createElement("div", {
+  }, "\u2039"), React.createElement("div", {
     className: "portal-list",
     ref: rail,
     tabIndex: 0,
     role: "region",
-    "aria-label": "Portails d\u2019invocation"
-  }, children));
+    "aria-label": "Portails d\u2019invocation",
+    onPointerDown: startDrag,
+    onPointerMove: dragPortal,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+    onLostPointerCapture: endDrag
+  }, children), React.createElement("button", {
+    className: "portal-arrow portal-next",
+    type: "button",
+    "aria-label": "Portail suivant",
+    onClick: () => move(1)
+  }, "\u203A"));
 }
 function App() {
   useEffect(gameSound.connect, []);
