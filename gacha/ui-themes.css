@@ -69,8 +69,8 @@
 .game-hub .home-reapers-layout {
   display:grid;
   grid-template-columns:minmax(0,1fr);
-  grid-template-areas:"title" "hero" "modes" "actions";
-  align-content:start;
+  grid-template-areas:"hero" "modes" "actions";
+  align-content:center;
   gap:12px;
   min-height:100%;
   padding:clamp(14px,2vw,26px);
@@ -177,8 +177,9 @@
   .game-hub .hub-nav button b { font-size:8px; }
 }
 @media (min-width:880px) and (min-height:570px) {
-  .game-hub .home-reapers-layout { grid-template-columns:minmax(350px,.9fr) minmax(430px,1.35fr); grid-template-areas:"title hero" "modes hero" "actions actions"; align-content:center; }
-  .home-reapers-hero { min-height:300px; }
+  .game-hub .home-reapers-layout { grid-template-columns:minmax(390px,1.35fr) minmax(330px,.9fr); grid-template-areas:"hero modes" "hero actions"; align-content:center; }
+  .home-reapers-hero { min-height:clamp(355px,48vh,510px)!important; }
+  .home-mode-banners,.home-action-grid { align-self:center; }
 }
 
 /* Global frame — the home mockup's paper player strip and readable tab bar. */

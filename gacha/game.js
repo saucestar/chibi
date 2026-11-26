@@ -4199,8 +4199,6 @@ function HubHome({
   return /*#__PURE__*/React.createElement("section", {
     className: "hub-home home-reapers-layout"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "home-reapers-title"
-  }, /*#__PURE__*/React.createElement("small", null, "SHIBUYA \xB7 REAPERS\u2019 GAME"), /*#__PURE__*/React.createElement("h1", null, "Shinigami\u2019s Game"), /*#__PURE__*/React.createElement("p", null, "Le jeu des Shinigami commence ici."), /*#__PURE__*/React.createElement("span", null, "Record \xB7 \xC9tage ", profile.bestFloor, " / 100")), /*#__PURE__*/React.createElement("div", {
     className: "home-reapers-hero"
   }, /*#__PURE__*/React.createElement("div", {
     className: "home-reapers-halo",
