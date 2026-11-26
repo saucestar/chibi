@@ -829,17 +829,94 @@ function SpritePreview({
     fighter: fighter
   })));
 }
+const fighterAtlases = window.ChibiFighterAnimations || {};
+const fighterSheetCache = new Map();
+function fighterSheet(src) {
+  if (fighterSheetCache.has(src)) return fighterSheetCache.get(src);
+  if (fighterSheetCache.size >= 20) fighterSheetCache.delete(fighterSheetCache.keys().next().value);
+  const sheet = new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  }).catch(error => {
+    if (fighterSheetCache.get(src) === sheet) fighterSheetCache.delete(src);
+    throw error;
+  });
+  fighterSheetCache.set(src, sheet);
+  return sheet;
+}
+
+function fighterClipState(combat, action, hpRatio, victory) {
+  if (!combat) return "idle";
+  if (hpRatio <= 0) return "dead";
+  if (action === "burst") return "limit_atk";
+  if (action === "shockwave") return "atk";
+  if (action === "pyro" || action === "heal") return "magic_atk";
+  if (action === "guard") return "standby";
+  if (victory) return "win";
+  return hpRatio <= .25 ? "dying" : "idle";
+}
+
 function Sprite({
   fighter,
   action = null,
-  combat = false
+  combat = false,
+  hpRatio = fighter.maxHp ? fighter.hp / fighter.maxHp : 1,
+  victory = false,
+  actionKey = null
 }) {
   const isAttacking = combat && !!fighter.attackSprite && ["pyro", "shockwave", "burst"].includes(action ?? "");
   const sprite = isAttacking && fighter.attackSprite ? fighter.attackSprite : fighter.sprite;
   const frameCount = isAttacking ? fighter.attackFrames : fighter.frames;
   const visualHeight = (fighterVisualBounds[fighter.name] || [0, fighter.frameHeight || 116])[1];
+  const atlas = fighterAtlases[fighter.name];
+  const state = fighterClipState(combat, action, hpRatio, victory);
+  const clip = atlas?.clips[state];
+  const canvas = React.useRef(null);
+  const [loaded, setLoaded] = useState(null);
+  useEffect(() => {
+    if (!combat || !atlas) return;
+    for (const state of ["atk", "magic_atk"]) fighterSheet(atlas.clips[state].src).catch(() => {});
+  }, [atlas, combat]);
+  useEffect(() => {
+    if (!clip) return;
+    const surface = canvas.current;
+    let current = true, request = 0;
+    fighterSheet(clip.src).then(image => {
+      if (!current || !surface) return;
+      const context = surface.getContext("2d");
+      if (!context) return;
+      const width = image.width / clip.columns, height = image.height / clip.rows;
+      const scale = visualHeight / atlas.idleHeight;
+      surface.width = width;
+      surface.height = height;
+      surface.style.width = width * scale + "px";
+      surface.style.height = height * scale + "px";
+      surface.style.top = ((fighter.frameHeight || 116) + visualHeight) / 2 - (height - 5) * scale + "px";
+      context.imageSmoothingEnabled = false;
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const duration = { atk: 620, limit_atk: 650, magic_atk: 440, win: 1000 }[state];
+      const start = performance.now();
+      let last = -1;
+      function draw(time) {
+        const elapsed = time - start;
+        const frame = reduced ? 0 : duration ? Math.min(clip.frames - 1, Math.floor(elapsed / duration * clip.frames)) : Math.floor(elapsed / 130) % clip.frames;
+        if (frame !== last) {
+          context.clearRect(0, 0, width, height);
+          context.drawImage(image, frame % clip.columns * width, Math.floor(frame / clip.columns) * height, width, height, 0, 0, width, height);
+          last = frame;
+        }
+        if (!reduced && clip.frames > 1 && (!duration || frame < clip.frames - 1)) request = requestAnimationFrame(draw);
+      }
+      draw(start);
+      setLoaded(clip.src);
+    }).catch(() => {});
+    return () => { current = false; cancelAnimationFrame(request); };
+  }, [atlas, clip, state, actionKey, visualHeight, fighter.frameHeight]);
+  const showAtlas = clip && loaded === clip.src;
   return /*#__PURE__*/React.createElement("div", {
-    className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""}`,
+    className: `pixel-sprite hero-sprite hero-${fighter.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")} ${frameCount ? `sprite-frames-${frameCount}` : ""} ${isAttacking ? "attack-sprite" : ""} ${showAtlas ? "fighter-atlas-active" : ""}`,
     style: {
       backgroundImage: `url(${sprite})`,
       "--fighter-normalize": `${100 / visualHeight * fighterRenderScale(fighter.name)}`,
@@ -853,7 +930,7 @@ function Sprite({
     },
     role: "img",
     "aria-label": fighter.name
-  });
+  }, atlas && React.createElement("canvas", { ref: canvas, className: "fighter-atlas-frame", hidden: !showAtlas, "aria-hidden": true }));
 }
 // Rank scales the effect once; base wiki power and saved inventories stay unchanged.
 const pinRankScales = {
@@ -3348,6 +3425,13 @@ function resolvePvpRoom(room) {
   }
   return next;
 }
+function pvpSpriteAction(replay, uid, index) {
+  if (replay?.actorUid !== uid || replay?.actorIndex !== index) return null;
+  if (replay.type === "heal" || replay.type === "guard") return replay.type;
+  if (replay.type !== "attack") return null;
+  const pin = Object.values(psychs).find(pin => pin.name === replay.pinName);
+  return pin?.kind === "special" ? "pyro" : "shockwave";
+}
 function PvpBattle({
   matchId,
   close
@@ -3520,12 +3604,15 @@ function PvpBattle({
   }, enemy.team.map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? "defeated" : ""} ${replay?.targetUid === rival && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
+      className: `pvp-arena-unit enemy-unit ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replay?.targetUid === rival && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === rival && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
       combat: true,
-      action: replay?.actorUid === rival && replay?.actorIndex === index ? "shockwave" : null
+      hpRatio: fighter.hp / fighter.maxHp,
+      victory: !replay && room.status === "finished" && room.winner === rival,
+      action: pvpSpriteAction(replay, rival, index),
+      actionKey: replay?.actorUid === rival && replay?.actorIndex === index ? replay : null
     }), /*#__PURE__*/React.createElement("span", {
       className: "enemy-hp"
     }, /*#__PURE__*/React.createElement("i", {
@@ -3538,12 +3625,15 @@ function PvpBattle({
   }, mine.team.map((fighter, index) => {
     const base = characterRoster.find(f => f.name === fighter.name);
     return /*#__PURE__*/React.createElement("div", {
-      className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""} ${replay?.targetUid === uid && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
+      className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""} ${replay?.targetUid === uid && replay?.targetIndex === index ? "hit" : ""} ${replay?.actorUid === uid && replay?.actorIndex === index ? "acting" : ""}`,
       key: index
     }, /*#__PURE__*/React.createElement(Sprite, {
       fighter: base,
       combat: true,
-      action: replay?.actorUid === uid && replay?.actorIndex === index ? "shockwave" : null
+      hpRatio: fighter.hp / fighter.maxHp,
+      victory: !replay && room.status === "finished" && room.winner === uid,
+      action: pvpSpriteAction(replay, uid, index),
+      actionKey: replay?.actorUid === uid && replay?.actorIndex === index ? replay : null
     }), replay?.targetUid === uid && replay?.targetIndex === index && /*#__PURE__*/React.createElement("b", { className: `pvp-damage-pop ${replay.evaded ? "miss" : ""}` }, replay.evaded ? "MISS" : `−${replay.damage}`), /*#__PURE__*/React.createElement("span", null, fighter.name));
   })), /*#__PURE__*/React.createElement("p", {
     className: "combat-status",
@@ -5720,11 +5810,13 @@ function Battle({
   }))))), /*#__PURE__*/React.createElement("div", {
     className: "player-line"
   }, team.map(fighter => /*#__PURE__*/React.createElement("div", {
-    className: `arena-hero ${fighter.hp <= 0 ? "defeated" : ""}`,
+    className: `arena-hero ${fighter.hp <= 0 ? fighterAtlases[fighter.name] ? "fighter-atlas-ko" : "defeated" : ""}`,
     key: fighter.name
   }, /*#__PURE__*/React.createElement(Sprite, {
     fighter: fighter,
-    action: activeAction === "burst" || fighter.name === actor ? activeAction : null,
+    action: fighter.name === actor ? activeAction : null,
+    actionKey: fighter.name === actor && activeAction ? queueIndex : null,
+    victory: reward,
     combat: true
   }), /*#__PURE__*/React.createElement("span", null, fighter.name), hitFeedback?.side === "ally" && hitFeedback.target === fighter.name && /*#__PURE__*/React.createElement("span", {
     className: "hit-feedback",
@@ -5944,14 +6036,19 @@ window.ChibiGameCatalog = { characters: characterRoster, bases, elements: charac
 window.ChibiRaidSprites = {
   loadPage: ffbePage,
   enemies: enemyCatalog,
-  mountParty(host, names) {
+  mountParty(host, members, victory, plans) {
     const root = ReactDOM.createRoot(host);
-    root.render(names.map((name, index) => {
+    const draw = round => root.render(members.map(({ name, hp, maxHp }, index) => {
       const fighter = characterRoster.find(character => character.name === name);
+      const plan = round?.[index];
+      const kind = plan?.kind === "guard" ? "guard" : psychs[plan?.pin]?.kind;
+      const action = { physical: "shockwave", special: "pyro", heal: "heal", guard: "guard" }[kind];
       return React.createElement("span", { key: index, className: "raid-party-sprite" },
-        fighter ? React.createElement(Sprite, { fighter, combat: true }) : null);
+        fighter && (hp > 0 || fighterAtlases[name]) ? React.createElement(Sprite, { fighter, combat: true, hpRatio: hp / maxHp, victory, action }) : null);
     }));
-    return () => root.unmount();
+    draw(plans);
+    const timer = plans && setTimeout(() => draw(null), 680);
+    return () => { clearTimeout(timer); root.unmount(); };
   }
 };
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(SaveBoundary));

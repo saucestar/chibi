@@ -131,6 +131,8 @@
       if (draftKey !== key) { draftKey = key; draft = {}; }
       const previous = previousFrame?.roomId === roomId ? previousFrame.result : null;
       const damage = previous ? Math.max(0, previous.hp - result.hp) : 0;
+      const playedRound = previous && (result.turn > previous.turn || (done && !previous.won && !previous.lost))
+        ? room.actions?.[result.turn > previous.turn ? result.turn - 1 : result.turn] : null;
       previousFrame = { roomId, result };
       const bossName = txt(room.meta.bossName);
       const bossArt = window.ChibiGameCatalog.enemies.find(enemy => enemy.id === room.meta.bossId)?.sprite;
@@ -188,8 +190,8 @@
       overlay.querySelector('.raid-native-close').onclick = close;
       mountBossSprite(overlay.querySelector('.raid-boss-sprite'), room.meta.bossId, true);
       overlay.querySelectorAll('[data-squad]').forEach(host => {
-        const fighters = result.squads[result.ids[Number(host.dataset.squad)]] || [];
-        const unmount = window.ChibiRaidSprites?.mountParty(host, fighters.filter(fighter => fighter.hp > 0).map(fighter => fighter.name));
+        const id = result.ids[Number(host.dataset.squad)];
+        const unmount = window.ChibiRaidSprites?.mountParty(host, result.squads[id] || [], result.won, playedRound?.[id]?.plans);
         if (unmount) partySprites.push(unmount);
       });
 

@@ -1178,6 +1178,25 @@
 }
 .raid-party-sprite { display:grid; grid-template: minmax(0,1fr) / minmax(0,1fr); place-items:end center; width:48%; height:100%; }
 .raid-party-sprite .hero-sprite { transform:scale(calc(.43 * var(--fighter-normalize,1))); transform-origin:bottom; }
+.hero-sprite.fighter-atlas-active {
+  position:relative;
+  overflow:visible;
+  background-image:none!important;
+  animation:none!important;
+}
+.hero-sprite .fighter-atlas-frame {
+  position:absolute;
+  left:50%;
+  max-width:none!important;
+  max-height:none!important;
+  transform:translateX(-50%);
+  image-rendering:pixelated;
+  pointer-events:none;
+}
+.combat-hud .fighter-atlas-ko {
+  opacity:.72;
+  pointer-events:none;
+}
 .raid-squad-title,.raid-unit>div:first-child { display:flex; align-items:center; justify-content:space-between; gap:3px; flex-wrap:wrap; }
 .raid-squad-title b,.raid-unit b { overflow-wrap:anywhere; }
 .raid-squad-title small { color:#ffdd8e; }
